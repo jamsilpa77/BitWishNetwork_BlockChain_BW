@@ -74,3 +74,4 @@ const WalletAuthModal: React.FC<WalletAuthModalProps> = ({ isOpen, onClose, onSu
 };
 
 export default WalletAuthModal;
+// Force update trigger
