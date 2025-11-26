@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { LanguageManager } from '../../utils/LanguageManager/LanguageManager';
+import { apiService } from '@/services/ApiService';
+import { Decimal } from 'decimal.js';
 import './ReferralModal.css';
 
 interface ReferralModalProps {
     isOpen: boolean;
     onClose: () => void;
     currentLanguage?: string;
+    walletAddress?: string; // 지갑 주소 prop 추가 필요
 }
 
 const ReferralModal: React.FC<ReferralModalProps> = ({
     isOpen,
     onClose,
-    currentLanguage
+    currentLanguage,
+    walletAddress
 }) => {
     const [languageManager] = useState(() => new LanguageManager());
     const [, setForceUpdate] = useState(0);
@@ -30,22 +34,37 @@ const ReferralModal: React.FC<ReferralModalProps> = ({
         }
     }, [currentLanguage, languageManager]);
 
-    // Load wallet data on open
+    // Load user data from server on open
     useEffect(() => {
-        if (isOpen) {
-            const savedWallet = localStorage.getItem('bw_wallet_data');
-            if (savedWallet) {
-                try {
-                    const parsed = JSON.parse(savedWallet);
-                    setMyReferralCode(parsed.myReferralCode || null);
-                    setFriendsInvited(parsed.referralCount || 0);
-                    setBonusRate(parsed.referralBonusRate || 0);
-                } catch (e) {
-                    console.error('Failed to load wallet data', e);
+        if (isOpen && walletAddress) {
+            apiService.getUserStatus(walletAddress).then((data) => {
+                if (data) {
+                    // User 정보에서 추천 코드 가져오기 (API 응답 구조에 따라 조정 필요)
+                    // 현재 getUserStatus는 mining/status를 호출하므로 User 정보가 없을 수 있음.
+                    // 따라서 User 정보를 포함하도록 백엔드 API 수정이 필요할 수 있으나,
+                    // 일단 miningState의 referralCount는 확실히 있음.
+                    // myReferralCode는 User 모델에 있으므로, 별도 조회 혹은 통합 조회가 필요.
+                    // 임시로 localStorage 백업 사용 혹은 API 확장이 이상적.
+                    // 여기서는 API가 확장되었다고 가정하거나, WalletService에서 가져온 로컬 데이터를 1차로 쓰고
+                    // 서버 데이터로 보정하는 방식을 사용.
+
+                    // 1. 로컬에서 코드 가져오기 (지갑 생성 시 저장된 것)
+                    const savedWallet = localStorage.getItem('bw_wallet_data');
+                    if (savedWallet) {
+                        const parsed = JSON.parse(savedWallet);
+                        setMyReferralCode(parsed.myReferralCode || null);
+                    }
+
+                    // 2. 서버에서 통계 가져오기
+                    if (data.miningState) {
+                        const count = data.miningState.referralCount || 0;
+                        setFriendsInvited(count);
+                        setBonusRate(count * 2); // 1명당 2%
+                    }
                 }
-            }
+            }).catch(err => console.error('Failed to load referral stats:', err));
         }
-    }, [isOpen]);
+    }, [isOpen, walletAddress]);
 
     const getTranslation = (key: string) => languageManager.getTranslation(key);
 
@@ -59,48 +78,8 @@ const ReferralModal: React.FC<ReferralModalProps> = ({
         });
     };
 
-    const generateReferralCode = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let result = 'REF';
-        for (let i = 0; i < 10; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
-    };
-
-    const handleIssueCode = () => {
-        // If code already exists, toggle share
-        if (myReferralCode) {
-            setShowSocialShare(!showSocialShare);
-            return;
-        }
-
-        // Generate new code
-        const newCode = generateReferralCode();
-        const savedWallet = localStorage.getItem('bw_wallet_data');
-
-        if (savedWallet) {
-            try {
-                const parsed = JSON.parse(savedWallet);
-                parsed.myReferralCode = newCode;
-                // Initialize stats if missing
-                if (parsed.referralCount === undefined) parsed.referralCount = 0;
-                if (parsed.referralBonusRate === undefined) parsed.referralBonusRate = 0;
-
-                localStorage.setItem('bw_wallet_data', JSON.stringify(parsed));
-
-                setMyReferralCode(newCode);
-                setFriendsInvited(0);
-                setBonusRate(0);
-
-                alert(getTranslation('referral.codeGenerated'));
-            } catch (e) {
-                console.error('Failed to save referral code', e);
-                alert(getTranslation('referral.codeGenerationError'));
-            }
-        } else {
-            alert(getTranslation('secondPassword.addressNotFound')); // Wallet not found message
-        }
+    const handleShareToggle = () => {
+        setShowSocialShare(!showSocialShare);
     };
 
     const handleSocialShare = (platform: string) => {
@@ -141,7 +120,7 @@ const ReferralModal: React.FC<ReferralModalProps> = ({
                 <div className="referral-code-section">
                     <label className="code-label">{getTranslation('referral.modal.myCode')}</label>
                     <div className="code-display">
-                        <span className="code-text">{myReferralCode || '----------------'}</span>
+                        <span className="code-text">{myReferralCode || 'Loading...'}</span>
                         {myReferralCode && (
                             <button
                                 className={`copy-btn ${copySuccess ? 'success' : ''}`}
@@ -153,9 +132,9 @@ const ReferralModal: React.FC<ReferralModalProps> = ({
                     </div>
                 </div>
 
-                {/* 코드 발급 버튼 (코드가 없을 때만 '발급', 있으면 '공유하기'로 변경 가능하지만 디자인 유지 위해 버튼 기능 분기) */}
-                <button className="issue-code-btn" onClick={handleIssueCode}>
-                    {myReferralCode ? '🎁 ' + getTranslation('referral.modal.shareVia') : '🎁 ' + getTranslation('referral.modal.issueCode')}
+                {/* 공유하기 버튼 */}
+                <button className="issue-code-btn" onClick={handleShareToggle}>
+                    {'🎁 ' + getTranslation('referral.modal.shareVia')}
                 </button>
 
                 {/* 소셜 공유 그리드 */}

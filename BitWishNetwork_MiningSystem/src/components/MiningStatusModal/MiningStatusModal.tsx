@@ -3,8 +3,10 @@ import { LanguageManager } from '@/utils/LanguageManager/LanguageManager';
 import { Decimal } from 'decimal.js';
 import { PrecisionCalculator } from '@/utils/PrecisionCalculator/PrecisionCalculator';
 import { RealTimeSyncService } from '@/services/MiningService/RealTimeSyncService';
+import { apiService } from '@/services/ApiService';
 import {
-    NetworkStatus
+    NetworkStatus,
+    RealTimeMiningStatus
 } from '@/types';
 import './MiningStatusModal.css';
 import AttendanceModal from '../AttendanceModal/AttendanceModal';
@@ -53,112 +55,92 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
         referralRewardStorage: new Decimal(0)
     });
 
-    const stopRealTimeSync = () => {
-        realTimeSyncService.stopSync();
-    };
-
-    const startRealTimeSync = () => {
-        realTimeSyncService.startSync(() => { });
-    };
-
+    // 초기 데이터 로드 및 동기화 시작
     useEffect(() => {
-        if (isOpen) {
-            startRealTimeSync();
-
-            // 출석 상태 확인 및 업데이트 로직 (9AM 기준)
-            const updateAttendanceStatus = () => {
-                const now = new Date();
-
-                // 9AM 기준 날짜 계산 (AttendanceModal과 동일 로직 - 독립 구현)
-                const checkInDate = new Date(now);
-                if (checkInDate.getHours() < 9) {
-                    checkInDate.setDate(checkInDate.getDate() - 1);
-                }
-                const todayStr = `${checkInDate.getFullYear()}-${String(checkInDate.getMonth() + 1).padStart(2, '0')}-${String(checkInDate.getDate()).padStart(2, '0')}`;
-
-                // 로컬 스토리지 확인
-                const savedData = localStorage.getItem('bw_attendance_data');
-                let isCheckedToday = false;
-
-                if (savedData) {
-                    const parsedData = JSON.parse(savedData);
-                    isCheckedToday = parsedData.includes(todayStr);
-                }
-
-                // 보너스 적용 여부에 따른 수치 계산
-                const base = new Decimal(0.25);
-                const dailyMax = new Decimal(6.0);
-                const bonusMultiplier = isCheckedToday ? new Decimal(1.05) : new Decimal(1.0);
-
-                setUserStats(prev => {
-                    // 값이 실제 변경되었을 때만 업데이트 (불필요한 렌더링 방지)
-                    if (prev.isAttendanceActive === isCheckedToday) {
-                        return prev;
-                    }
-
-                    return {
-                        ...prev,
-                        baseRate: base.mul(bonusMultiplier),
-                        dailyMaxRate: dailyMax.mul(bonusMultiplier),
-                        attendanceBonusRate: isCheckedToday ? new Decimal(5.0) : new Decimal(0.0),
-                        isAttendanceActive: isCheckedToday
-                    };
-                });
-            };
-
-            // 추천 보너스 데이터 로드 및 계산
-            const loadReferralData = () => {
-                const savedWallet = localStorage.getItem('bw_wallet_data');
-                if (savedWallet) {
-                    try {
-                        const parsed = JSON.parse(savedWallet);
-                        const count = parsed.referralCount || 0;
-                        const rate = new Decimal(count).mul(2.0); // 1명당 2%
-
-                        // Load storage values
-                        // referralReward -> referralBonusStorage
-                        // referralBonus -> referralRewardStorage
-                        const bonusStorage = new Decimal(parsed.referralReward || 0);
-                        const rewardStorage = new Decimal(parsed.referralBonus || 0);
-
-                        setUserStats(prev => ({
-                            ...prev,
-                            referralCount: count,
-                            referralBonusRate: rate,
-                            referralBonusStorage: bonusStorage,
-                            referralRewardStorage: rewardStorage
-                        }));
-                    } catch (e) {
-                        console.error('Failed to load referral data', e);
-                    }
-                }
-            };
-
-            // 초기 실행
-            updateAttendanceStatus();
-            loadReferralData();
-
-            // 1초마다 시간 업데이트 및 9시 리셋 체크
-            const timeInterval = setInterval(() => {
-                setLastUpdate(new Date());
-                updateAttendanceStatus(); // 매 초마다 출석 상태(9시 경계) 체크
-            }, 1000);
-
-            return () => {
-                stopRealTimeSync();
-                clearInterval(timeInterval);
-            };
+        if (!isOpen || !walletAddress) {
+            return;
         }
-        return undefined;
-    }, [isOpen]);
 
+        // 1. 서비스 초기화 (서버 상태 로드)
+        realTimeSyncService.initialize(walletAddress).then(() => {
+            // 초기 상태 반영
+            const status = realTimeSyncService.getCurrentStatus();
+            if (status.currentIssued > 0) {
+                setAccumulatedReward(new Decimal(status.currentIssued));
+            }
+        });
+
+        // 2. 실시간 동기화 시작 (30초 주기)
+        realTimeSyncService.startSync((status: RealTimeMiningStatus) => {
+            setLastUpdate(new Date());
+            setNetworkStatus(status.networkStatus);
+            // 서버에서 동기화된 최신 채굴량 반영
+            setAccumulatedReward(new Decimal(status.currentIssued));
+        });
+
+        // 3. 서버에서 최신 채굴 상태 및 사용자 정보 조회
+        console.log('[DEBUG] Calling getUserStatus with walletAddress:', walletAddress);
+        apiService.getUserStatus(walletAddress).then((data) => {
+            console.log('[DEBUG] getUserStatus response:', data);
+            if (data) {
+                // 마이닝 상태 업데이트
+                if (data.miningState) {
+                    setIsMining(data.miningState.isMining);
+                    if (data.miningState.isMining && data.miningState.miningStartTime) {
+                        const startTime = new Date(data.miningState.miningStartTime).getTime();
+                        const now = Date.now();
+                        const diffSeconds = Math.floor((now - startTime) / 1000);
+                        setMiningTime(diffSeconds > 0 ? diffSeconds : 0);
+                    }
+                    setAccumulatedReward(new Decimal(data.miningState.accumulatedReward || 0));
+                }
+
+                // 추천인 및 보너스 정보 업데이트
+                const referralCount = data.miningState?.referralCount || 0;
+                const referralBonusRate = new Decimal(referralCount).mul(2.0);
+
+                // 출석 보너스 상태 업데이트
+                const isAttendanceActive = data.miningState?.isAttendanceActive || false;
+                const attendanceBonusRate = isAttendanceActive ? new Decimal(5.0) : new Decimal(0.0);
+
+                // 출석 보너스가 활성화되어 있으면 baseRate와 dailyMaxRate 재계산
+                const baseRateValue = new Decimal(0.25);
+                const dailyMaxRateValue = new Decimal(6.0);
+
+                const finalBaseRate = isAttendanceActive
+                    ? baseRateValue.mul(new Decimal(1.05))
+                    : baseRateValue;
+
+                const finalDailyMaxRate = isAttendanceActive
+                    ? dailyMaxRateValue.mul(new Decimal(1.05))
+                    : dailyMaxRateValue;
+
+                setUserStats(prev => ({
+                    ...prev,
+                    baseRate: finalBaseRate,
+                    dailyMaxRate: finalDailyMaxRate,
+                    referralCount: referralCount,
+                    referralBonusRate: referralBonusRate,
+                    isAttendanceActive: isAttendanceActive,
+                    attendanceBonusRate: attendanceBonusRate,
+                    referralBonusStorage: new Decimal(0),
+                    referralRewardStorage: new Decimal(0)
+                }));
+            }
+        }).catch(err => console.error('Failed to load user status:', err));
+
+        return () => {
+            realTimeSyncService.stopSync();
+        };
+    }, [isOpen, walletAddress, realTimeSyncService]);
+
+    // 로컬 타이머 (UI 업데이트용, 1초마다 증가)
     useEffect(() => {
         let interval: NodeJS.Timeout;
         if (isMining) {
             interval = setInterval(() => {
                 setMiningTime(prev => prev + 1);
-                // 현재 적용된 기본 보상률(보너스 포함)을 기준으로 초당 보상 계산
-                // baseRate / 3600
+                // UI상 부드러운 증가를 위해 로컬에서 예상치 더함 (실제 데이터는 30초마다 서버 동기화로 보정됨)
                 setAccumulatedReward(prev => prev.plus(userStats.baseRate.div(3600)));
             }, 1000);
         }
@@ -182,21 +164,25 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
-    const handleStartMining = () => {
-        setIsMining(true);
+    const handleStartMining = async () => {
+        try {
+            const result = await apiService.startMining(walletAddress);
+            if (result && result.success) {
+                setIsMining(true);
+                setMiningTime(0); // 시작 시 0부터 (또는 서버 시간 기준)
+            }
+        } catch (error) {
+            console.error('Start mining failed:', error);
+            alert('Failed to start mining. Please try again.');
+        }
     };
 
-    const handleStopMining = () => {
-        setIsMining(false);
-    };
 
     const handleOpenAttendance = () => {
         setIsAttendanceModalOpen(true);
     };
 
     const handleCheckInSuccess = (bonusRate: number) => {
-        // 출석 성공 시 즉시 상태 업데이트
-        // 50단위 부동소수점 정밀 계산 (decimal.js)
         const base = new Decimal(0.25);
         const dailyMax = new Decimal(6.0);
         const bonusMultiplier = new Decimal(1).plus(new Decimal(bonusRate));
@@ -205,7 +191,7 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
             ...prev,
             baseRate: base.mul(bonusMultiplier),
             dailyMaxRate: dailyMax.mul(bonusMultiplier),
-            attendanceBonusRate: new Decimal(bonusRate * 100), // 0.05 -> 5.0
+            attendanceBonusRate: new Decimal(bonusRate * 100),
             isAttendanceActive: true
         }));
     };
@@ -350,26 +336,25 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
                 </div>
 
                 <div className="footer-buttons">
-                    <button className="footer-btn start" onClick={handleStartMining}>
-                        <span className="btn-icon">⚡</span>
+                    <button
+                        className={`footer-btn start ${isMining ? 'disabled' : ''}`}
+                        onClick={handleStartMining}
+                        disabled={isMining}
+                    >
+                        <span className="button-icon">⚡</span>
                         {getTranslation('buttons.start')}
                     </button>
-                    <button className="footer-btn stop" onClick={handleStopMining}>
-                        <span className="btn-icon">⏹️</span>
-                        {getTranslation('buttons.stop')}
-                    </button>
                     <button className="footer-btn wallet">
-                        <span className="btn-icon">🔑</span>
+                        <span className="button-icon">🔑</span>
                         {getTranslation('buttons.myWallet')}
                     </button>
                     <button className="footer-btn close" onClick={onClose}>
-                        <span className="btn-icon">❌</span>
+                        <span className="button-icon">❌</span>
                         {getTranslation('buttons.close')}
                     </button>
                 </div>
             </div>
 
-            {/* 출석 보너스 모달 */}
             {isAttendanceModalOpen && (
                 <AttendanceModal
                     isOpen={isAttendanceModalOpen}

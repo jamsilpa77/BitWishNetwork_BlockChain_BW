@@ -352,7 +352,7 @@
 /* 하단 버튼 그룹 */
 .footer-buttons {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
 }
 
@@ -373,6 +373,7 @@
 .footer-btn.start {
     background: #9C27B0;
 }
+
 
 .footer-btn.stop {
     background: #F44336;

@@ -21,6 +21,29 @@ const MiningAuthModal: React.FC<MiningAuthModalProps> = ({
 
     useEffect(() => {
         if (isOpen) {
+            // 10분 유예 타임 체크
+            const authData = localStorage.getItem('bw_mining_auth');
+            if (authData) {
+                try {
+                    const { walletAddress, timestamp } = JSON.parse(authData);
+                    const now = Date.now();
+                    const gracePeriod = 10 * 60 * 1000; // 10분
+
+                    if (now - timestamp < gracePeriod) {
+                        // 유효한 인증 정보가 있으면 자동 로그인
+                        onSuccess(walletAddress);
+                        return;
+                    } else {
+                        // 만료된 인증 정보 삭제
+                        localStorage.removeItem('bw_mining_auth');
+                    }
+                } catch {
+                    // 파싱 오류 시 삭제
+                    localStorage.removeItem('bw_mining_auth');
+                }
+            }
+
+            // 유예 타임이 없거나 만료된 경우 입력 필드 초기화
             setAddress('');
             setPassword('');
             setError('');
@@ -39,6 +62,13 @@ const MiningAuthModal: React.FC<MiningAuthModalProps> = ({
         }
 
         if (walletService.verifySecondPassword(address, password)) {
+            // 인증 성공 시 localStorage에 저장 (10분 유예 타임 시작)
+            const authData = {
+                walletAddress: address,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('bw_mining_auth', JSON.stringify(authData));
+
             onSuccess(address);
         } else {
             setError(t('miningAuth.loginFail'));

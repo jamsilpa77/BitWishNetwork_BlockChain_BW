@@ -24,22 +24,22 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { LanguageManager } from '@/utils/LanguageManager/LanguageManager';
+import { LanguageManager } from '../../utils/LanguageManager/LanguageManager';
 import { Decimal } from 'decimal.js';
-import { RealTimeSyncService } from '@/services/MiningService/RealTimeSyncService';
-import { PrecisionCalculator } from '@/utils/PrecisionCalculator/PrecisionCalculator';
+import { RealTimeSyncService } from '../../services/MiningService/RealTimeSyncService';
+import { PrecisionCalculator } from '../../utils/PrecisionCalculator/PrecisionCalculator';
 import {
     RealTimeMiningStatus,
     NetworkStatus,
     Language
-} from '@/types';
-import MiningStatusModal from '@/components/MiningStatusModal/MiningStatusModal';
+} from '../../types';
+import MiningStatusModal from '../MiningStatusModal/MiningStatusModal';
 import CreateWalletModal from '../../components/CreateWalletModal/CreateWalletModal';
 import MyWalletModal from '../../components/MyWalletModal/MyWalletModal';
 import ReferralModal from '../../components/ReferralModal/ReferralModal';
 import WalletAuthModal from '../../components/WalletAuthModal/WalletAuthModal';
-import MiningAuthModal from '@/components/MiningAuthModal/MiningAuthModal';
-import SecondPasswordModal from '@/components/SecondPasswordModal/SecondPasswordModal';
+import MiningAuthModal from '../MiningAuthModal/MiningAuthModal';
+import SecondPasswordModal from '../SecondPasswordModal/SecondPasswordModal';
 import { walletService } from '../../services/WalletService/WalletService';
 import './HomePage.css';
 
@@ -595,6 +595,7 @@ const HomePage: React.FC = () => {
                     isOpen={isReferralModalOpen}
                     onClose={() => setIsReferralModalOpen(false)}
                     currentLanguage={currentLanguage}
+                    walletAddress={authenticatedAddress}
                 />
             )}
         </div>

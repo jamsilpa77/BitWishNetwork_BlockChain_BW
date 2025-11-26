@@ -234,6 +234,15 @@ export class AttendanceBonusService {
    */
   public getAttendanceStatus(): AttendanceStatus {
     try {
+      const today: string = new Date().toISOString().split('T')[0] as string;
+      const existingRecord = this.attendanceRecords.find(record =>
+        record.date === today
+      );
+
+      if (existingRecord && existingRecord.isCompleted) {
+        return 'COMPLETED';
+      }
+
       if (this.isAttendanceAvailable()) {
         return 'AVAILABLE';
       } else {
@@ -318,7 +327,7 @@ export class AttendanceBonusService {
   /**
    * 출석 보너스 적용
    */
-  public applyAttendanceBonus(): { success: boolean; message: string } {
+  public async applyAttendanceBonus(walletAddress?: string): Promise<{ success: boolean; message: string }> {
     try {
       if (!this.isAttendanceAvailable()) {
         return {
@@ -351,6 +360,25 @@ export class AttendanceBonusService {
       this.attendanceRecords.push(newRecord);
       this.saveAttendanceRecords();
       this.calculateBonusRate();
+
+      // 백엔드 API 호출 (walletAddress가 있을 경우)
+      if (walletAddress) {
+        try {
+          const response = await fetch('http://localhost:5001/api/attendance/check', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ walletAddress })
+          });
+
+          const data = await response.json();
+          console.log('백엔드 저장 결과:', data);
+        } catch (apiError) {
+          console.error('백엔드 API 호출 오류:', apiError);
+          // localStorage는 저장되었으므로 계속 진행
+        }
+      }
 
       return {
         success: true,

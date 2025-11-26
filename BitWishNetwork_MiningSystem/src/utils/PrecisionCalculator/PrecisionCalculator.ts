@@ -494,4 +494,12 @@ export class PrecisionCalculator {
     const v = value instanceof Decimal ? value : new Decimal(value);
     return this.formatForDisplay(v);
   }
+  /**
+   * 50자리 정밀도 값을 문자열로 반환 (formatBW)
+   * @param value 50자리 정밀도 값
+   * @returns 50자리 정밀도 문자열
+   */
+  public formatBW(value: Decimal): string {
+    return value.toFixed(this.precision);
+  }
 }

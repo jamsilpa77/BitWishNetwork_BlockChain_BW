@@ -25,113 +25,10 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Switch, Route } from 'react-router-dom';
 import HomePage from './components/HomePage/HomePage';
-import MiningPage from './components/MiningPage/MiningPage';
-import Navigation from './components/Navigation/Navigation';
-import LanguageSelector from './components/Language/LanguageSelector';
-import { Language } from './types';
+import AdminPage from './components/AdminPage/AdminPage';
 import './styles/global.css';
-
-interface AppState {
-  currentPage: string;
-  currentLanguage: Language;
-  isDarkMode: boolean;
-}
-
-interface AppProps { }
-
-// Navigation 컴포넌트 props 인터페이스
-interface NavigationProps {
-  currentPage: string;
-  onPageChange: (page: string) => void;
-  currentLanguage: Language;
-  onLanguageChange: (language: Language) => void;
-  isDarkMode: boolean;
-  onToggleDarkMode: () => void;
-}
-
-// LanguageSelector 컴포넌트 props 인터페이스
-interface LanguageSelectorProps {
-  currentLanguage: Language;
-  onLanguageChange: (language: Language) => void;
-}
-
-// HomePage 컴포넌트 props 인터페이스
-interface HomePageProps {
-  currentLanguage: Language;
-}
-
-// MiningPage 컴포넌트 props 인터페이스
-interface MiningPageProps {
-  currentLanguage: Language;
-}
-
-/**
- * BitWishNetwork 메인 애플리케이션 컴포넌트 - 완벽한 독립성 보장
- * 프론트엔드 5000포트에서 실행
- */
-class BitWishNetworkApp extends React.Component<AppProps, AppState> {
-  constructor(props: AppProps) {
-    super(props);
-    // 절대 준수사항: 전역 변수 사용 금지
-    this.state = {
-      currentPage: 'home',
-      currentLanguage: 'ko' as Language,
-      isDarkMode: false
-    };
-  }
-
-  /**
-   * 페이지 변경
-   */
-  changePage = (page: string) => {
-    this.setState({ currentPage: page });
-  };
-
-  /**
-   * 언어 변경
-   */
-  changeLanguage = (language: Language) => {
-    this.setState({ currentLanguage: language });
-  };
-
-  /**
-   * 다크 모드 토글
-   */
-  toggleDarkMode = () => {
-    this.setState(prevState => ({ isDarkMode: !prevState.isDarkMode }));
-  };
-
-  /**
-   * 현재 페이지 렌더링
-   */
-  renderCurrentPage = () => {
-    const { currentPage, currentLanguage } = this.state;
-
-    switch (currentPage) {
-      // case 'mining':
-      //   return <MiningPage />;
-      case 'home':
-      default:
-        return <HomePage />;
-    }
-  };
-
-  override render() {
-    const { currentPage, currentLanguage, isDarkMode } = this.state;
-
-    return (
-      <div className={`bitwish-app ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
-        <main className="main-content">
-          {this.renderCurrentPage()}
-        </main>
-
-        <LanguageSelector />
-      </div>
-    );
-  }
-}
 
 // React 18 방식으로 렌더링
 const rootElement = document.getElementById('root');
@@ -139,7 +36,10 @@ if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <BrowserRouter>
-      <BitWishNetworkApp />
+      <Switch>
+        <Route exact path="/" component={HomePage} />
+        <Route path="/bitwish/testadmin" component={AdminPage} />
+      </Switch>
     </BrowserRouter>
   );
 } else {

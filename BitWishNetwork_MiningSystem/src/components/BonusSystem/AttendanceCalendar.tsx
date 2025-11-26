@@ -195,9 +195,9 @@ const AttendanceCalendar: React.FC = memo(() => {
   /**
    * 출석 체크
    */
-  const handleAttendanceCheck = (date: Date): void => {
+  const handleAttendanceCheck = async (date: Date): Promise<void> => {
     try {
-      const result: { success: boolean; message: string } = attendanceBonusService.applyAttendanceBonus();
+      const result: { success: boolean; message: string } = await attendanceBonusService.applyAttendanceBonus();
       if (result.success) {
         alert(result.message);
         loadAttendanceRecords();
