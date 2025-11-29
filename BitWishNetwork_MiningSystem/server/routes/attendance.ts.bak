@@ -27,23 +27,9 @@ router.post('/check', async (req, res) => {
             });
         }
 
-        // [Fix] 오전 9시 기준 날짜 계산 (Day Shift Logic)
-        // 00:00 ~ 08:59 사이에 체크인하면 '어제' 날짜로 기록해야 함
-        const now = new Date();
-        const currentHour = now.getHours();
-
-        let recordDate = new Date(now);
-        if (currentHour < 9) {
-            recordDate.setDate(recordDate.getDate() - 1);
-        }
-
-        // [CRITICAL FIX] toISOString()은 UTC로 변환하므로 타임존 문제 발생!
-        // 로컬 날짜를 YYYY-MM-DD 형식으로 직접 포맷팅
-        const year = recordDate.getFullYear();
-        const month = String(recordDate.getMonth() + 1).padStart(2, '0');
-        const day = String(recordDate.getDate()).padStart(2, '0');
-        const todayStr = `${year}-${month}-${day}`; // YYYY-MM-DD (로컬 타임존 기준)
-
+        // 오늘 날짜
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
 
         // BonusRecord 조회 또는 생성
         let bonusRecord = await BonusRecord.findOne({ walletAddress });
@@ -64,18 +50,15 @@ router.post('/check', async (req, res) => {
         );
 
         if (existingAttendance) {
-            // [Fix] 이미 출석했더라도 MiningState가 꺼져있으면 켜준다. (데이터 불일치 방지 및 초기화 후 복구 지원)
+            // [Fix] 이미 출석했더라도 MiningState가 꺼져있으면 켜준다. (데이터 불일치 방지)
             const currentState = await MiningState.findOne({ walletAddress });
             if (currentState && !currentState.isAttendanceActive) {
                 // 보너스 재적용
                 currentState.isAttendanceActive = true;
                 currentState.attendanceDate = new Date();
-
-                // 정밀도 유지를 위한 Decimal 연산
                 const base = new Decimal(currentState.currentBaseRate);
-                const bonus = new Decimal('0.05'); // 5%
+                const bonus = new Decimal('0.05');
                 currentState.currentTotalRate = base.mul(new Decimal(1).plus(bonus)).toString();
-
                 await currentState.save();
 
                 return res.json({

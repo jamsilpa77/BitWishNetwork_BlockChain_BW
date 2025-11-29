@@ -36,31 +36,47 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onCh
     const [attendanceData, setAttendanceData] = useState<string[]>([]);
     const [isCheckedToday, setIsCheckedToday] = useState(false);
 
-    // 초기화 및 데이터 로드 (로컬 스토리지 시뮬레이션)
+    // [Fix] 긴급 조치: 서버 연동을 위한 지갑 주소 상수 정의
+    const WALLET_ADDRESS = 'BW9F5FF090231236037F250A523B4FC320FB44BFA8';
+
+    // 초기화 및 데이터 로드 (서버 API 연동)
     useEffect(() => {
         if (isOpen) {
             const now = new Date();
             setCurrentDate(now);
             setViewDate(now);
 
-            // 로컬 스토리지에서 출석 데이터 로드 (독립성 보장)
-            const savedData = localStorage.getItem('bw_attendance_data');
-            if (savedData) {
-                const parsedData = JSON.parse(savedData);
-                setAttendanceData(parsedData);
-                checkIfCheckedToday(parsedData, now);
-            }
+            // [Fix] 로컬 스토리지 대신 서버 API 호출 (캐시 방지)
+            fetch(`http://localhost:5001/api/admin/attendance/${WALLET_ADDRESS}?_t=${Date.now()}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        // 서버 데이터를 'YYYY-MM-DD' 문자열 배열로 변환
+                        const serverRecords = data.data.records.map((r: any) => {
+                            // "2025. 11. 28. ..." 형식을 파싱
+                            const parts = r.fullDate.split('. ');
+                            return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                        });
+                        setAttendanceData(serverRecords);
+
+                        // 오늘 출석 여부 확인
+                        if (data.data.isActive) {
+                            setIsCheckedToday(true);
+                        } else {
+                            setIsCheckedToday(false);
+                        }
+                    }
+                })
+                .catch(err => console.error('출석 데이터 로드 실패:', err));
         }
     }, [isOpen]);
 
-    // 오늘 출석 여부 확인 (9AM 기준)
+    // 오늘 출석 여부 확인 (서버 데이터 기반이므로 로컬 로직 불필요)
     const checkIfCheckedToday = (data: string[], now: Date) => {
-        const todayStr = getCheckInDateString(now);
-        setIsCheckedToday(data.includes(todayStr));
+        // Server response handles this
     };
 
     // 출석 기준 날짜 문자열 생성 (오전 9시 기준)
-    // 오전 9시 이전이면 전날 날짜로 처리, 9시 이후면 오늘 날짜로 처리
     const getCheckInDateString = (date: Date): string => {
         const checkInDate = new Date(date);
         if (checkInDate.getHours() < 9) {
@@ -78,16 +94,14 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onCh
         const lastDay = new Date(year, month + 1, 0);
 
         const daysInMonth = lastDay.getDate();
-        const startDayOfWeek = firstDay.getDay(); // 0: 일요일, 1: 월요일 ...
+        const startDayOfWeek = firstDay.getDay();
 
         const calendarDays = [];
 
-        // 빈 칸 채우기
         for (let i = 0; i < startDayOfWeek; i++) {
             calendarDays.push(null);
         }
 
-        // 날짜 채우기
         for (let i = 1; i <= daysInMonth; i++) {
             calendarDays.push(new Date(year, month, i));
         }
@@ -102,7 +116,6 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onCh
         const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         const todayStr = getCheckInDateString(currentDate);
 
-        // 비교를 위한 타임스탬프 (시간 제거)
         const checkDate = new Date(dateStr).getTime();
         const currentCheckDate = new Date(todayStr).getTime();
 
@@ -121,25 +134,37 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onCh
         return 'future'; // 미래
     };
 
-    // 출석 체크 핸들러
-    const handleDayClick = (date: Date | null) => {
+    // 출석 체크 핸들러 (서버 연동)
+    const handleDayClick = async (date: Date | null) => {
         if (!date) return;
 
         const status = getDateStatus(date);
         if (status === 'active') {
-            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            try {
+                // [Fix] 서버 API 호출로 출석 체크
+                const response = await fetch('http://localhost:5001/api/attendance/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletAddress: WALLET_ADDRESS })
+                });
+                const result = await response.json();
 
-            const newData = [...attendanceData, dateStr];
-            setAttendanceData(newData);
-            setIsCheckedToday(true);
+                if (result.success) {
+                    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    const newData = [...attendanceData, dateStr];
+                    setAttendanceData(newData);
+                    setIsCheckedToday(true);
 
-            // 로컬 스토리지 저장
-            localStorage.setItem('bw_attendance_data', JSON.stringify(newData));
-
-            // 부모 컴포넌트에 알림 (보너스율 5% = 0.05)
-            onCheckIn(0.05);
-
-            alert(getTranslation('attendance.checked'));
+                    // 부모에게 알림
+                    onCheckIn(0.05);
+                    alert(result.message || getTranslation('attendance.checked'));
+                } else {
+                    alert(result.message);
+                }
+            } catch (error) {
+                console.error('출석 체크 실패:', error);
+                alert('서버 통신 오류가 발생했습니다.');
+            }
         }
     };
 

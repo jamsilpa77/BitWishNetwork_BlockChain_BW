@@ -25,6 +25,8 @@ const AdminPage: React.FC = () => {
     const [attendanceData, setAttendanceData] = useState<any>(null);
     const [attendanceLoading, setAttendanceLoading] = useState<boolean>(false);
     const [attendanceError, setAttendanceError] = useState<string>('');
+    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
 
     // 마이닝 데이터 검색
     const handleSearchMining = async () => {
@@ -110,7 +112,7 @@ const AdminPage: React.FC = () => {
         setAttendanceError('');
 
         try {
-            const response = await fetch(`http://localhost:5001/api/admin/attendance/${attendanceSearchAddress}`);
+            const response = await fetch(`http://localhost:5001/api/admin/attendance/${attendanceSearchAddress}?year=${selectedYear}&month=${selectedMonth}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -132,6 +134,8 @@ const AdminPage: React.FC = () => {
             setAttendanceLoading(false);
         }
     };
+
+
 
     return (
         <div className="admin-page">
@@ -328,12 +332,32 @@ const AdminPage: React.FC = () => {
                                     onChange={(e) => setAttendanceSearchAddress(e.target.value)}
                                     disabled={attendanceLoading}
                                 />
+                                <div className="date-selectors">
+                                    <select
+                                        value={selectedYear}
+                                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                                        className="admin-select"
+                                    >
+                                        <option value={2024}>2024년</option>
+                                        <option value={2025}>2025년</option>
+                                        <option value={2026}>2026년</option>
+                                    </select>
+                                    <select
+                                        value={selectedMonth}
+                                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                                        className="admin-select"
+                                    >
+                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                            <option key={m} value={m}>{m}월</option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <button
                                     className="admin-button primary"
                                     onClick={handleSearchAttendance}
                                     disabled={attendanceLoading}
                                 >
-                                    {attendanceLoading ? '검색 중...' : '검색'}
+                                    {attendanceLoading ? '검색 중...' : '월별 검색'}
                                 </button>
                             </div>
 
@@ -343,10 +367,10 @@ const AdminPage: React.FC = () => {
 
                             {attendanceData && (
                                 <div className="attendance-result-box">
-                                    <h3>✅ 출석 현황</h3>
+                                    <h3>✅ {selectedMonth}월 출석 현황</h3>
                                     <div className="attendance-summary">
                                         <div className="summary-item">
-                                            <span className="summary-label">출석 보너스 상태:</span>
+                                            <span className="summary-label">오늘 출석 상태:</span>
                                             <span className={`summary-value ${attendanceData.isActive ? 'active' : 'inactive'}`}>
                                                 {attendanceData.isActive ? '🟢 ON' : '🔴 OFF'}
                                             </span>
@@ -355,38 +379,42 @@ const AdminPage: React.FC = () => {
 
                                     {attendanceData.records && attendanceData.records.length > 0 ? (
                                         <div className="attendance-table-container">
-                                            <h4>출석 이력 (최근 30일)</h4>
+                                            <h4>{selectedMonth}월 출석 이력</h4>
                                             <table className="attendance-table">
                                                 <thead>
                                                     <tr>
-                                                        <th>년</th>
-                                                        <th>월</th>
-                                                        <th>일</th>
+                                                        <th>일시 (시작 ~ 종료)</th>
                                                         <th>5% 채굴 BW 수량</th>
-                                                        <th>ON/OFF 여부</th>
+                                                        <th>상태</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {attendanceData.records.map((record: any, index: number) => (
                                                         <tr key={index}>
-                                                            <td>{record.year}</td>
-                                                            <td>{record.month}</td>
-                                                            <td>{record.day}</td>
-                                                            <td>{record.bonusAmount || '-'} BW</td>
+                                                            <td className="date-cell">{record.fullDate}</td>
+                                                            <td>{record.bonusAmount} BW</td>
                                                             <td>
                                                                 <span className={record.isActive ? 'status-on' : 'status-off'}>
-                                                                    {record.isActive ? '✅ ON' : '❌ OFF'}
+                                                                    {record.isActive ? '✅ 완료' : '❌ 미완료'}
                                                                 </span>
                                                             </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
+                                                <tfoot>
+                                                    <tr className="total-row">
+                                                        <td><strong>{selectedMonth}월 총 합산 금액</strong></td>
+                                                        <td colSpan={2} className="total-amount">
+                                                            <strong>{attendanceData.totalBonus} BW</strong>
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
                                             </table>
                                         </div>
                                     ) : (
                                         <div className="no-data-message">
                                             <p className="no-data-icon">📭</p>
-                                            <p className="no-data-text">출석 기록이 없습니다</p>
+                                            <p className="no-data-text">{selectedMonth}월 출석 기록이 없습니다</p>
                                         </div>
                                     )}
                                 </div>

@@ -123,6 +123,31 @@ export class MiningController {
             console.log('[DEBUG SERVER] Wallet:', walletAddress);
             console.log('[DEBUG SERVER] MiningState found:', !!miningState);
             if (miningState) {
+                // [Auto-Expire Check] 출석 보너스 유효기간 검사 (매일 오전 9시 기준)
+                const now = new Date();
+                const cutoffTime = new Date();
+                cutoffTime.setHours(9, 0, 0, 0);
+
+                // 현재 시간이 9시 이전이면, 기준은 어제 9시 (아직 오늘 9시가 안 됐으므로)
+                if (now.getHours() < 9) {
+                    cutoffTime.setDate(cutoffTime.getDate() - 1);
+                }
+
+                // 마지막 출석 시간이 기준 시간보다 이전이면 만료 처리
+                if (miningState.isAttendanceActive && miningState.attendanceDate) {
+                    const lastAttendance = new Date(miningState.attendanceDate);
+                    if (lastAttendance < cutoffTime) {
+                        console.log('[AUTO-EXPIRE] Attendance bonus expired for:', walletAddress);
+                        miningState.isAttendanceActive = false;
+                        miningState.currentTotalRate = miningState.currentBaseRate; // 기본율로 복귀
+                        await miningState.save();
+                    }
+                }
+
+                console.log('---------------------------------------------------');
+                console.log('[DEBUG SERVER] getUserStatus Called');
+                console.log('[DEBUG SERVER] Wallet:', walletAddress);
+                console.log('[DEBUG SERVER] MiningState found:', !!miningState);
                 console.log('[DEBUG SERVER] isAttendanceActive:', miningState.isAttendanceActive);
                 console.log('[DEBUG SERVER] currentTotalRate:', miningState.currentTotalRate);
             }

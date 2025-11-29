@@ -355,15 +355,17 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
                 </div>
             </div>
 
-            {isAttendanceModalOpen && (
-                <AttendanceModal
-                    isOpen={isAttendanceModalOpen}
-                    onClose={() => setIsAttendanceModalOpen(false)}
-                    onCheckIn={handleCheckInSuccess}
-                    currentLanguage={currentLanguage}
-                />
-            )}
-        </div>
+            {
+                isAttendanceModalOpen && (
+                    <AttendanceModal
+                        isOpen={isAttendanceModalOpen}
+                        onClose={() => setIsAttendanceModalOpen(false)}
+                        onCheckIn={handleCheckInSuccess}
+                        currentLanguage={currentLanguage}
+                    />
+                )
+            }
+        </div >
     );
 };
 

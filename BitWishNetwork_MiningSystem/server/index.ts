@@ -34,6 +34,7 @@ mongoose.connect(MONGODB_URI)
         // Start Server
         app.listen(PORT, () => {
             console.log(`🚀 Server is running on port ${PORT}`);
+            console.log(`🔄 Server restarted at ${new Date().toLocaleString()}`);
         });
     })
     .catch((err) => {

@@ -62,7 +62,8 @@ const BonusRecordSchema: Schema = new Schema({
     attendanceHistory: [{
         date: { type: String, required: true }, // YYYY-MM-DD
         checkInTime: { type: Date, default: Date.now },
-        bonusRate: { type: String, default: '0.05000000000000000000000000000000000000000000000000' }
+        bonusRate: { type: String, default: '0.05000000000000000000000000000000000000000000000000' },
+        fixedBonusAmount: { type: String, required: false } // 과거 데이터 고정값 저장용
     }]
 }, {
     timestamps: true

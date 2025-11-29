@@ -56,6 +56,9 @@ const AttendanceCalendar: React.FC = memo(() => {
    * 컴포넌트 마운트 시 초기화
    */
   useEffect(() => {
+    // [Fix] 브라우저 캐시 강제 삭제 (유령 데이터 박멸)
+    localStorage.removeItem('bw-attendance-records');
+
     initializeAttendanceCalendar();
     startRealTimeSync();
 
@@ -99,6 +102,7 @@ const AttendanceCalendar: React.FC = memo(() => {
       const interval = setInterval(() => {
         checkAttendanceStatus();
         updateBonusRate();
+        loadAttendanceRecords(); // [Fix] 1초마다 서버 데이터 동기화 (초기화 즉시 반영)
       }, 1000); // 1초마다 실시간 업데이트
 
       return () => clearInterval(interval);
@@ -119,15 +123,33 @@ const AttendanceCalendar: React.FC = memo(() => {
     }
   };
 
+  // [Fix] 긴급 조치: 서버 연동을 위한 지갑 주소 상수 정의
+  const WALLET_ADDRESS = 'BW9F5FF090231236037F250A523B4FC320FB44BFA8';
+
   /**
-   * 출석 기록 로드 - useCallback 최적화
+   * 출석 기록 로드 - 서버 API 연동
    */
-  const loadAttendanceRecords = useCallback((): void => {
+  const loadAttendanceRecords = useCallback(async (): Promise<void> => {
     try {
-      const savedRecords = localStorage.getItem('bw-attendance-records');
-      if (savedRecords) {
-        const records = JSON.parse(savedRecords);
-        setAttendanceRecords(records);
+      // [Fix] LocalStorage 대신 서버 API 호출 (캐시 방지용 타임스탬프 추가)
+      const response = await fetch(`http://localhost:5001/api/admin/attendance/${WALLET_ADDRESS}?_t=${Date.now()}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        // 서버 데이터를 컴포넌트 상태 형식으로 변환
+        const serverRecords = data.data.records.map((record: any) => ({
+          date: new Date(record.fullDate.split('. ').slice(0, 3).join('-')), // 날짜 파싱
+          status: 'COMPLETED',
+          bonusRate: 0.05
+        }));
+
+        setAttendanceRecords(serverRecords);
+
+        // 오늘 출석 여부에 따라 상태 업데이트
+        if (data.data.isActive) {
+          setAttendanceStatus('COMPLETED');
+          setBonusRate(0.05);
+        }
       }
     } catch (error) {
       console.error('출석 기록 로드 오류:', error);
@@ -135,15 +157,10 @@ const AttendanceCalendar: React.FC = memo(() => {
   }, []);
 
   /**
-   * 출석 기록 저장 - useCallback 최적화
+   * 출석 기록 저장 - 서버 API가 처리하므로 클라이언트 저장은 불필요
    */
   const saveAttendanceRecords = useCallback((records: AttendanceRecord[]): void => {
-    try {
-      localStorage.setItem('bw-attendance-records', JSON.stringify(records));
-      setAttendanceRecords(records);
-    } catch (error) {
-      console.error('출석 기록 저장 오류:', error);
-    }
+    // 서버가 SSOT(Single Source of Truth)이므로 클라이언트 저장은 하지 않음
   }, []);
 
   /**
