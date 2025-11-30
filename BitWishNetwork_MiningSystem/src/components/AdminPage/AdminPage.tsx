@@ -394,9 +394,13 @@ const AdminPage: React.FC = () => {
                                                             <td className="date-cell">{record.fullDate}</td>
                                                             <td>{record.bonusAmount} BW</td>
                                                             <td>
-                                                                <span className={record.isActive ? 'status-on' : 'status-off'}>
-                                                                    {record.isActive ? '✅ 완료' : '❌ 미완료'}
-                                                                </span>
+                                                                {record.status === 'RUNNING' ? (
+                                                                    <span className="status-running">🔥 진행 중</span>
+                                                                ) : (
+                                                                    <span className={record.isActive ? 'status-on' : 'status-off'}>
+                                                                        {record.isActive ? '✅ 완료' : '❌ 미완료'}
+                                                                    </span>
+                                                                )}
                                                             </td>
                                                         </tr>
                                                     ))}

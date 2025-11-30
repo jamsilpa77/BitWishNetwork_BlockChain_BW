@@ -177,43 +177,55 @@ router.get('/attendance/:walletAddress', async (req, res) => {
             let checkInTime = record.checkInTime ? new Date(record.checkInTime) : null;
             let recordDateStr = record.date; // "2025-11-28"
 
+            // YYYY-MM-DD 파싱 (공통 사용)
+            const [year, month, day] = recordDateStr.split('-').map(Number);
+
             // checkInTime이 없으면 date 문자열로 추정 (09:00:00 KST)
             if (!checkInTime) {
-                // YYYY-MM-DD를 로컬 타임존으로 파싱
-                const [year, month, day] = recordDateStr.split('-').map(Number);
                 checkInTime = new Date(year, month - 1, day, 9, 0, 0, 0);
             }
 
-            // 종료 시간 계산 (다음날 오전 08:59:59 KST)
-            // recordDateStr을 로컬 타임존으로 파싱
-            const [year, month, day] = recordDateStr.split('-').map(Number);
+            // 종료 시간 계산 (다음날 08:59:59)
             const endTime = new Date(year, month - 1, day + 1, 8, 59, 59, 999);
+            const now = new Date();
 
-            // 포맷팅: YYYY.MM.DD HH:mm:ss 시작 ~ YYYY.MM.DD HH:mm:ss 종료
-            const startTimeStr = checkInTime.toLocaleString('ko-KR', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-            });
-            const endTimeStr = endTime.toLocaleString('ko-KR', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-            });
+            let fullDateRange = '';
+            let status = 'COMPLETED'; // 기본값: 완료
 
-            const fullDateRange = `${startTimeStr} 시작 ~ ${endTimeStr} 종료`;
+            // 현재 시각이 종료 시각 이전이고, 출석이 활성화되어 있고, 마이닝 중이면 RUNNING
+            if (now < endTime && isActive && miningState && miningState.isMining) {
+                // 진행 중인 경우
+                status = 'RUNNING';
+                const startTimeStr = checkInTime.toLocaleString('ko-KR', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                });
+                fullDateRange = `${startTimeStr} 시작 ~ 현재 마이닝 진행 중`;
+            } else {
+                // 완료된 경우
+                const startTimeStr = checkInTime.toLocaleString('ko-KR', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                });
+                const endTimeStr = endTime.toLocaleString('ko-KR', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                });
+                fullDateRange = `${startTimeStr} 시작 ~ ${endTimeStr} 종료`;
+            }
 
             let finalAmount = '0.00000000';
 
             if (record.fixedBonusAmount) {
                 // 확정된 보너스 금액이 있으면 사용
                 finalAmount = record.fixedBonusAmount;
-            } else if (record.date === todayStr && isActive && miningState && miningState.isMining) {
+            } else if (status === 'RUNNING') {
                 // [오늘] 진행 중인 경우: 실시간 누적 보상의 5% 지분 계산
                 // 공식: 현재 누적 보상 * (0.05 / 1.05)
                 finalAmount = currentReward.mul(0.05).div(1.05).toFixed(8);
             } else {
                 // [과거] 확정 금액이 누락된 경우: 시간 비례 추정 계산
-                // 총 시간(초) = (종료 시간 - 체크인 시간) / 1000
-                // 시간당 보너스 = 0.25 * 0.05 = 0.0125 BW
+                const endTime = new Date(year, month - 1, day + 1, 8, 59, 59, 999);
                 const durationMs = endTime.getTime() - checkInTime.getTime();
                 const durationHours = durationMs / (1000 * 60 * 60);
 
@@ -229,7 +241,8 @@ router.get('/attendance/:walletAddress', async (req, res) => {
             return {
                 fullDate: fullDateRange,
                 bonusAmount: finalAmount,
-                isActive: true
+                isActive: true,
+                status: status // 상태 필드 추가
             };
         });
 
@@ -251,6 +264,3 @@ router.get('/attendance/:walletAddress', async (req, res) => {
 });
 
 export default router;
-
-// Server restarted at 2025-11-29 14:30
-

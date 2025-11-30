@@ -408,25 +408,6 @@
     border-radius: 8px;
     font-size: 1rem;
     background: white;
-    cursor: pointer;
-    transition: border-color 0.3s;
-}
-
-.admin-select:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
-/* 테이블 합계 행 스타일 */
-.total-row {
-    background-color: #f0f2ff;
-    font-weight: bold;
-    border-top: 2px solid #667eea;
-}
-
-.total-row td {
-    padding: 15px 12px;
-    color: #333;
 }
 
 .total-amount {

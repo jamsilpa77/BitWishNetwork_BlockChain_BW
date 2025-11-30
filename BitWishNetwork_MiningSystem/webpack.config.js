@@ -98,7 +98,8 @@ module.exports = (env, argv) => {
     ],
     devServer: {
       port: 5000,
-      host: 'localhost',
+      host: '0.0.0.0',
+      allowedHosts: 'all',
       hot: true,
       open: true,
       historyApiFallback: true,
