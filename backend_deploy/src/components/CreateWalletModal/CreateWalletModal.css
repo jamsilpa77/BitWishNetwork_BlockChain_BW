@@ -1,0 +1,383 @@
+/**
+ * 지갑 만들기 모달 스타일
+ */
+
+/* 오버레이 */
+.create-wallet-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    /* 마이닝 모달보다 위에 */
+    backdrop-filter: blur(2px);
+}
+
+/* 모달 박스 */
+.create-wallet-modal {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    width: 550px;
+    max-width: 95%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    font-family: 'Noto Sans KR', sans-serif;
+    position: relative;
+    transition: width 0.3s ease;
+}
+
+/* 헤더 */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 30px;
+}
+
+.header-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.money-bag-icon {
+    font-size: 1.5rem;
+}
+
+.modal-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #333;
+    margin: 0;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+
+.close-button:hover {
+    color: #333;
+}
+
+/* 바디 */
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    /* 툴팁 위치 기준 */
+}
+
+.body-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin-bottom: 10px;
+}
+
+/* 추천인 가이드 버튼 및 툴팁 컨테이너 */
+.referral-guide-container {
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 10;
+}
+
+.referral-guide-btn {
+    background: #F8F9FA;
+    border: 1px solid #DEE2E6;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    color: #495057;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.referral-guide-btn:hover {
+    background: #E9ECEF;
+}
+
+/* 툴팁 - 흰색 배경 투명도 30% (opacity 0.7) */
+.referral-guide-tooltip {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 320px;
+    margin-top: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.7);
+    /* 투명도 30% 적용 */
+    border: 1px solid #DEE2E6;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    font-size: 0.85rem;
+    color: #333;
+    line-height: 1.5;
+    word-break: keep-all;
+    backdrop-filter: blur(5px);
+    /* 배경 흐림 효과 추가로 가독성 보완 */
+    z-index: 20;
+}
+
+.body-description {
+    color: #6c757d;
+    margin-bottom: 40px;
+    font-size: 1rem;
+}
+
+/* 입력 섹션 */
+.input-section {
+    width: 100%;
+    max-width: 350px;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.input-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.referral-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #4285F4;
+    /* 파란색 테두리 */
+    border-radius: 8px;
+    font-size: 1rem;
+    text-align: center;
+    outline: none;
+}
+
+.referral-input::placeholder {
+    color: #adb5bd;
+}
+
+/* 지갑 만들기 시작 버튼 (그라데이션) */
+.create-start-btn {
+    background: linear-gradient(135deg, #2962FF 0%, #AA00FF 100%);
+    /* 파랑-보라 그라데이션 */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 15px 40px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 6px rgba(41, 98, 255, 0.3);
+    transition: transform 0.1s;
+}
+
+.create-start-btn:hover {
+    opacity: 0.95;
+}
+
+.create-start-btn:active {
+    transform: scale(0.98);
+}
+
+.btn-icon {
+    font-size: 1.2rem;
+}
+
+/* --- 시드문구 확인 단계 스타일 --- */
+
+/* 모달 너비 확장 */
+.create-wallet-modal.wide {
+    width: 600px;
+}
+
+/* 헤더 변형 */
+.blue-wallet-icon {
+    font-size: 2rem;
+    background: #448AFF;
+    color: white;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.header-text-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.header-subtitle {
+    font-size: 0.8rem;
+    color: #757575;
+    font-weight: 500;
+}
+
+/* 시드 디스플레이 컨테이너 */
+.seed-display-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.green-key-icon {
+    font-size: 3rem;
+    color: #00C853;
+    /* 초록색 */
+    margin-bottom: 10px;
+}
+
+.body-description.small {
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+/* 시드 그리드 */
+.seed-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    background: #F5F5F5;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.seed-item {
+    background: white;
+    border: 1px solid #E0E0E0;
+    border-radius: 5px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+}
+
+.seed-number {
+    color: #9E9E9E;
+    font-size: 0.8rem;
+    min-width: 15px;
+}
+
+.seed-word {
+    color: #333;
+    font-weight: 600;
+}
+
+/* 하단 액션 버튼 그룹 */
+.seed-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.copy-btn {
+    background: #448AFF;
+    /* 파란색 */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.copy-btn:hover {
+    background: #2979FF;
+}
+
+.next-step-btn {
+    background: linear-gradient(90deg, #00C853 0%, #2962FF 100%);
+    /* 초록-파랑 그라데이션 */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.next-step-btn:hover {
+    opacity: 0.9;
+}
+
+/* 검증 단계 스타일 */
+.verification-container {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.verification-input-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.verification-label {
+    display: block;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.verification-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #CFD8DC;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.verification-input:focus {
+    border-color: #448AFF;
+}
+
+.verification-input::placeholder {
+    color: #B0BEC5;
+}
+
+.complete-btn {
+    background: linear-gradient(90deg, #00C853 0%, #2962FF 100%);
+    /* 초록-파랑 그라데이션 */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 15px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    width: 100%;
+}
+
+.complete-btn:hover {
+    opacity: 0.9;
+}

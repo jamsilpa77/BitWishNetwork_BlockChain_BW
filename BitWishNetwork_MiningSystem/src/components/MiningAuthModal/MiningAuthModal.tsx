@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { walletService } from '../../services/WalletService/WalletService';
+import { walletService } from '../../services/BlockchainService/WalletService';
 import { LanguageManager } from '../../utils/LanguageManager/LanguageManager';
 import './MiningAuthModal.css';
 
@@ -54,14 +54,36 @@ const MiningAuthModal: React.FC<MiningAuthModalProps> = ({
 
     const t = (key: string) => languageManager.getTranslation(key, currentLanguage);
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
         setError('');
+
+        if (!address.trim()) {
+            setError(t('miningAuth.addressPlaceholder'));
+            return;
+        }
+
         if (!password) {
             setError(t('miningAuth.loginFail'));
             return;
         }
 
-        if (walletService.verifySecondPassword(address, password)) {
+        // [수정] 0. 기기 점유 지갑 확인 로직 제거 (관리자 지시사항: 30번 보고서 준수)
+        // 어떤 지갑 주소라도 2차 비밀번호만 맞으면 마이닝 페이지 진입 허용
+
+        // 1. 2차 비밀번호 존재 여부 확인 (신규/기존 미설정 유저 자동 감지)
+        const hasPassword = await walletService.hasSecondPassword(address);
+
+        if (!hasPassword) {
+            // 비밀번호가 없으면 설정 유도
+            if (window.confirm(t('miningAuth.noPasswordConfirm') || '2차 비밀번호가 설정되지 않았습니다.\n지금 설정하시겠습니까?')) {
+                onOpenSecondPassword();
+            }
+            return;
+        }
+
+        const isValid = await walletService.verifySecondPassword(address, password);
+
+        if (isValid) {
             // 인증 성공 시 localStorage에 저장 (10분 유예 타임 시작)
             const authData = {
                 walletAddress: address,

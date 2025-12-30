@@ -1,0 +1,139 @@
+.wallet-auth-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.wallet-auth-modal-content {
+    background: linear-gradient(145deg, #1a1f2c, #2d3748);
+    border-radius: 20px;
+    padding: 30px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.wallet-auth-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+}
+
+.wallet-auth-modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #63b3ed;
+    font-weight: 700;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: #a0aec0;
+    font-size: 2rem;
+    cursor: pointer;
+    transition: color 0.2s;
+    line-height: 1;
+}
+
+.close-button:hover {
+    color: #ffffff;
+}
+
+.wallet-auth-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.auth-description {
+    color: #cbd5e0;
+    font-size: 1rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-textarea {
+    width: 100%;
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 1rem;
+    resize: none;
+    transition: border-color 0.2s;
+}
+
+.auth-textarea:focus {
+    outline: none;
+    border-color: #63b3ed;
+    box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.2);
+}
+
+.error-message {
+    color: #fc8181;
+    font-size: 0.9rem;
+    text-align: center;
+    margin: 0;
+}
+
+.button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.cancel-button,
+.confirm-button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, background-color 0.2s;
+}
+
+.cancel-button {
+    background-color: #4a5568;
+    color: #ffffff;
+}
+
+.cancel-button:hover {
+    background-color: #2d3748;
+}
+
+.confirm-button {
+    background: linear-gradient(90deg, #4299e1, #667eea);
+    color: #ffffff;
+}
+
+.confirm-button:hover {
+    background: linear-gradient(90deg, #3182ce, #5a67d8);
+    transform: translateY(-1px);
+}
+
+.confirm-button:active {
+    transform: translateY(0);
+}

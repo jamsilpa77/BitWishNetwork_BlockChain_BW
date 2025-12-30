@@ -1,0 +1,12 @@
+[
+  {
+    "code": "REF9F5FF0909DC5",
+    "owner": "BW9F5FF090231236037F250A523B4FC320FB44BFA8",
+    "referees": [
+      "TEST_USER_1",
+      "TEST_USER_2",
+      "TEST_USER_3"
+    ],
+    "bonusRate": 0.06
+  }
+]

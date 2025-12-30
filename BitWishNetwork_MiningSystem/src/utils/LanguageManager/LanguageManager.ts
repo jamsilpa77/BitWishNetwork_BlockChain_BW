@@ -149,7 +149,7 @@ export class LanguageManager {
           referral: {
             title: '추천 보너스',
             storage: '추천보상 보관함',
-            bonusStorage: '추천보너스 보상 보관함',
+            bonusStorage: '추천보너스 보관함',
             note: '📌 추천인이 KYC통과하면 사용 가능 금액으로 15일 후 마이그레이션 됩니다.',
             myCode: '추천인 코드:'
           },
@@ -170,7 +170,10 @@ export class LanguageManager {
         desc: '지갑 생성 시 백업한 24단어 시드 구문을 입력해주세요.',
         placeholder: '여기에 시드 구문을 입력하세요...',
         verify: '지갑 열기',
-        error: '시드 구문이 올바르지 않습니다.'
+        error: '시드 구문이 올바르지 않습니다.',
+        securityCheck: '지갑 보안 확인',
+        passwordDesc: '지갑 비밀번호를 입력하여 본인 인증을 완료해주세요.',
+        confirm: '확인'
       },
       miningAuth: {
         title: 'BitWish 지갑 인증',
@@ -184,11 +187,13 @@ export class LanguageManager {
         setSecondPassword: '2차 비밀번호 설정',
         loginBtn: 'BitWish 지갑 인증',
         loginSuccess: '인증되었습니다.',
-        loginFail: '지갑 주소 또는 비밀번호가 일치하지 않습니다.'
+        loginFail: '지갑 주소 또는 비밀번호가 일치하지 않습니다.',
+        noPasswordConfirm: '2차 비밀번호가 설정되지 않았습니다.\n지금 설정하시겠습니까?'
       },
       secondPassword: {
         title: 'BitWish 2차 비밀번호 설정',
         desc: 'BitWish 지갑 주소와 강력한 비밀번호를 설정하여 보안을 강화하세요.',
+        placeholder: '비밀번호를 입력하세요',
         newPasswordPlaceholder: '새로운 비밀번호를 입력하세요',
         confirmPasswordLabel: '비밀번호 확인',
         confirmPasswordPlaceholder: '비밀번호를 다시 입력하세요',
@@ -407,7 +412,8 @@ export class LanguageManager {
         setSecondPassword: 'Set 2nd Password',
         loginBtn: 'BitWish Wallet Auth',
         loginSuccess: 'Authenticated successfully.',
-        loginFail: 'Wallet address or password does not match.'
+        loginFail: 'Wallet address or password does not match.',
+        noPasswordConfirm: '2nd password is not set.\nWould you like to set it now?'
       },
       secondPassword: {
         title: 'Set BitWish 2nd Password',

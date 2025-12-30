@@ -17,7 +17,7 @@
  * ✅ 자체 보안 검증만 사용
  * ✅ 50단위 부동소수점 정밀 계산형식으로 구현 하지만 UI 홈페이지 이미지상 소수즘 8자리만 표기한다. 
  * ✅ BitWish Network 전용 시스템만 사용
- * ✅ 모든 텍스트는 한국어, 영어, 일어, 중국어포함 동남아권 언어 변경 되도록 모든 기능에 완벽하게 구현한다. 
+ * ✅ 모든 텍스트는 한국어, 영어, 일어, 중국어포함 언어 변경 되도록 모든 기능에 완벽하게 구현한다. 
  *        단 절대 복잡하게 파일들을 만들지 않도록한다. 
  * ✅ 마이닝 페이지는 완벽한 독립성 보장과 완벽한 데이터베이스 MongDB 하이브리드 완벽 저장소 구현한다. 
  * ✅ 유저는 1명이든 천만명이든 개인 단독 데이터베이스 MongDB 하이브리드 완벽 저장소를 구현한다.
@@ -126,15 +126,15 @@ export class NetworkStatusService {
   private async checkNetworkStatus(): Promise<void> {
     try {
       const startTime = Date.now();
-      
+
       // 실제 구현에서는 네트워크 상태 API 호출
       const response = await fetch(`${this.networkUrl}/api/network/status`, {
         method: 'GET'
       });
-      
+
       const endTime = Date.now();
       const latency = endTime - startTime;
-      
+
       if (response.ok) {
         this.updateConnectionQuality(latency);
         this.lastStatusCheck = new Date();
@@ -179,12 +179,12 @@ export class NetworkStatusService {
   }> {
     try {
       const startTime = Date.now();
-      
+
       // 실제 구현에서는 네트워크 상태 API 호출
       const response = await fetch(`${this.networkUrl}/api/network/status`);
       const endTime = Date.now();
       const latency = endTime - startTime;
-      
+
       const isConnected = response.ok;
       const uptime = this.calculateUptime();
       const errorCount = this.calculateErrorCount();
@@ -231,7 +231,7 @@ export class NetworkStatusService {
       const packetLoss = await this.measurePacketLoss();
       const bandwidth = await this.measureBandwidth();
       const jitter = await this.measureJitter();
-      
+
       const score = this.calculateQualityScore(latency, packetLoss, bandwidth, jitter);
 
       const quality = {
@@ -313,7 +313,7 @@ export class NetworkStatusService {
       }
 
       const alertId = `network-alert-${threshold}-${Date.now()}`;
-      
+
       // 실제 구현에서는 경고 시스템에 등록
       console.log(`네트워크 경고 설정: ${threshold}ms (ID: ${alertId})`);
 
@@ -395,23 +395,23 @@ export class NetworkStatusService {
   private calculateQualityScore(latency: number, packetLoss: number, bandwidth: number, jitter: number): number {
     // 품질 점수 계산 (0-100)
     let score = 100;
-    
+
     // 지연시간 점수 (50점 만점)
     if (latency > 500) score -= 50;
     else if (latency > 200) score -= 30;
     else if (latency > 100) score -= 15;
     else if (latency > 50) score -= 5;
-    
+
     // 패킷 손실률 점수 (30점 만점)
     if (packetLoss > 0.05) score -= 30;
     else if (packetLoss > 0.02) score -= 20;
     else if (packetLoss > 0.01) score -= 10;
-    
+
     // 지터 점수 (20점 만점)
     if (jitter > 50) score -= 20;
     else if (jitter > 20) score -= 10;
     else if (jitter > 10) score -= 5;
-    
+
     return Math.max(0, score);
   }
 

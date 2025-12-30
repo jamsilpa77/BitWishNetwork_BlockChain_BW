@@ -17,7 +17,7 @@
  * ✅ 자체 보안 검증만 사용
  * ✅ 50단위 부동소수점 정밀 계산형식으로 구현 하지만 UI 홈페이지 이미지상 소수즘 8자리만 표기한다. 
  * ✅ BitWish Network 전용 시스템만 사용
- * ✅ 모든 텍스트는 한국어, 영어, 일어, 중국어포함 동남아권 언어 변경 되도록 모든 기능에 완벽하게 구현한다. 
+ * ✅ 모든 텍스트는 한국어, 영어, 일어, 중국어포함 언어 변경 되도록 모든 기능에 완벽하게 구현한다. 
  *        단 절대 복잡하게 파일들을 만들지 않도록한다. 
  * ✅ 마이닝 페이지는 완벽한 독립성 보장과 완벽한 데이터베이스 MongDB 하이브리드 완벽 저장소 구현한다. 
  * ✅ 유저는 1명이든 천만명이든 개인 단독 데이터베이스 MongDB 하이브리드 완벽 저장소를 구현한다.
@@ -126,18 +126,18 @@ export class BlockMonitorService {
     try {
       // 실제 구현에서는 블록체인 API에서 최신 블록 조회
       const currentBlockHeight = this.lastBlockHeight + 1;
-      
+
       if (currentBlockHeight > this.lastBlockHeight) {
         const blockGenerationTime = Date.now();
         this.blockGenerationTimes.push(blockGenerationTime);
-        
+
         // 최근 100개 블록 생성 시간만 유지
         if (this.blockGenerationTimes.length > 100) {
           this.blockGenerationTimes.shift();
         }
-        
+
         this.lastBlockHeight = currentBlockHeight;
-        
+
         // 블록 생성 이벤트 발생
         this.onNewBlockGenerated(currentBlockHeight, blockGenerationTime);
       }
@@ -173,7 +173,7 @@ export class BlockMonitorService {
     try {
       const now = Date.now();
       const totalBlocks = this.lastBlockHeight;
-      
+
       let averageBlockTime = 0;
       if (this.blockGenerationTimes.length > 1) {
         const timeDifferences = [];
@@ -187,7 +187,7 @@ export class BlockMonitorService {
         averageBlockTime = timeDifferences.reduce((sum, diff) => sum + diff, 0) / timeDifferences.length;
       }
 
-      const lastBlockTime: number = this.blockGenerationTimes.length > 0 
+      const lastBlockTime: number = this.blockGenerationTimes.length > 0
         ? (this.blockGenerationTimes[this.blockGenerationTimes.length - 1] || now)
         : now;
 
@@ -244,11 +244,11 @@ export class BlockMonitorService {
       // 최근 블록 생성 시간들의 평균 계산
       const recentTimes = this.blockGenerationTimes.slice(-10);
       const averageTime = recentTimes.reduce((sum, time) => sum + time, 0) / recentTimes.length;
-      
+
       // 다음 블록 예상 시간 계산
       const estimatedTime = new Date(Date.now() + 60000); // 1분 후 예상 (간단화)
       const confidence = Math.min(0.95, recentTimes.length / 10); // 신뢰도 계산
-      
+
       const factors = [
         '최근 블록 생성 패턴',
         '네트워크 해시레이트',
@@ -290,7 +290,7 @@ export class BlockMonitorService {
       }
 
       const notificationId = `block-notification-${blockHeight}-${Date.now()}`;
-      
+
       // 실제 구현에서는 알림 시스템에 등록
       console.log(`블록 알림 설정: #${blockHeight} (ID: ${notificationId})`);
 
@@ -323,7 +323,7 @@ export class BlockMonitorService {
     try {
       const now = Date.now();
       const startTime = now - (hours * 60 * 60 * 1000);
-      
+
       // 실제 구현에서는 데이터베이스에서 조회
       const history = this.blockGenerationTimes
         .filter(time => time >= startTime)
@@ -363,19 +363,19 @@ export class BlockMonitorService {
   }> {
     try {
       const startTime = Date.now();
-      
+
       // 실제 구현에서는 네트워크 상태 API 호출
       await new Promise(resolve => setTimeout(resolve, 100)); // 시뮬레이션
-      
+
       const latency = Date.now() - startTime;
       const isHealthy = latency < 1000; // 1초 미만이면 건강한 상태
-      
+
       const networkStatus = {
         isHealthy: isHealthy,
         latency: latency,
         peerCount: Math.floor(Math.random() * 50) + 10, // 시뮬레이션
         syncStatus: isHealthy ? 'SYNCED' : 'SYNCING',
-        lastBlockTime: this.blockGenerationTimes.length > 0 
+        lastBlockTime: this.blockGenerationTimes.length > 0
           ? new Date(this.blockGenerationTimes[this.blockGenerationTimes.length - 1] || Date.now())
           : new Date()
       };
@@ -410,7 +410,7 @@ export class BlockMonitorService {
       }
 
       const alertId = `block-alert-${threshold}-${Date.now()}`;
-      
+
       // 실제 구현에서는 경고 시스템에 등록
       console.log(`블록 생성 경고 설정: ${threshold}초 (ID: ${alertId})`);
 
