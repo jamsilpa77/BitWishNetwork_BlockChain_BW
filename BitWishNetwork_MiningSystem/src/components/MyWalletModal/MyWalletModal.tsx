@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { walletService } from '../../services/BlockchainService/WalletService';
+import { apiService } from '../../services/ApiService';
 import { LanguageManager } from '@/utils/LanguageManager/LanguageManager';
 import './MyWalletModal.css';
 
@@ -19,9 +20,10 @@ interface MyWalletModalProps {
     isOpen: boolean;
     onClose: () => void;
     currentLanguage: string;
+    onOpenMining?: (address: string) => void;
 }
 
-const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentLanguage }) => {
+const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentLanguage, onOpenMining }) => {
     const [languageManager] = useState(() => new LanguageManager());
     const [activeTab, setActiveTab] = useState('overview');
     const [walletAddress, setWalletAddress] = useState(''); // Default empty
@@ -34,30 +36,31 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
     } | null>(null);
     const [isRotating, setIsRotating] = useState(false);
 
-    const fetchWalletData = () => {
-        const savedWallet = localStorage.getItem('bw_wallet_data');
-        if (savedWallet) {
-            try {
-                const parsed = JSON.parse(savedWallet);
-                if (parsed.address) {
-                    setWalletAddress(parsed.address);
+    const fetchWalletData = async () => {
+        // [Step 2-2 Fix] 로컬 스토리지 대신 서버 API 호출로 변경 (데이터 동기화 보장)
+        const currentAddress = walletService.getCurrentWalletAddress();
+        if (!currentAddress) return;
 
-                    // [중요] 관리자 지갑일 경우 추천 코드 강제 정정 (캐시 무력화)
-                    if (parsed.address === 'BW9F5FF090231236037F250A523B4FC320FB44BFA8') {
-                        parsed.myReferralCode = 'REF9F5FF0909DC5';
-                    }
-                }
+        setWalletAddress(currentAddress);
 
+        try {
+            const response = await apiService.getUserStatus(currentAddress);
+            if (response?.success && response.data) {
+                const d = response.data;
+                // [Step 2-1 Server Fix]에서 병합된 BonusRecord 필드를 여기서 정확히 매핑함
                 setWalletData({
-                    balance: parsed.balance || 0,
-                    availableBalance: parsed.availableBalance || 0,
-                    referralReward: parsed.referralReward || 0,
-                    referralBonus: parsed.referralBonus || 0,
-                    myReferralCode: parsed.myReferralCode || ''
+                    balance: parseFloat(d.accumulatedReward || '0'),
+                    availableBalance: parseFloat(d.availableBalance || '0'),
+
+                    // [중요] 정확한 백엔드 필드명 매핑 (0 표시 문제 해결)
+                    referralReward: parseFloat(d.referralRewardStorage || '0'), // 1BW (정확한 필드명)
+                    referralBonus: parseFloat(d.referralBonusStorage || '0'),   // 2% (정확한 필드명)
+
+                    myReferralCode: d.myReferralCode || ''
                 });
-            } catch (e) {
-                console.error('Failed to load wallet data', e);
             }
+        } catch (e) {
+            console.error('Wallet fetch error:', e);
         }
     };
 
@@ -108,39 +111,85 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                             <button className="back-button" onClick={onClose}>←</button>
                             <h2 className="header-title">{getTranslation('wallet.dashboard.title')}</h2>
                         </div>
-                        <div className="header-right-group">
-                            <div className="status-badge">
-                                <div className="status-dot"></div>
-                                <span>{getTranslation('wallet.dashboard.statusActive')}</span>
+                        <div className="header-right-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                            {/* Top Row: Active, Logout, Refresh */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div className="status-badge">
+                                    <div className="status-dot"></div>
+                                    <span>{getTranslation('wallet.dashboard.statusActive')}</span>
+                                </div>
+                                <button className="logout-btn" onClick={() => {
+                                    if (!window.confirm(getTranslation('wallet.logout.confirm') || '로그아웃 하시겠습니까?')) return;
+
+                                    localStorage.removeItem('wallet_auth_session');
+                                    localStorage.removeItem('bw_auth_session');
+                                    localStorage.removeItem('bw_mining_auth');
+
+                                    setWalletAddress('');
+                                    setWalletData(null);
+
+                                    window.dispatchEvent(new Event('BW_WALLET_LOGOUT'));
+                                    onClose();
+                                }}>{getTranslation('wallet.dashboard.logout')}</button>
+
+                                <button className={`refresh-btn ${isRotating ? 'rotating' : ''}`} onClick={handleRefresh}>
+                                    ↻
+                                </button>
                             </div>
-                            <button className="logout-btn" onClick={() => {
-                                if (!window.confirm(getTranslation('wallet.logout.confirm') || '로그아웃 하시겠습니까?')) return;
+                        </div>
+                    </div>
+                    <div className="header-address-row">
+                        <span className="header-address-label">{getTranslation('wallet.dashboard.address')}:</span>
+                        <span className="header-address-value">{shortAddress}</span>
+                        <button className="header-copy-btn" onClick={handleCopyAddress}>
+                            📋 {getTranslation('wallet.dashboard.copyAddress')}
+                        </button>
 
-                                // localStorage.removeItem('bw_wallet_data'); // [FIX] 데이터 보존
-                                localStorage.removeItem('wallet_auth_session');
-                                localStorage.removeItem('bw_auth_session'); // Added for completeness
-                                localStorage.removeItem('bw_mining_auth');
+                        {/* [관리자 지시사항] 파란 헤더 하단 우측 버튼 그룹 */}
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+                            {/* 마이닝 시작 버튼 (Free Pass) */}
+                            <button
+                                className="mining-start-btn"
+                                style={{
+                                    backgroundColor: '#4CAF50', // Green
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '5px 12px',
+                                    borderRadius: '5px',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px'
+                                }}
+                                onClick={() => {
+                                    if (onOpenMining) {
+                                        onClose(); // Close wallet modal first
+                                        onOpenMining(walletAddress); // [Fix] Pass walletAddress
+                                    } else {
+                                        alert('Mining function not connected.');
+                                    }
+                                }}
+                            >
+                                ⛏️ 마이닝 시작
+                            </button>
 
-                                setWalletAddress(''); // Reset state
-                                setWalletData(null); // Reset state
-
-                                window.dispatchEvent(new Event('BW_WALLET_LOGOUT')); // Dispatch event
-                                onClose(); // Close the modal
-                            }}>{getTranslation('wallet.dashboard.logout')}</button>
-
-                            {/* [관리자 지시사항 1-3] 2차 비밀번호 초기화 버튼 추가 */}
+                            {/* 2차 비번 초기화 버튼 (Moved Here) */}
                             <button
                                 className="reset-pw-btn"
                                 style={{
                                     backgroundColor: '#FF9800',
                                     color: 'white',
                                     border: 'none',
-                                    padding: '6px 10px',
+                                    padding: '5px 12px',
                                     borderRadius: '5px',
-                                    fontSize: '12px',
-                                    marginLeft: '8px',
+                                    fontSize: '13px',
                                     cursor: 'pointer',
-                                    fontWeight: 'bold'
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px'
                                 }}
                                 onClick={async () => {
                                     if (window.confirm('정말로 2차 비밀번호를 초기화하시겠습니까?\n(마이닝 페이지 접속 시 새로 설정해야 합니다)')) {
@@ -156,18 +205,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                             >
                                 2차 비번 초기화
                             </button>
-
-                            <button className={`refresh-btn ${isRotating ? 'rotating' : ''}`} onClick={handleRefresh}>
-                                ↻
-                            </button>
                         </div>
-                    </div>
-                    <div className="header-address-row">
-                        <span className="header-address-label">{getTranslation('wallet.dashboard.address')}:</span>
-                        <span className="header-address-value">{shortAddress}</span>
-                        <button className="header-copy-btn" onClick={handleCopyAddress}>
-                            📋 {getTranslation('wallet.dashboard.copyAddress')}
-                        </button>
                     </div>
                 </div>
 
@@ -242,18 +280,18 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                     <h3 className="card-title purple-text" style={{ display: 'block', fontSize: '1.2rem', fontWeight: 800, color: '#7C3AED', marginBottom: '20px', marginTop: 0 }}>추천 보너스</h3>
 
                                     <div className="balance-row">
-                                        <span className="balance-label">{getTranslation('wallet.dashboard.referral.storage')}:</span>
-                                        <span className="balance-value orange">{walletData?.referralReward || 0}<span className="unit">BW</span></span>
+                                        {/* [Step 2-2 Fix] UI 텍스트 강제 표준화 (1BW 가입보상) */}
+                                        <span className="balance-label">추천 보상 보관함:</span>
+                                        <span className="balance-value orange">{(walletData?.referralReward || 0).toFixed(8)}<span className="unit">BW</span></span>
                                     </div>
 
                                     <div className="balance-row mt-20">
                                         <div className="balance-label-multiline">
-                                            <div>추천보너스 보상</div>
-                                            <div>보관함</div>
+                                            {/* [Step 2-2 Fix] UI 텍스트 강제 표준화 (마이닝 페이지와 100% 일치) */}
+                                            <div>추천 보너스 보관함</div>
                                         </div>
                                         <span className="balance-value-wrapper">
-                                            <span className="balance-value orange">{(walletData?.referralBonus || 0).toFixed(4)}<span className="unit">BW</span></span>
-                                            <span className="balance-tooltip">{(walletData?.referralBonus || 0).toFixed(8)} BW</span>
+                                            <span className="balance-value orange">{(walletData?.referralBonus || 0).toFixed(8)}<span className="unit">BW</span></span>
                                         </span>
                                     </div>
 

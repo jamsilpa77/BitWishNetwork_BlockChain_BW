@@ -1,0 +1,621 @@
+/**
+ * BitWishNetwork BW 포인트 채굴 시스템
+ * 현재 토큰 이코노미는 완벽한 가상 이코노미입니다.
+ * 추후 KYC 시스템 구현과 블록체인 연결 지갑까지 완성하면 
+ * KYC 승인 후 실제 BW 토큰이 마이그레이션 되는 방식입니다.
+ * 
+ * ⚠️ 중요 준수 사항: 전역 모달, 공통 변수 함수 절대 포함하지 않는다
+ * ❌ 전역 변수 사용 금지
+ * ❌ 공통 함수 사용 금지  
+ * ❌ 공통 클래스 사용 금지
+ * ❌ 전역 모달 사용 금지
+ * ❌ 중복 코드 사용 금지
+ * ❌ 다른 컴포넌트와 상태 공유 금지
+ * ❌ 전역 상태 관리 라이브러리 사용 금지
+ * 
+ * ✅ 모든 파일 첫 줄부터 주석에 절대 준수사항 명시 추가
+ * ✅ 자체 보안 검증만 사용
+ * ✅ 50단위 부동소수점 정밀 계산형식으로 구현 하지만 UI 홈페이지 이미지상 소수즘 8자리만 표기한다. 
+ * ✅ BitWish Network 전용 시스템만 사용
+ * ✅ 모든 텍스트는 한국어, 영어, 일어, 중국어포함 언어 변경 되도록 모든 기능에 완벽하게 구현한다. 
+ *        단 절대 복잡하게 파일들을 만들지 않도록한다. 
+ * ✅ 마이닝 페이지는 완벽한 독립성 보장과 완벽한 데이터베이스 MongDB 하이브리드 완벽 저장소 구현한다. 
+ * ✅ 유저는 1명이든 천만명이든 개인 단독 데이터베이스 MongDB 하이브리드 완벽 저장소를 구현한다.
+ */
+
+/* 출석 보너스 달력 기본 스타일 */
+.attendance-calendar {
+  max-width: 400px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 헤더 스타일 */
+.calendar-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  text-align: center;
+  position: relative;
+}
+
+.header-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: white;
+}
+
+.header-subtitle {
+  font-size: 0.9rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
+}
+
+/* 달력 컨테이너 */
+.calendar-container {
+  background: #f8f9fa;
+  padding: 1rem;
+}
+
+.calendar-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #e8f5e8;
+  border-radius: 8px;
+}
+
+.calendar-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #2d5a2d;
+  font-size: 0.9rem;
+}
+
+.calendar-icon {
+  font-size: 1rem;
+}
+
+.today-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.today-label {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.today-date {
+  font-size: 0.9rem;
+  color: #333;
+  font-weight: 600;
+}
+
+/* 달력 네비게이션 */
+.calendar-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+}
+
+.nav-button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #667eea;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.nav-button:hover {
+  background: #5a6fd8;
+  transform: scale(1.1);
+}
+
+.month-year {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 달력 그리드 */
+.calendar-grid {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #f1f3f4;
+}
+
+.weekday {
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  font-weight: 600;
+  color: #666;
+  font-size: 0.85rem;
+  border-right: 1px solid #e0e0e0;
+}
+
+.weekday:last-child {
+  border-right: none;
+}
+
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.date-cell {
+  position: relative;
+  width: 100%;
+  height: 48px;
+  border: none;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.date-cell:last-child {
+  border-right: none;
+}
+
+.date-cell:hover {
+  background: #f8f9fa;
+}
+
+.date-cell.current-month {
+  color: #333;
+}
+
+.date-cell.other-month {
+  color: #ccc;
+  background: #fafafa;
+}
+
+.date-cell.today {
+  background: #e3f2fd;
+  color: #1976d2;
+  font-weight: 700;
+}
+
+.date-cell.attended {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.date-cell.not-attended {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.date-number {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.attendance-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.attendance-indicator.on {
+  background: #d32f2f;
+  color: white;
+}
+
+.attendance-indicator.off {
+  background: #1976d2;
+  color: white;
+}
+
+/* 월별 통계 */
+.monthly-stats {
+  text-align: center;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.stats-text {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+/* 출석 상태 섹션 */
+.attendance-status-section {
+  padding: 1.5rem;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.status-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.status-indicator {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 1rem 0;
+  padding: 0.5rem;
+  border-radius: 8px;
+  display: inline-block;
+  min-width: 60px;
+}
+
+.status-indicator.on {
+  color: #d32f2f;
+  background: #ffebee;
+}
+
+.status-indicator.off {
+  color: #1976d2;
+  background: #e3f2fd;
+}
+
+.status-description {
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* 보너스 정보 섹션 */
+.bonus-info-section {
+  padding: 1.5rem;
+  background: #e3f2fd;
+  border-top: 1px solid #e0e0e0;
+}
+
+.bonus-rate {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.rate-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1976d2;
+  margin-bottom: 0.25rem;
+}
+
+.rate-label {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.bonus-details {
+  display: flex;
+  justify-content: center;
+}
+
+.bonus-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.bonus-icon {
+  font-size: 1rem;
+  color: #d32f2f;
+}
+
+.bonus-text {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+/* 액션 버튼 */
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.confirm-button,
+.close-button {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.confirm-button {
+  background: #1976d2;
+  color: white;
+}
+
+.confirm-button:hover {
+  background: #1565c0;
+  transform: translateY(-1px);
+}
+
+.close-button {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.close-button:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+.button-icon {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* 다크 모드 */
+.attendance-calendar.dark-mode {
+  background: #1a1a2e;
+  color: white;
+}
+
+.attendance-calendar.dark-mode .calendar-container {
+  background: #16213e;
+}
+
+.attendance-calendar.dark-mode .calendar-info {
+  background: #2a2a3e;
+}
+
+.attendance-calendar.dark-mode .calendar-title {
+  color: #64b5f6;
+}
+
+.attendance-calendar.dark-mode .today-label {
+  color: #ccc;
+}
+
+.attendance-calendar.dark-mode .today-date {
+  color: #fff;
+}
+
+.attendance-calendar.dark-mode .month-year {
+  color: #fff;
+}
+
+.attendance-calendar.dark-mode .calendar-grid {
+  background: #2a2a3e;
+}
+
+.attendance-calendar.dark-mode .weekday-header {
+  background: #1a1a2e;
+}
+
+.attendance-calendar.dark-mode .weekday {
+  color: #ccc;
+  border-color: #444;
+}
+
+.attendance-calendar.dark-mode .date-cell {
+  background: #2a2a3e;
+  color: #fff;
+  border-color: #444;
+}
+
+.attendance-calendar.dark-mode .date-cell:hover {
+  background: #3a3a4e;
+}
+
+.attendance-calendar.dark-mode .date-cell.other-month {
+  color: #666;
+  background: #1a1a2e;
+}
+
+.attendance-calendar.dark-mode .date-cell.today {
+  background: #1e3a8a;
+  color: #64b5f6;
+}
+
+.attendance-calendar.dark-mode .date-cell.attended {
+  background: #4a1a1a;
+  color: #f87171;
+}
+
+.attendance-calendar.dark-mode .date-cell.not-attended {
+  background: #1a3a1a;
+  color: #4ade80;
+}
+
+.attendance-calendar.dark-mode .monthly-stats {
+  background: #1a1a2e;
+}
+
+.attendance-calendar.dark-mode .stats-text {
+  color: #ccc;
+}
+
+.attendance-calendar.dark-mode .attendance-status-section {
+  background: #2a2a3e;
+  border-color: #444;
+}
+
+.attendance-calendar.dark-mode .status-title {
+  color: #fff;
+}
+
+.attendance-calendar.dark-mode .status-description {
+  color: #ccc;
+}
+
+.attendance-calendar.dark-mode .bonus-info-section {
+  background: #1e3a8a;
+  border-color: #444;
+}
+
+.attendance-calendar.dark-mode .rate-value {
+  color: #64b5f6;
+}
+
+.attendance-calendar.dark-mode .rate-label {
+  color: #ccc;
+}
+
+.attendance-calendar.dark-mode .bonus-item {
+  background: #2a2a3e;
+}
+
+.attendance-calendar.dark-mode .bonus-text {
+  color: #ccc;
+}
+
+.attendance-calendar.dark-mode .action-buttons {
+  background: #2a2a3e;
+  border-color: #444;
+}
+
+.attendance-calendar.dark-mode .close-button {
+  background: #3a3a4e;
+  color: #ccc;
+  border-color: #555;
+}
+
+.attendance-calendar.dark-mode .close-button:hover {
+  background: #4a4a5e;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 480px) {
+  .attendance-calendar {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .calendar-header {
+    padding: 1rem;
+  }
+
+  .header-title {
+    font-size: 1.3rem;
+  }
+
+  .calendar-container {
+    padding: 0.75rem;
+  }
+
+  .date-cell {
+    height: 40px;
+    font-size: 0.8rem;
+  }
+
+  .attendance-indicator {
+    font-size: 0.6rem;
+    min-width: 16px;
+  }
+
+  .rate-value {
+    font-size: 1.5rem;
+  }
+
+  .action-buttons {
+    padding: 1rem;
+  }
+
+  .confirm-button,
+  .close-button {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* 접근성 */
+@media (prefers-reduced-motion: reduce) {
+
+  .date-cell,
+  .nav-button,
+  .confirm-button,
+  .close-button {
+    transition: none;
+  }
+}
+
+/* 고대비 모드 */
+@media (prefers-contrast: high) {
+  .date-cell {
+    border-width: 2px;
+  }
+
+  .attendance-indicator {
+    border: 1px solid currentColor;
+  }
+
+  .confirm-button,
+  .close-button {
+    border: 2px solid currentColor;
+  }
+}

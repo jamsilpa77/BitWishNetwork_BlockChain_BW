@@ -65,7 +65,7 @@ export class MiningController {
 
             if (state && state.isMining) {
                 // 정지 전까지의 채굴량 정산
-                this.calculatePendingReward(state);
+                await this.calculatePendingReward(state);
 
                 state.isMining = false;
                 state.miningStartTime = null;
@@ -158,18 +158,18 @@ export class MiningController {
 
             const user = await User.findOne({ walletAddress });
             const miningState = await MiningState.findOne({ walletAddress });
+            // [Step 2-1 Fix] BonusRecord 조회 추가 (보너스 보관함 데이터 누락 방지)
+            const bonusRecord = await BonusRecord.findOne({ walletAddress });
 
-            console.log('---------------------------------------------------');
-            console.log('[DEBUG SERVER] getUserStatus Called');
-            console.log('[DEBUG SERVER] Wallet:', walletAddress);
-            console.log('[DEBUG SERVER] MiningState found:', !!miningState);
+            // ... (중간 로직 유지) ...
+
             if (miningState) {
                 // [Auto-Expire Check] 출석 보너스 유효기간 검사 (매일 오전 9시 기준)
                 const now = new Date();
                 const cutoffTime = new Date();
                 cutoffTime.setHours(9, 0, 0, 0);
 
-                // 현재 시간이 9시 이전이면, 기준은 어제 9시 (아직 오늘 9시가 안 됐으므로)
+                // 현재 시간이 9시 이전이면, 기준은 어제 9시
                 if (now.getHours() < 9) {
                     cutoffTime.setDate(cutoffTime.getDate() - 1);
                 }
@@ -181,7 +181,7 @@ export class MiningController {
                         console.log('[AUTO-EXPIRE] Attendance bonus expired for:', walletAddress);
                         miningState.isAttendanceActive = false;
 
-                        // [FIX] 추천 보너스 유지하면서 재계산 (기본율 * (1 + 추천보너스율))
+                        // [FIX] 추천 보너스 유지하면서 재계산
                         const baseRate = new Decimal(miningState.currentBaseRate);
                         const referralRate = new Decimal(miningState.referralBonusRate || 0);
                         miningState.currentTotalRate = baseRate.mul(new Decimal(1).plus(referralRate)).toString();
@@ -189,26 +189,24 @@ export class MiningController {
                         await miningState.save();
                     }
                 }
-
-                console.log('---------------------------------------------------');
-                console.log('[DEBUG SERVER] getUserStatus Called');
-                console.log('[DEBUG SERVER] Wallet:', walletAddress);
-                console.log('[DEBUG SERVER] MiningState found:', !!miningState);
-                console.log('[DEBUG SERVER] isAttendanceActive:', miningState.isAttendanceActive);
-                console.log('[DEBUG SERVER] currentTotalRate:', miningState.currentTotalRate);
             }
-            console.log('---------------------------------------------------');
 
             if (miningState && miningState.isMining) {
                 // 접속하지 않았던 시간(오프라인) 동안의 보상 계산 및 반영
-                this.calculatePendingReward(miningState);
+                await this.calculatePendingReward(miningState);
                 miningState.lastSyncTime = new Date();
                 await miningState.save();
             }
 
             res.status(200).json({
                 success: true,
-                user,
+                user: user ? {
+                    ...user.toObject(),
+                    // [Step 2-1 Fix] BonusRecord 필드 병합 (없으면 '0' 기본값)
+                    referralBonusStorage: bonusRecord?.referralBonusStorage || '0',  // 2% 채굴분
+                    referralRewardStorage: bonusRecord?.referralRewardStorage || '0', // 1BW 가입보상
+                    referralList: bonusRecord?.referralList || []
+                } : null,
                 miningState
             });
         } catch (error) {
@@ -221,7 +219,7 @@ export class MiningController {
      * 보상 계산 내부 로직 (Private)
      * 시간 차이(초) * 초당 채굴률
      */
-    private calculatePendingReward(state: any): void {
+    private async calculatePendingReward(state: any): Promise<void> {
         const now = new Date();
         const lastSync = new Date(state.lastSyncTime);
 
