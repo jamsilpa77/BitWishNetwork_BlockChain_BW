@@ -3,6 +3,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
+import User from '../models/User'; // [추가] 가입 정보 조회를 위한 User 모델 추가
 
 const router = express.Router();
 
@@ -366,6 +367,73 @@ router.get('/referral/:walletAddress', async (req, res) => {
             success: false,
             message: '서버 오류가 발생했습니다'
         });
+    }
+});
+
+// --- 추천 보상 현황 (Referral Reward Status) 관련 API ---
+
+// 1. 추천 보상 전체 지급 상태 조회 (Total Summary)
+router.get('/rewards/total', async (req, res) => {
+    try {
+        // BonusRecord 컬렉션에서 모든 referralRewardStorage (1BW 보상) 합산
+        const results = await BonusRecord.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalIssued: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } }
+                }
+            }
+        ]);
+
+        return res.json({
+            success: true,
+            totalIssued: results.length > 0 ? results[0].totalIssued : 0
+        });
+    } catch (error) {
+        console.error('Admin total rewards error:', error);
+        return res.status(500).json({ success: false, message: '서버 통계 계산 중 오류 발생' });
+    }
+});
+
+// 2. 개별 유저 추천 보상 상세 조회 (Search Detail)
+router.get('/rewards/detail/:walletAddress', async (req, res) => {
+    try {
+        const { walletAddress } = req.params;
+        console.log(`[Admin] Detail search for reward status: ${walletAddress}`);
+
+        // 1) BonusRecord 먼저 조회 (보상 정보가 최우선)
+        let bonusRecord = await BonusRecord.findOne({ walletAddress });
+
+        // 2) User 정보 조회 (가입일 정보 등)
+        const user = await User.findOne({ walletAddress });
+
+        // 데이터가 아예 없는 경우에만 404
+        if (!bonusRecord && !user) {
+            return res.status(404).json({ success: false, message: '조회된 데이터가 없습니다' });
+        }
+
+        // 3) 결과 조합 (데이터가 부분적으로만 있어도 뱉어내기)
+        const responseData = {
+            walletAddress: walletAddress,
+            myReferralCode: user ? user.myReferralCode : (bonusRecord ? 'N/A' : '-'),
+            joinDate: user ? user.createdAt : (bonusRecord ? (bonusRecord as any).createdAt || new Date() : new Date()),
+            totalReward: bonusRecord ? (bonusRecord.referralRewardStorage || "0") : "0",
+            referralCount: bonusRecord && bonusRecord.referralList ? bonusRecord.referralList.length : 0,
+            referralList: bonusRecord ? bonusRecord.referralList.map((ref: any) => ({
+                childWalletAddress: ref.childWalletAddress,
+                joinedAt: ref.joinedAt,
+                status: 'COMPLETED'
+            })) : []
+        };
+
+        return res.json({
+            success: true,
+            data: responseData
+        });
+
+    } catch (error) {
+        console.error('Admin reward detail search error:', error);
+        return res.status(500).json({ success: false, message: '상세 조회 중 서버 오류 발생' });
     }
 });
 

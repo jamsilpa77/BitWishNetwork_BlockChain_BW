@@ -36,6 +36,57 @@ const AdminPage: React.FC = () => {
     const [hasLoadedInitialData, setHasLoadedInitialData] = useState<boolean>(false);
     const [isSearchMode, setIsSearchMode] = useState<boolean>(false); // 검색 모드 상태 추가
 
+    // [추천 보상 현황] 전용 state 추가
+    const [rewardStatusDetail, setRewardStatusDetail] = useState<any>(null);
+    const [totalRewardIssued, setTotalRewardIssued] = useState<number>(0);
+    const [rewardSearchAddress, setRewardSearchAddress] = useState<string>('');
+    const [rewardLoading, setRewardLoading] = useState<boolean>(false);
+
+    // 1. 추천 보상 전체 합계 조회
+    const fetchTotalRewards = async () => {
+        try {
+            const response = await fetch('http://localhost:5001/api/admin/rewards/total');
+            const data = await response.json();
+            if (data.success) {
+                setTotalRewardIssued(data.totalIssued);
+            }
+        } catch (err) {
+            console.error('전체 보상 합계 조회 실패:', err);
+        }
+    };
+
+    // 2. 추천 보상 개별 상세 조회
+    const handleSearchRewardStatus = async () => {
+        if (!rewardSearchAddress.trim()) {
+            alert('지갑 주소를 입력하세요');
+            return;
+        }
+
+        setRewardLoading(true);
+        try {
+            const response = await fetch(`http://localhost:5001/api/admin/rewards/detail/${rewardSearchAddress}`);
+            const data = await response.json();
+            if (data.success) {
+                setRewardStatusDetail(data.data);
+            } else {
+                alert(data.message || '데이터를 찾을 수 없습니다');
+                setRewardStatusDetail(null);
+            }
+        } catch (err) {
+            console.error('상세 조회 실패:', err);
+            alert('서버 연결 실패');
+        } finally {
+            setRewardLoading(false);
+        }
+    };
+
+    // 탭 변경 시 전체 통계 로딩
+    React.useEffect(() => {
+        if (activeTab === 'rewardStatus') {
+            fetchTotalRewards();
+        }
+    }, [activeTab]);
+
 
     // 마이닝 데이터 검색
     const handleSearchMining = async () => {
@@ -301,6 +352,12 @@ const AdminPage: React.FC = () => {
                     onClick={() => setActiveTab('referral')}
                 >
                     🎁 추천 보너스
+                </button>
+                <button
+                    className={`admin-tab ${activeTab === 'rewardStatus' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('rewardStatus')}
+                >
+                    💰 추천 보상 현황
                 </button>
                 <button
                     className={`admin-tab ${activeTab === 'partner' ? 'active' : ''}`}
@@ -683,6 +740,95 @@ const AdminPage: React.FC = () => {
                                             <p className="no-data-text">{selectedMonth}월 추천 가입자가 없습니다</p>
                                         </div>
                                     )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'rewardStatus' && (
+                    <div className="admin-panel">
+                        <h2>💎 보상 현황 상태</h2>
+
+                        <div className="test-section">
+                            <h3>추천 보상 전체 지급 상태</h3>
+                            <div className="total-summary-card">
+                                <span className="total-label">전체 지급 보상</span>
+                                <span className="total-value">{formatPrecise(totalRewardIssued)} BW</span>
+                            </div>
+
+                            <div className="search-box" style={{ marginTop: '30px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="검색할 지갑 주소 입력"
+                                    className="admin-input"
+                                    value={rewardSearchAddress}
+                                    onChange={(e) => setRewardSearchAddress(e.target.value)}
+                                />
+                                <button
+                                    className="admin-button primary"
+                                    onClick={handleSearchRewardStatus}
+                                    disabled={rewardLoading}
+                                >
+                                    {rewardLoading ? '검색 중...' : '지갑 검색'}
+                                </button>
+                            </div>
+
+                            {rewardStatusDetail && (
+                                <div className="reward-detail-container" style={{ marginTop: '30px' }}>
+                                    <h4>👤 개별 보상 상세 정보</h4>
+                                    <div className="data-grid">
+                                        <div className="data-item">
+                                            <span className="data-label">지갑 주소:</span>
+                                            <span className="data-value">{rewardStatusDetail.walletAddress}</span>
+                                        </div>
+                                        <div className="data-item">
+                                            <span className="data-label">본인 추천 코드:</span>
+                                            <span className="data-value">{rewardStatusDetail.myReferralCode}</span>
+                                        </div>
+                                        <div className="data-item">
+                                            <span className="data-label">가입 날짜:</span>
+                                            <span className="data-value">{formatDateTime(rewardStatusDetail.joinDate)}</span>
+                                        </div>
+                                        <div className="data-item">
+                                            <span className="data-label">총 받은 보상:</span>
+                                            <span className="data-value" style={{ color: '#ffd700', fontWeight: 'bold' }}>
+                                                {formatPrecise(rewardStatusDetail.totalReward)} BW
+                                            </span>
+                                        </div>
+                                        <div className="data-item">
+                                            <span className="data-label">본인 코드로 가입한 가입자 수:</span>
+                                            <span className="data-value">{rewardStatusDetail.referralCount}명</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="referral-list-section" style={{ marginTop: '40px' }}>
+                                        <h4>👥 내 코드로 가입된 가입자 목록</h4>
+                                        {rewardStatusDetail.referralList && rewardStatusDetail.referralList.length > 0 ? (
+                                            <table className="attendance-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>가입자 지갑 주소</th>
+                                                        <th>가입 날짜</th>
+                                                        <th>보상 지급 상태</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {rewardStatusDetail.referralList.map((ref: any, idx: number) => (
+                                                        <tr key={idx}>
+                                                            <td className="wallet-cell">{ref.childWalletAddress}</td>
+                                                            <td>{formatDateTime(ref.joinedAt)}</td>
+                                                            <td style={{ color: '#4caf50', fontWeight: 'bold' }}>✅ 지급완료 (1 BW)</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        ) : (
+                                            <div className="no-data-message" style={{ padding: '20px' }}>
+                                                추천 가입자가 없습니다.
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
