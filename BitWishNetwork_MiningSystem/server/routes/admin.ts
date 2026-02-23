@@ -86,15 +86,23 @@ router.post('/mining/reset', [
             { new: true }
         );
 
-        // 2. BonusRecord 초기화
+        // 2. BonusRecord 초기화 (1BW 보상은 보존하고 유령 데이터만 제거)
         const bonusUpdate = await BonusRecord.findOneAndUpdate(
             { walletAddress },
             {
                 $set: {
-                    referralBonusStorage: "0",
-                    referralRewardStorage: "0",
-                    referralList: [],
-                    attendanceHistory: []
+                    referralBonusRate: "0", // 2% 추천 보너스율 초기화
+                    referralBonusStorage: "0", // 2% 보너스 누적액 초기화 (실시간 보관함)
+                    // referralRewardStorage: "0", // ⚠️ [보존 정책] 1BW 보상은 초기화하지 않음
+                    referralList: [], // 추천 목록 초기화
+                    attendanceHistory: [] // 출석 기록 초기화
+                },
+                $unset: {
+                    // ⚠️ [청소] 과거 잘못된 필드(유령 데이터) 영구 삭제
+                    bonusStorage: "",
+                    recommendBonusStorage: "",
+                    recommendRewardStorage: "",
+                    referralRewardAmount: ""
                 }
             },
             { new: true }

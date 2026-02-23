@@ -141,6 +141,43 @@ class ApiService {
             throw error;
         }
     }
+
+    /**
+     * 추천 보상 상태 조회 (Step 4 실시간 연동용)
+     * @param walletAddress 지갑 주소
+     */
+    public async getBonusStatus(walletAddress: string): Promise<any> {
+        try {
+            const response = await this.client.get(`/referral/stats/${walletAddress}`);
+            if (response.data && response.data.success) {
+                return {
+                    referral: {
+                        bonusStorage: parseFloat(response.data.data.referralBonusStorage),
+                        rewardStorage: parseFloat(response.data.data.referralRewardStorage)
+                    }
+                };
+            }
+            return null;
+        } catch (error) {
+            console.error('Failed to get bonus status:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 추천인 코드 서버 동기화 (Step 2 작업)
+     * @param walletAddress 지갑 주소
+     * @param myReferralCode 추천 코드
+     */
+    public async updateReferralCode(walletAddress: string, myReferralCode: string): Promise<any> {
+        try {
+            const response = await this.client.post('/user/code', { walletAddress, myReferralCode });
+            return response.data;
+        } catch (error) {
+            console.error('Failed to update referral code:', error);
+            throw error;
+        }
+    }
 }
 
 export const apiService = new ApiService();

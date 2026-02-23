@@ -23,6 +23,7 @@ import {
 } from '@/constants';
 
 export class RealTimeSyncService {
+  private static instance: RealTimeSyncService;
   private precisionCalculator: PrecisionCalculator;
   private realTimeStatus: RealTimeMiningStatus;
   private syncInterval: NodeJS.Timeout | null;
@@ -30,6 +31,7 @@ export class RealTimeSyncService {
   private lastSyncTime: Date;
   private walletAddress: string | null;
   private syncCount: number;
+  private subscribers: Array<(status: RealTimeMiningStatus) => void> = [];
 
   constructor() {
     this.precisionCalculator = new PrecisionCalculator();
@@ -41,10 +43,18 @@ export class RealTimeSyncService {
     this.syncCount = 0;
   }
 
+  public static getInstance(): RealTimeSyncService {
+    if (!RealTimeSyncService.instance) {
+      RealTimeSyncService.instance = new RealTimeSyncService();
+    }
+    return RealTimeSyncService.instance;
+  }
+
   private initializeRealTimeStatus(): RealTimeMiningStatus {
     return {
       totalSupply: MINING_CONSTANTS.TOTAL_SUPPLY,
       currentIssued: 0,
+      referralBonusStorage: 0, // [Step 4] 초기값 추가
       remainingSupply: MINING_CONSTANTS.TOTAL_SUPPLY,
       remainingIssued: MINING_CONSTANTS.TOTAL_SUPPLY,
       issuanceRate: 0.00,
@@ -67,6 +77,11 @@ export class RealTimeSyncService {
       const status = await apiService.getUserStatus(address);
       if (status && status.miningState) {
         this.updateLocalStatusFromServer(status.miningState);
+      }
+      // [추가] 보상 기록 로드 시 보너스 잔액 동기화
+      const bonusData = await apiService.getBonusStatus(address);
+      if (bonusData && bonusData.referral) {
+        this.realTimeStatus.referralBonusStorage = bonusData.referral.bonusStorage || 0;
       }
     } catch (error) {
       console.error('Failed to initialize mining service:', error);
@@ -185,6 +200,7 @@ export class RealTimeSyncService {
    */
   private updateLocalStatusFromServer(serverData: any): void {
     const currentIssued = new Decimal(serverData.accumulatedReward || 0);
+    const referralBonus = new Decimal(serverData.referralBonusStorage || 0); // [Step 4] 서버에서 온 보너스 잔액
     const totalSupply = new Decimal(MINING_CONSTANTS.TOTAL_SUPPLY);
 
     const remaining = totalSupply.minus(currentIssued);
@@ -193,12 +209,43 @@ export class RealTimeSyncService {
     this.realTimeStatus = {
       ...this.realTimeStatus,
       currentIssued: currentIssued.toNumber(),
+      referralBonusStorage: referralBonus.toNumber(), // [Step 4] 동기화
       remainingSupply: remaining.toNumber(),
       remainingIssued: remaining.toNumber(),
       issuanceRate: issuanceRate.toNumber(),
       issueRate: issuanceRate.toNumber(),
       lastUpdate: new Date()
     };
+    this.notifySubscribers(); // 서버 데이터로 갱신 시에도 알림
+  }
+
+
+  /**
+   * 실시간 데이터 구독 (Step 4 연동용)
+   */
+  public subscribe(callback: (status: RealTimeMiningStatus) => void): () => void {
+    this.subscribers.push(callback);
+    // 즉시 현재 상태 전달
+    callback(this.getCurrentStatus());
+    return () => {
+      this.subscribers = this.subscribers.filter(sub => sub !== callback);
+    };
+  }
+
+  private notifySubscribers(): void {
+    const status = this.getCurrentStatus();
+    this.subscribers.forEach(callback => callback(status));
+  }
+
+  /**
+   * [신규] 화면의 실시간 채굴량 및 추천 보너스 보관함을 서비스 메모리에 업데이트
+   * 다음 자동 동기화 시 이 값이 서버로 안전하게 전송됨
+   */
+  public updateCurrentMiningAmount(miningAmount: number, bonusAmount: number): void {
+    this.realTimeStatus.currentIssued = miningAmount;
+    this.realTimeStatus.referralBonusStorage = bonusAmount;
+    this.realTimeStatus.lastUpdate = new Date();
+    this.notifySubscribers(); // 상태 변경 시 즉시 알림
   }
 
   public getCurrentStatus(): RealTimeMiningStatus {

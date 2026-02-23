@@ -227,6 +227,7 @@ export type TransactionStatus = 'PENDING' | 'CONFIRMED' | 'FAILED' | 'CANCELLED'
 export interface RealTimeMiningStatus {
   totalSupply: number;
   currentIssued: number;
+  referralBonusStorage: number; // [Step 4] 2% 추천 보너스 보관함 실시간 필드 추가
   remainingSupply: number;
   remainingIssued: number;
   issuanceRate: number;

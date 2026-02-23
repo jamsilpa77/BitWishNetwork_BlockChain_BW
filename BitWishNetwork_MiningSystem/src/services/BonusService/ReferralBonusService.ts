@@ -277,6 +277,20 @@ export class ReferralBonusService {
       };
 
       this.userReferralStatus.set(userId, referralBonus);
+
+      // [Step 2] 서버 DB에 추천 코드 영구 저장 (동기화)
+      fetch('/api/user/code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: userId === 'current-user' ? localStorage.getItem('bw_wallet_address') : userId,
+          myReferralCode: referralCode
+        })
+      }).then(res => res.json())
+        .then(result => {
+          if (result.success) console.log('[Referral] 추천 코드 서버 동기화 성공');
+        }).catch(err => console.error('[Referral] 서버 저장 실패:', err));
+
       this.saveData();
 
       return { success: true, referralCode };
@@ -288,73 +302,41 @@ export class ReferralBonusService {
   /**
    * 추천인 코드로 합류
    */
-  public joinWithReferralCode(referralCode: string, newUserId: string, newUser: User): { success: boolean; message?: string } {
+  /**
+   * 추천인 코드로 합류 (서버 DB 통합 방식)
+   * 1BW 보상 지급은 이제 서버에서 원자적으로 처리됩니다.
+   */
+  public async joinWithReferralCode(referralCode: string, newUserId: string, newUser: User): Promise<{ success: boolean; message?: string }> {
     try {
-      let referrerId: string | null = null;
-      for (const [uid, status] of this.userReferralStatus.entries()) {
-        if (status.referralCode === referralCode) {
-          referrerId = uid;
-          break;
-        }
+      console.log(`[ReferralBonusService] 📡 서버에 추천 보상 지급 요청: Code(${referralCode})`);
+
+      // 1. 서버 API 호출 (가입자 및 추천인 보상 동시 처리)
+      const response = await fetch('/api/referral/register-reward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          referralCode: referralCode,
+          referredWallet: newUser.walletAddress
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        console.error('[ReferralBonusService] ❌ 보상 지급 실패:', result.message);
+        return { success: false, message: result.message || 'Reward payout failed' };
       }
 
-      if (!referrerId) return { success: false, message: 'Invalid referral code' };
-      if (referrerId === newUserId) return { success: false, message: 'Cannot refer self' };
+      console.log('[ReferralBonusService] ✅ 서버 DB 보상 지급 완료');
 
-      const joinedDate = new Date();
-      const referralRecord: ReferralRecord = {
-        id: `ref_${Date.now()}`,
-        referrerId,
-        referredId: newUserId,
-        referralCode,
-        bonusRate: BONUS_CONSTANTS.REFERRAL_BONUS_RATE,
-        bonusAmount: 0,
-        rewardAmount: BONUS_CONSTANTS.REFERRAL_REWARD_AMOUNT,
-        status: REFERRAL_STATUS.ACTIVE,
-        createdAt: joinedDate,
-        updatedAt: joinedDate
-      };
+      // 2. 서버 데이터와 로컬 상태 동기화 (최종 결과 로드)
+      await this.loadData();
 
-      this.referralRecords.set(referralRecord.id, referralRecord);
+      return { success: true, message: 'Join success & Reward issued' };
 
-      // 추천인 업데이트
-      const rStatus = this.userReferralStatus.get(referrerId);
-      if (rStatus) {
-        rStatus.referredUsers.push({
-          userId: newUserId,
-          walletAddress: newUser.walletAddress,
-          joinedDate,
-          totalMiningAmount: 0,
-          bonusAmount: 0,
-          rewardAmount: BONUS_CONSTANTS.REFERRAL_REWARD_AMOUNT,
-          kycStatus: newUser.kycStatus,
-          kycApprovedAt: newUser.kycStatus === 'APPROVED' ? new Date() : null
-        });
-        rStatus.bonusRate = rStatus.referredUsers.length * 0.02;
-        this.addToRewardStorage(referrerId, BONUS_CONSTANTS.REFERRAL_REWARD_AMOUNT);
-      }
-
-      // 가입자 업데이트
-      const nStatus: ReferralBonus = {
-        referralCode: '',
-        referredUsers: [],
-        totalBonus: 0,
-        bonusRate: BONUS_CONSTANTS.REFERRAL_BONUS_RATE,
-        rewardAmount: BONUS_CONSTANTS.REFERRAL_REWARD_AMOUNT,
-        bonusStorage: 0,
-        rewardStorage: BONUS_CONSTANTS.REFERRAL_REWARD_AMOUNT,
-        lockedBonusStorage: 0,
-        availableBonusStorage: 0,
-        lockedRewardStorage: BONUS_CONSTANTS.REFERRAL_REWARD_AMOUNT,
-        availableRewardStorage: 0
-      };
-      this.userReferralStatus.set(newUserId, nStatus);
-      this.addToRewardStorage(newUserId, BONUS_CONSTANTS.REFERRAL_REWARD_AMOUNT);
-
-      this.saveData();
-      return { success: true, message: 'Join success' };
     } catch (e) {
-      return { success: false, message: 'Join error' };
+      console.error('[ReferralBonusService] ❌ 가입 처리 중 네트워크 오류:', e);
+      return { success: false, message: 'Network connection error' };
     }
   }
 

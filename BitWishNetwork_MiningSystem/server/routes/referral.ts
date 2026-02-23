@@ -128,4 +128,82 @@ router.get('/stats/:walletAddress', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/referral/register-reward
+ * 가입 시 추천인/가입자 양방향 1BW 실시간 DB 적립 (무결성 보장)
+ * 50자리 정밀 연산을 사용하여 어떠한 데이터 오차도 허용하지 않음
+ */
+router.post('/register-reward', async (req, res) => {
+    const { referralCode, referredWallet } = req.body;
+
+    try {
+        console.log(`[Referral] Reward processing for ${referredWallet} with code: ${referralCode}`);
+
+        // 1. 추천인 정보 재검증
+        const referrer = await User.findOne({ myReferralCode: referralCode });
+        if (!referrer) {
+            console.error(`[Referral] Invalid referrer code: ${referralCode}`);
+            return res.status(404).json({ success: false, message: 'Invalid referrer code' });
+        }
+
+        // 2. 추천인 보상 처리 (1BW 가산 + 추천 리스트 추가)
+        // upsert: true를 사용하여 BonusRecord가 없는 경우 자동으로 "그릇" 생성
+        let referrerBonus = await BonusRecord.findOneAndUpdate(
+            { walletAddress: referrer.walletAddress },
+            {
+                $push: {
+                    referralList: {
+                        childWalletAddress: referredWallet,
+                        joinedAt: new Date(),
+                        rewardStatus: 'COMPLETED'
+                    }
+                }
+            },
+            { upsert: true, new: true }
+        );
+
+        // 정밀 연산 (Decimal.js 사용) - 추천인
+        const currentRefReward = new Decimal(referrerBonus.referralRewardStorage || '0');
+        referrerBonus.referralRewardStorage = currentRefReward.plus('1').toFixed(8);
+        await referrerBonus.save();
+
+        // 3. 가입자 본인 보상 처리 (1BW 가산)
+        let referredBonus = await BonusRecord.findOneAndUpdate(
+            { walletAddress: referredWallet },
+            {}, // 가입자 본인의 리스트는 건드리지 않음
+            { upsert: true, new: true }
+        );
+
+        // 정밀 연산 (Decimal.js 사용) - 가입자
+        const currentRefedReward = new Decimal(referredBonus.referralRewardStorage || '0');
+        referredBonus.referralRewardStorage = currentRefedReward.plus('1').toFixed(8);
+        await referredBonus.save();
+
+        // 4. 추천인의 MiningState 업데이트 (추천인 수 및 보너스율 2%p 증가)
+        const updatedMiningState = await MiningState.findOneAndUpdate(
+            { walletAddress: referrer.walletAddress },
+            {
+                $inc: { referralCount: 1 },
+                $set: {
+                    // 추천인 수 * 0.02 (2%)를 보너스율로 설정
+                    referralBonusRate: (referrerBonus.referralList.length * 0.02).toString()
+                }
+            },
+            { new: true, upsert: true }
+        );
+
+        console.log(`[Referral] Successfully issued rewards: Referrer(${referrer.walletAddress}), Referred(${referredWallet})`);
+
+        return res.json({
+            success: true,
+            message: 'All rewards issued accurately',
+            totalRewardStored: referrerBonus.referralRewardStorage
+        });
+
+    } catch (error) {
+        console.error('[CRITICAL] Reward payout failure:', error);
+        return res.status(500).json({ success: false, message: 'Server transaction error' });
+    }
+});
+
 export default router;

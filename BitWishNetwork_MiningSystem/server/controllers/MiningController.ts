@@ -142,7 +142,16 @@ export class MiningController {
                 }
             }
 
-            res.status(200).json({ success: true, data: state });
+            // [Step 4 Fix] 최신 보너스 잔액도 함께 반환하여 프론트엔드 동기화 보장
+            const bonusRecord = await BonusRecord.findOne({ walletAddress });
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    ...state.toObject(),
+                    referralBonusStorage: bonusRecord?.referralBonusStorage || '0'
+                }
+            });
         } catch (error) {
             console.error('Sync mining error:', error);
             res.status(500).json({ success: false, message: 'Internal server error' });
