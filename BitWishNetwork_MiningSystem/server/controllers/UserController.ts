@@ -64,21 +64,22 @@ export class UserController {
             await miningState.save();
             console.log(`[REGISTER] MiningState created`);
 
-            // 4. 보너스 레코드 초기화
+            // 4. 보너스 레코드 초기화 (Step 1 수정: 기본값 0.0으로 정정)
             const bonusRecord = new BonusRecord({
                 walletAddress,
                 referralBonusStorage: '0.00000000000000000000000000000000000000000000000000',
-                referralRewardStorage: '1.00000000000000000000000000000000000000000000000000',
+                referralRewardStorage: '0.00000000000000000000000000000000000000000000000000', // ⚠️ 1.0에서 0.0으로 정정 완료
                 referralList: [],
                 attendanceHistory: []
             });
             await bonusRecord.save();
             console.log(`[REGISTER] BonusRecord created`);
 
-            // 5. 추천인 관계 처리 (추천인이 존재할 경우)
-            if (referrerCode) {
-                console.log(`[REGISTER] Processing referral code: ${referrerCode}`);
-                await this.processReferral(referrerCode, walletAddress);
+            // 5. 추천인 관계 처리 (Step 2: 검증 강화 - 빈 문자열 및 공백 체크 강화)
+            if (referrerCode && typeof referrerCode === 'string' && referrerCode.trim().length > 0) {
+                const cleanCode = referrerCode.trim();
+                console.log(`[REGISTER] Processing referral code: ${cleanCode}`);
+                await this.processReferral(cleanCode, walletAddress);
             }
 
             res.status(201).json({ success: true, data: newUser });
@@ -151,11 +152,18 @@ export class UserController {
             console.log(`[REFERRAL] Start - Code: ${referrerCode}, New user: ${newWalletAddress}`);
 
             const referrer = await User.findOne({ myReferralCode: referrerCode });
+
+            // [Step 2 강화] 추천인이 유효하지 않거나, 본인 지갑을 본인이 추천하는 경우 차단
             if (!referrer) {
-                console.log(`[REFERRAL] Referrer not found`);
+                console.log(`[REFERRAL] Referrer not found: ${referrerCode}`);
                 return;
             }
-            console.log(`[REFERRAL] Referrer found: ${referrer.walletAddress}`);
+            if (referrer.walletAddress === newWalletAddress) {
+                console.log(`[REFERRAL] Self-referral blocked: ${newWalletAddress}`);
+                return;
+            }
+
+            console.log(`[REFERRAL] Referrer validated: ${referrer.walletAddress}`);
 
             // 추천인의 보너스 레코드 업데이트
             const referrerBonusRecord = await BonusRecord.findOne({ walletAddress: referrer.walletAddress });

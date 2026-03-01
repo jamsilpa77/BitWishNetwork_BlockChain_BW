@@ -23,7 +23,7 @@
  * ✅ 유저는 1명이든 천만명이든 개인 단독 데이터베이스 MongDB 하이브리드 완벽 저장소를 구현한다.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LanguageManager } from '../../utils/LanguageManager/LanguageManager';
 import { Decimal } from 'decimal.js';
 import { RealTimeSyncService } from '../../services/MiningService/RealTimeSyncService';
@@ -50,7 +50,7 @@ import './HomePage.css';
 const HomePage: React.FC = () => {
     // 절대 준수사항: 전역 변수 사용 금지
     const [languageManager] = useState(() => new LanguageManager());
-    const [realTimeSyncService] = useState(() => new RealTimeSyncService());
+    const [realTimeSyncService] = useState(() => RealTimeSyncService.getInstance()); // [Task B] 싱글톤으로 교체 (중요!)
     const [precisionCalculator] = useState(() => new PrecisionCalculator());
 
     const [currentLanguage, setCurrentLanguage] = useState<Language>('ko');
@@ -58,13 +58,22 @@ const HomePage: React.FC = () => {
     const [miningStatus, setMiningStatus] = useState<RealTimeMiningStatus | null>(null);
     const [networkStatus, setNetworkStatus] = useState<NetworkStatus>('DISCONNECTED');
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-    // [New] 전역 통계 데이터 (실시간 연동)
-    const [globalStats, setGlobalStats] = useState<any>({
+
+    // [Task B] 전역 통계 인터페이스 정의
+    interface GlobalStats {
+        totalUsers: number;
+        totalBlocks: number;
+        currentIssued: Decimal;
+        remainingSupply: Decimal;
+        issuanceRate: string;
+    }
+
+    // [Task B] 전역 통계 데이터 (Decimal 정밀도 유지 및 실시간 이동용)
+    const [globalStats, setGlobalStats] = useState<GlobalStats>({
         totalUsers: 0,
         totalBlocks: 0,
-        totalReward: 0,
-        currentIssued: '0',
-        remainingSupply: '21000000000',
+        currentIssued: new Decimal(0),
+        remainingSupply: new Decimal(21000000000),
         issuanceRate: '0.00'
     });
 
@@ -78,6 +87,7 @@ const HomePage: React.FC = () => {
     const [isSecondPasswordModalOpen, setIsSecondPasswordModalOpen] = useState(false);
 
     const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
+    const [tickerInterval, setTickerInterval] = useState<NodeJS.Timeout | null>(null); // [신규] 홈페이지 전용 티커
     const [isConnected, setIsConnected] = useState(true);
     const [authenticatedAddress, setAuthenticatedAddress] = useState<string>('');
 
@@ -88,10 +98,12 @@ const HomePage: React.FC = () => {
         initializeHomePage();
         startRealTimeSync();
         startAutoRefresh();
+        startHomePageTicker(); // [신규] 초당 통계 엔진 시작
 
         return () => {
             stopRealTimeSync();
             stopAutoRefresh();
+            if (tickerInterval) clearInterval(tickerInterval);
         };
     }, []);
 
@@ -112,22 +124,26 @@ const HomePage: React.FC = () => {
 
             // 초기 마이닝 상태 로드
             loadMiningStatus();
-            fetchGlobalStats(); // [New] 초기 통계 로드
+            fetchGlobalStats(); // 초기 서버 통계 로드
         } catch (error) {
             console.error('홈페이지 초기화 오류:', error);
         }
     };
 
     /**
-     * [New] 전역 통계 데이터 가져오기 (API 연동)
+     * [Task B] 전역 통계 데이터 가져오기 (초기 데이터 및 10초 주기 교정)
      */
     const fetchGlobalStats = async () => {
         try {
-            // [Modified] 백엔드 실시간 통계 API 연동
             const response = await fetch('/api/stats/realtime');
             const result = await response.json();
             if (result.success && result.data) {
-                setGlobalStats(result.data);
+                // 숫자를 Decimal 객체로 저장하여 누적 오류 방지
+                setGlobalStats({
+                    ...result.data,
+                    currentIssued: new Decimal(result.data.currentIssued || 0),
+                    remainingSupply: new Decimal(result.data.remainingSupply || 21000000000)
+                });
             }
         } catch (e) {
             console.error('Global stats fetch failed:', e);
@@ -135,11 +151,22 @@ const HomePage: React.FC = () => {
     };
 
     /**
-     * 실시간 동기화 시작
+     * [Task B-2] 홈페이지 실시간 티커 (가상 로직 제거 완료)
+     * 이제 오직 서버로부터 받은 실제 데이터(Global Stats)가 갱신될 때만 UI가 반응합니다.
+     */
+    const startHomePageTicker = () => {
+        // [중요] 임의의 데이터 가공 로직을 전면 삭제했습니다.
+        // 데이터 정합성을 위해 서버의 실제 데이터(fetchGlobalStats) 통제만 따릅니다.
+        if (tickerInterval) clearInterval(tickerInterval);
+    };
+
+    /**
+     * 실시간 동기화 시작 (서비스 구독)
      */
     const startRealTimeSync = (): void => {
         try {
-            realTimeSyncService.startSync((status) => {
+            // 서비스 구독하여 현재 유저의 채굴량이 변할 때 홈페이지 상태도 갱신
+            realTimeSyncService.subscribe((status) => {
                 setMiningStatus(status);
                 setLastUpdate(new Date());
             });
@@ -160,14 +187,14 @@ const HomePage: React.FC = () => {
     };
 
     /**
-     * 자동 새로고침 시작 (30초마다)
+     * 자동 새로고침 시작 (1초마다 실시간 데이터 수신)
      */
     const startAutoRefresh = (): void => {
         try {
             const interval = setInterval(() => {
                 refreshHomePage();
-                fetchGlobalStats(); // [New] 주기적 통계 갱신
-            }, 3000); // 3초마다 갱신 (실시간 느낌)
+                fetchGlobalStats(); // [Task B-3] 1초 주기로 서버의 실제 통계 수신
+            }, 1000); // 1초마다 갱신 (100% 서버 데이터 기반)
             setRefreshInterval(interval);
         } catch (error) {
             console.error('자동 새로고침 시작 오류:', error);
@@ -339,17 +366,22 @@ const HomePage: React.FC = () => {
      * [New] CountUp Animation Hook (커스텀 구현)
      * 0부터 목표값까지 부드럽게 숫자가 올라가는 효과
      */
-    const useCountUp = (targetValue: string | number, duration: number = 2000) => {
+    const useCountUp = (targetValue: string | number, duration: number = 800) => {
         const [count, setCount] = useState('0');
+        // [Task B-1 핵심] 이전 값을 기억하기 위한 useRef 도입
+        const prevValueRef = useRef<Decimal>(new Decimal(targetValue || 0));
 
         useEffect(() => {
             let startTime: number;
             let animationFrameId: number;
-            const targetNum = new Decimal(targetValue || 0);
 
-            // 목표값이 0이면 애니메이션 없이 0 반환
-            if (targetNum.isZero()) {
-                setCount('0');
+            const targetNum = new Decimal(targetValue || 0);
+            const startNum = prevValueRef.current; // 0이 아닌 직전 숫자에서 시작
+            const diff = targetNum.minus(startNum);
+
+            // 값이 변하지 않았으면 애니메이션 생략
+            if (diff.isZero()) {
+                setCount(targetNum.toFixed(8));
                 return;
             }
 
@@ -357,11 +389,12 @@ const HomePage: React.FC = () => {
                 if (!startTime) startTime = currentTime;
                 const progress = Math.min((currentTime - startTime) / duration, 1);
 
-                // Ease-out 효과 (빠르게 시작해서 천천히 끝남)
+                // Ease-out 효과
                 const easeOut = 1 - Math.pow(1 - progress, 3);
 
-                const currentVal = targetNum.times(easeOut);
-                setCount(currentVal.toFixed(8)); // 8자리 소수점 유지
+                // [중요 로직] 시작값 + (차이값 * 진행도) = 부드러운 증분 효과
+                const currentVal = startNum.plus(diff.times(easeOut));
+                setCount(currentVal.toFixed(8));
 
                 if (progress < 1) {
                     animationFrameId = requestAnimationFrame(animate);
@@ -370,15 +403,19 @@ const HomePage: React.FC = () => {
 
             animationFrameId = requestAnimationFrame(animate);
 
-            return () => cancelAnimationFrame(animationFrameId);
+            return () => {
+                cancelAnimationFrame(animationFrameId);
+                // [Task B-1 핵심] 다음 애니메이션을 위해 현재 목표값을 직전 값으로 저장
+                prevValueRef.current = targetNum;
+            };
         }, [targetValue, duration]);
 
         return count;
     };
 
-    // 애니메이션 값 적용
-    const animatedIssued = useCountUp(globalStats.currentIssued);
-    const animatedRemaining = useCountUp(globalStats.remainingSupply);
+    // 애니메이션 값 적용 (Decimal 객체를 숫자로 변환하여 전달)
+    const animatedIssued = useCountUp(globalStats.currentIssued.toNumber());
+    const animatedRemaining = useCountUp(globalStats.remainingSupply.toNumber());
 
     return (
         <div className={`home-page ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
