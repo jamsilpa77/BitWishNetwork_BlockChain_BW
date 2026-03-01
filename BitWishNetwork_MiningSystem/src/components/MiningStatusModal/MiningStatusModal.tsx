@@ -182,73 +182,69 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
         };
         window.addEventListener('storage', handleResetSignal);
 
-        // 실시간 동기화 시작
+        // 실시간 동기화 시작 (API 동기화)
         realTimeSyncService.startSync((status: RealTimeMiningStatus) => {
             setLastUpdate(new Date());
             setNetworkStatus(status.networkStatus);
-            setAccumulatedReward(new Decimal(status.currentIssued));
+            // [중요] API 동기화 시에도 현재 메모리 값을 최우선으로 반영 (UI 튕김 방지)
+            if (status.currentIssued > 0) {
+                setAccumulatedReward(new Decimal(status.currentIssued));
+            }
+        });
+
+        // [핵심] 실시간 채굴량 방송 구독 (1초 단위)
+        const unsubscribeMining = realTimeSyncService.subscribe((status) => {
+            if (status.currentIssued >= 0) {
+                setAccumulatedReward(new Decimal(status.currentIssued));
+            }
+            if (status.referralBonusStorage >= 0) {
+                setUserStats(prev => ({
+                    ...prev,
+                    referralBonusStorage: new Decimal(status.referralBonusStorage)
+                }));
+            }
         });
 
         return () => {
             window.removeEventListener('storage', handleResetSignal);
             realTimeSyncService.stopSync();
+            unsubscribeMining(); // 구독 해제 (하지만 티커는 서비스에서 계속 돌아감)
         };
     }, [isOpen, walletAddress, realTimeSyncService, referralBonusService]);
 
-    // 로컬 타이머 및 실시간 보너스 저장
-    // [긴급 수정 - Step 4] 실시간 동기화 장애 해결용 Ref (Closure Trap 방지)
-    const rewardRef = React.useRef(accumulatedReward);
-    const bonusRef = React.useRef(userStats.referralBonusStorage);
-
-    // 상태 변경 시 Ref 최신화 (타이머 내부에서 최신값을 참조하기 위함)
-    React.useEffect(() => {
-        rewardRef.current = accumulatedReward;
-    }, [accumulatedReward]);
-
-    React.useEffect(() => {
-        bonusRef.current = userStats.referralBonusStorage;
-    }, [userStats.referralBonusStorage]);
-
+    // 진행 시간(Mining Time) 관리 전용 타이머
     useEffect(() => {
         let timerId: NodeJS.Timeout;
-
         if (isMining) {
             timerId = setInterval(() => {
                 setMiningTime(prev => prev + 1);
 
-                // 1. 화면상 채굴량 증가
-                setAccumulatedReward(prev => prev.plus(userStats.baseRate.div(3600)));
-
-                // 2. [Step 3 & 4 핵심] 서버 DB 실시간 동기화
-                // 10초마다 서비스의 applyReferralBonus 호출 -> 서비스가 알아서 계산하고 localStorage에 저장함
-                // 순수 기본급(0.25)을 기준으로 보너스(6%) 계산 요청
-                if (miningTime > 0 && (miningTime + 1) % 10 === 0) {
+                // [신규] 10초마다 보너스 보관함 로직 수행 (창이 열려있을 때)
+                const currentTime = miningTime + 1;
+                if (currentTime > 0 && currentTime % 10 === 0) {
                     const result = referralBonusService.applyReferralBonus(walletAddress, 0.25);
                     if (result.success && (result as any).bonusAmount) {
-                        // 화면의 보관함 수치도 즉시 업데이트
-                        setUserStats(prev => ({
-                            ...prev,
-                            referralBonusStorage: prev.referralBonusStorage.plus(new Decimal((result as any).bonusAmount!))
-                        }));
+                        // 서비스 메모리에 보너스 합산 반영 (그러면 모든 창이 동기화됨)
+                        realTimeSyncService.updateBonusStorage((result as any).bonusAmount!);
                     }
                 }
-
-                // [긴급 보완] 10초 주기를 기다리지 않고, 방송국에는 1초마다 최신 Ref 수치를 전송하여 지갑과 즉시 동기화
-                // 타이머 생성 시점의 갇힌 state가 아닌, Ref의 최신값을 전동함
-                const currentAmountStr = rewardRef.current.toFixed(8);
-                const currentBonusStr = bonusRef.current.toFixed(8);
-
-                realTimeSyncService.updateCurrentMiningAmount(
-                    parseFloat(currentAmountStr),
-                    parseFloat(currentBonusStr)
-                );
             }, 1000);
         }
-
         return () => {
             if (timerId) clearInterval(timerId);
         };
-    }, [isMining, walletAddress]); // [주의] miningTime 의존성 제거 (타이머 재성성 방지)
+    }, [isMining, miningTime, walletAddress]);
+
+    // [신규] 마이닝 상태 변화 시 서비스 티커 제어
+    useEffect(() => {
+        if (isMining && userStats.baseRate.gt(0)) {
+            // 마이닝 시작 시 서비스에 채굴 엔진 가동 명령 (Rate 전달)
+            realTimeSyncService.startMiningTicker(userStats.baseRate.toNumber());
+        } else {
+            // 마이닝 중지 시 엔진 정지
+            realTimeSyncService.stopMiningTicker();
+        }
+    }, [isMining, userStats.baseRate]);
 
     const getTranslation = (key: string): string => {
         return languageManager.getTranslation(key, currentLanguage);

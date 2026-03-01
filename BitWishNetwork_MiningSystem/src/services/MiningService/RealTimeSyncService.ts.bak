@@ -27,9 +27,7 @@ export class RealTimeSyncService {
   private precisionCalculator: PrecisionCalculator;
   private realTimeStatus: RealTimeMiningStatus;
   private syncInterval: NodeJS.Timeout | null;
-  private miningTicker: NodeJS.Timeout | null = null; // [신규] 배경 채굴 계산기
   private isRunning: boolean;
-  private currentBaseRate: Decimal = new Decimal(0); // [신규] 초당 증가량 계산용 기본율
   private lastSyncTime: Date;
   private walletAddress: string | null;
   private syncCount: number;
@@ -56,7 +54,7 @@ export class RealTimeSyncService {
     return {
       totalSupply: MINING_CONSTANTS.TOTAL_SUPPLY,
       currentIssued: 0,
-      referralBonusStorage: 0,
+      referralBonusStorage: 0, // [Step 4] 초기값 추가
       remainingSupply: MINING_CONSTANTS.TOTAL_SUPPLY,
       remainingIssued: MINING_CONSTANTS.TOTAL_SUPPLY,
       issuanceRate: 0.00,
@@ -70,45 +68,8 @@ export class RealTimeSyncService {
   }
 
   /**
-   * [신규] 배경 채굴 티커 시작 (창이 닫혀도 유지됨)
-   * @param baseRate 시간당 채굴률 (예: 0.25)
-   */
-  public startMiningTicker(baseRate: number): void {
-    if (this.miningTicker) clearInterval(this.miningTicker);
-
-    this.currentBaseRate = new Decimal(baseRate);
-    const perSecondRate = this.currentBaseRate.div(3600);
-
-    this.miningTicker = setInterval(() => {
-      if (this.realTimeStatus.currentIssued >= 0) {
-        // Decimal 정밀 연산 후 업데이트
-        const current = new Decimal(this.realTimeStatus.currentIssued);
-        const next = current.plus(perSecondRate);
-
-        this.realTimeStatus.currentIssued = next.toNumber();
-        this.realTimeStatus.lastUpdate = new Date();
-
-        // 지갑 등 모든 구독자에게 1초마다 방송
-        this.notifySubscribers();
-      }
-    }, 1000);
-
-    console.log('[RealTimeSync] 배경 채굴 티커 시작됨. Rate:', baseRate);
-  }
-
-  /**
-   * [신규] 배경 채굴 티커 중지
-   */
-  public stopMiningTicker(): void {
-    if (this.miningTicker) {
-      clearInterval(this.miningTicker);
-      this.miningTicker = null;
-      console.log('[RealTimeSync] 배경 채굴 티커 중지됨.');
-    }
-  }
-
-  /**
    * 서비스 초기화 및 사용자 상태 로드
+   * @param address 지갑 주소
    */
   public async initialize(address: string): Promise<void> {
     this.walletAddress = address;
@@ -116,14 +77,8 @@ export class RealTimeSyncService {
       const status = await apiService.getUserStatus(address);
       if (status && status.miningState) {
         this.updateLocalStatusFromServer(status.miningState);
-
-        // [보강] 초기화 시 이미 채굴 중이라면, 서버에서 준 totalRate로 배경 티커 즉시 가동
-        if (status.miningState.isMining && status.miningState.totalRate > 0) {
-          console.log('[RealTimeSync] 초기화 중 채굴 상태 감지 -> 티커 자동 시작:', status.miningState.totalRate);
-          this.startMiningTicker(status.miningState.totalRate);
-        }
       }
-
+      // [추가] 보상 기록 로드 시 보너스 잔액 동기화
       const bonusData = await apiService.getBonusStatus(address);
       if (bonusData && bonusData.referral) {
         this.realTimeStatus.referralBonusStorage = bonusData.referral.bonusStorage || 0;
@@ -134,14 +89,39 @@ export class RealTimeSyncService {
   }
 
   /**
-   * 실시간 동기화 시작 (API Sync)
+   * 실시간 동기화 시작 (Legacy 호환용)
+   */
+  public startRealTimeSync(): { success: boolean; message?: string } {
+    if (this.isRunning) {
+      return { success: false, message: 'Already running' };
+    }
+    this.startSync();
+    return { success: true, message: 'Started' };
+  }
+
+  /**
+   * 실시간 동기화 정지 (Legacy 호환용)
+   */
+  public stopRealTimeSync(): { success: boolean; message?: string } {
+    if (!this.isRunning) {
+      return { success: false, message: 'Not running' };
+    }
+    this.stopSync();
+    return { success: true, message: 'Stopped' };
+  }
+
+  /**
+   * 실시간 동기화 시작
    */
   public startSync(callback?: (status: RealTimeMiningStatus) => void): void {
     if (this.isRunning || !this.walletAddress) return;
 
     this.isRunning = true;
+
+    // 즉시 1회 실행
     this.performDataSync(callback);
 
+    // 30초마다 주기적 실행
     this.syncInterval = setInterval(() => {
       this.performDataSync(callback);
     }, AUTO_REFRESH_INTERVAL);
@@ -164,6 +144,8 @@ export class RealTimeSyncService {
   private async performDataSync(callback?: (status: RealTimeMiningStatus) => void): Promise<void> {
     if (!this.walletAddress) return;
 
+    // [핵심 추가] 좀비 복구 방지 전용 코드
+    // 동기화 직전에 관리자 초기화 신호가 있는지 확인합니다.
     try {
       const triggerRaw = localStorage.getItem('BW_SYSTEM_RESET_TRIGGER');
       if (triggerRaw) {
@@ -172,21 +154,27 @@ export class RealTimeSyncService {
         const normWallet = this.walletAddress.trim().toLowerCase();
 
         if (normTarget === normWallet) {
-          this.stopMiningTicker(); // 리셋 시 티커도 정지
+          // 신호가 감지되면 즉시 동기화 중단 및 메모리 자폭(0으로 리셋)
+          // 이렇게 해야 서버 DB를 옛날 값으로 덮어쓰지 않습니다.
+          console.log('[RealTimeSync] 초기화 신호 감지 -> 동기화 중단 및 메모리 리셋');
+
           this.realTimeStatus = {
             ...this.realTimeStatus,
             currentIssued: 0,
             issuanceRate: 0,
             issueRate: 0
           };
+
+          // 콜백이 있다면 0으로 업데이트된 상태를 UI에 전달
           if (callback) callback(this.realTimeStatus);
-          return;
+          return; // 서버 전송 취소
         }
       }
-    } catch (e) { }
+    } catch (e) {
+      // JSON 파싱 에러 무시
+    }
 
     try {
-      // 배경 티커가 업데이트하고 있는 현재 메모리 값을 서버로 보냄
       const currentAmount = this.precisionCalculator.formatBW(
         new Decimal(this.realTimeStatus.currentIssued)
       );
@@ -212,7 +200,7 @@ export class RealTimeSyncService {
    */
   private updateLocalStatusFromServer(serverData: any): void {
     const currentIssued = new Decimal(serverData.accumulatedReward || 0);
-    const referralBonus = new Decimal(serverData.referralBonusStorage || 0);
+    const referralBonus = new Decimal(serverData.referralBonusStorage || 0); // [Step 4] 서버에서 온 보너스 잔액
     const totalSupply = new Decimal(MINING_CONSTANTS.TOTAL_SUPPLY);
 
     const remaining = totalSupply.minus(currentIssued);
@@ -221,21 +209,23 @@ export class RealTimeSyncService {
     this.realTimeStatus = {
       ...this.realTimeStatus,
       currentIssued: currentIssued.toNumber(),
-      referralBonusStorage: referralBonus.toNumber(),
+      referralBonusStorage: referralBonus.toNumber(), // [Step 4] 동기화
       remainingSupply: remaining.toNumber(),
       remainingIssued: remaining.toNumber(),
       issuanceRate: issuanceRate.toNumber(),
       issueRate: issuanceRate.toNumber(),
       lastUpdate: new Date()
     };
-    this.notifySubscribers();
+    this.notifySubscribers(); // 서버 데이터로 갱신 시에도 알림
   }
 
+
   /**
-   * 실시간 데이터 구독
+   * 실시간 데이터 구독 (Step 4 연동용)
    */
   public subscribe(callback: (status: RealTimeMiningStatus) => void): () => void {
     this.subscribers.push(callback);
+    // 즉시 현재 상태 전달
     callback(this.getCurrentStatus());
     return () => {
       this.subscribers = this.subscribers.filter(sub => sub !== callback);
@@ -248,12 +238,14 @@ export class RealTimeSyncService {
   }
 
   /**
-   * 보너스 저장소 업데이트용 (ReferralBonusService 연동)
+   * [신규] 화면의 실시간 채굴량 및 추천 보너스 보관함을 서비스 메모리에 업데이트
+   * 다음 자동 동기화 시 이 값이 서버로 안전하게 전송됨
    */
-  public updateBonusStorage(bonusAmountDelta: number): void {
-    const currentBonus = new Decimal(this.realTimeStatus.referralBonusStorage || 0);
-    this.realTimeStatus.referralBonusStorage = currentBonus.plus(bonusAmountDelta).toNumber();
-    this.notifySubscribers();
+  public updateCurrentMiningAmount(miningAmount: number, bonusAmount: number): void {
+    this.realTimeStatus.currentIssued = miningAmount;
+    this.realTimeStatus.referralBonusStorage = bonusAmount;
+    this.realTimeStatus.lastUpdate = new Date();
+    this.notifySubscribers(); // 상태 변경 시 즉시 알림
   }
 
   public getCurrentStatus(): RealTimeMiningStatus {
@@ -261,7 +253,7 @@ export class RealTimeSyncService {
   }
 
   /**
-   * 동기화 상태 조회 (Legacy)
+   * 동기화 상태 조회 (Legacy 호환용)
    */
   public getSyncStatus(): {
     isRunning: boolean;
