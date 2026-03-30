@@ -1,1 +1,0 @@
-{"version":3,"file":"storage.d.ts","sourceRoot":"","sources":["../../src/server/storage.ts"],"names":[],"mappings":"AAQA;;;GAGG;AACH,qBAAa,iBAAiB;IAC1B,OAAO,CAAC,MAAM,CAAC,eAAe;IAM9B;;;;OAIG;WACW,UAAU,CAAC,QAAQ,EAAE,MAAM,EAAE,IAAI,EAAE,GAAG,GAAG,OAAO;IAc9D;;;OAGG;WACW,YAAY,CAAC,QAAQ,EAAE,MAAM,GAAG,GAAG,GAAG,IAAI;IAcxD;;;OAGG;WACW,YAAY,CAAC,QAAQ,EAAE,MAAM,GAAG,OAAO;CAgBxD"}
