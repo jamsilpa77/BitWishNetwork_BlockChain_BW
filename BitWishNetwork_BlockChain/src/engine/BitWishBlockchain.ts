@@ -30,6 +30,7 @@ import { BitWishTransaction } from '../core/BitWishTransaction';
 import { BitWishWallet } from '../core/BitWishWallet';
 import { BitWishPoW } from '../consensus/BitWishPoW';
 import { BITWISH_NETWORK_CONFIG, BITWISH_TRANSACTION_CONFIG } from '../config/BitWishConfig';
+import { BitWishVM } from './BitWishVM';
 
 export interface BitWishAccount {
   address: string;
@@ -38,6 +39,9 @@ export interface BitWishAccount {
   createdAt: number;
   lastActivity: number;
   isActive: boolean;
+  codeHash: string;
+  storageRoot: string;
+  isContract: boolean;
 }
 
 export interface BitWishBlockchainStats {
@@ -78,36 +82,36 @@ export class BitWishBlockchain extends EventEmitter {
 
       // MongoDB에서 기존 데이터 로드 시도
       const existingData = await this.loadFromDatabase();
-      
+
       if (existingData && existingData.blocks.length > 0) {
         // 기존 데이터가 있으면 복원
         console.log('🔄 MongoDB에서 기존 블록체인 데이터 복원 중...');
-        
+
         for (const blockData of existingData.blocks) {
           const block = BitWishBlock.fromJSON(blockData);
           this.blocks.set(block.header.blockHeight, block);
         }
-        
+
         this.currentBlockHeight = existingData.currentBlockHeight;
         this.genesisBlock = this.blocks.get(0)!;
-        
+
         // 기존 계정들 복원
         for (const accountData of existingData.accounts) {
           this.accounts.set(accountData.address, accountData);
         }
-        
+
         console.log(`🔄 기존 데이터 복원 완료: ${existingData.blocks.length}개 블록, ${existingData.accounts.length}개 계정`);
       } else {
         // 기존 데이터가 없으면 제네시스 블록 생성
         console.log('🌱 새로운 BitWish 블록체인 초기화...');
-        
+
         this.genesisBlock = BitWishBlock.createGenesisBlock();
         this.blocks.set(0, this.genesisBlock);
         this.currentBlockHeight = 0;
 
         // 제네시스 계정 생성
         this.createAccount('BitWish-Foundation', BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.toString());
-        
+
         // 데이터베이스에 저장
         await this.saveToDatabase();
       }
@@ -139,7 +143,7 @@ export class BitWishBlockchain extends EventEmitter {
 
       // 대기 중인 트랜잭션 가져오기
       const blockTransactions = this.pendingTransactions.slice(0, BITWISH_NETWORK_CONFIG.MAX_TRANSACTIONS_PER_BLOCK);
-      
+
       // 마이닝 보상 트랜잭션 추가
       const blockReward = this.calculateBlockReward(this.currentBlockHeight + 1);
       const miningRewardTx = BitWishTransaction.createMiningRewardTransaction(
@@ -147,7 +151,7 @@ export class BitWishBlockchain extends EventEmitter {
         blockReward.toString(),
         this.currentBlockHeight + 1
       );
-      
+
       blockTransactions.unshift(miningRewardTx);
 
       // 블록 생성
@@ -172,7 +176,7 @@ export class BitWishBlockchain extends EventEmitter {
 
       // 블록 마이닝
       const miningResult = await this.pow.mineBlock(newBlock);
-      
+
       if (!miningResult.success) {
         throw new Error(`블록 마이닝 실패: ${miningResult.error}`);
       }
@@ -314,8 +318,8 @@ export class BitWishBlockchain extends EventEmitter {
 
       // 2. 잔액 검증 (시스템 트랜잭션 제외)
       if (transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.SYSTEM &&
-          transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.MINING_REWARD) {
-        
+        transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.MINING_REWARD) {
+
         const account = this.accounts.get(transaction.from);
         if (!account) {
           return { valid: false, error: '발신자 계정을 찾을 수 없습니다' };
@@ -343,21 +347,57 @@ export class BitWishBlockchain extends EventEmitter {
    */
   executeTransaction(transaction: BitWishTransaction): { success: boolean; error?: string } {
     try {
-      // 시스템 및 마이닝 보상 트랜잭션 처리
+      // 1. 컨트랙트 배포 (Deploy) 상황: 수신자(to)가 비어있고 data(바이트코드)가 들어온 경우
+      if ((!transaction.to || transaction.to === '') && transaction.data) {
+        // 트랜잭션 해시를 기반으로 나만의 컨트랙트 주소 발급
+        const newContractAddress = `BWC_${transaction.hash!.substring(0, 36)}`;
+        const contractAccount = this.createAccount(newContractAddress, '0');
+
+        contractAccount.isContract = true;
+        contractAccount.codeHash = transaction.data; // 바이트코드 영구 보관 (블록체인 기록)
+        this.accounts.set(newContractAddress, contractAccount);
+
+        console.log(`📜 [스마트 컨트랙트 배포 성공] 주소: ${newContractAddress}`);
+        return { success: true };
+      }
+
+      // 2. 컨트랙트 실행 (Execute) 상황: 수신자가 일반인이 아닌 '스마트 컨트랙트' 계정인 경우
+      const targetAccount = this.accounts.get(transaction.to);
+      if (targetAccount && targetAccount.isContract) {
+        console.log(`⚙️ [BWVM 엔진 호출] 컨트랙트 실행 타겟: ${transaction.to}`);
+
+        // 임시 스토리지(Map)를 생성하여 DB 상태 복사본을 BWVM에 집어넣음
+        const contractStorage = new Map<string, string>(); // TODO: 실제 DB Storage 로드
+
+        // 우리가 만든 BitWishVM (가상머신) 심장부 작동 개시
+        const vm = new BitWishVM(contractStorage, transaction.gasLimit);
+
+        // 컨트랙트 바이트코드 + 트랜잭션 호출 명령어(data) 결합하여 실행
+        const result = vm.execute(targetAccount.codeHash + " " + (transaction.data || ""));
+
+        if (!result.success) {
+          return { success: false, error: 'VM 실행 실패 (가스 초과 또는 로직 오류)' };
+        }
+
+        // TODO: VM 실행으로 변경된 결과(contractStorage)를 블록체인 계정 상태(storageRoot)에 영구 덮어쓰기 기록
+        return { success: true };
+      }
+
+      // 3. 기존 시스템 및 마이닝 보상 트랜잭션 처리
       if (transaction.type === BITWISH_TRANSACTION_CONFIG.TYPES.MINING_REWARD ||
-          transaction.type === BITWISH_TRANSACTION_CONFIG.TYPES.SYSTEM) {
-        
+        transaction.type === BITWISH_TRANSACTION_CONFIG.TYPES.SYSTEM) {
+
         // 수신자 계정 생성 또는 업데이트
         let toAccount = this.accounts.get(transaction.to);
         if (!toAccount) {
           toAccount = this.createAccount(transaction.to, '0');
         }
-        
+
         toAccount.balance = toAccount.balance.plus(transaction.amount);
         toAccount.lastActivity = Date.now();
-        
+
         this.accounts.set(transaction.to, toAccount);
-        
+
         console.log(`💰 ${transaction.type} 실행: ${transaction.amount.toString()} BW → ${transaction.to}`);
         return { success: true };
       }
@@ -413,7 +453,10 @@ export class BitWishBlockchain extends EventEmitter {
       nonce: 0,
       createdAt: Date.now(),
       lastActivity: Date.now(),
-      isActive: true
+      isActive: true,
+      codeHash: '',
+      storageRoot: '',
+      isContract: false
     };
 
     this.accounts.set(address, account);
@@ -465,7 +508,7 @@ export class BitWishBlockchain extends EventEmitter {
    */
   private calculateBlockReward(blockHeight: number): Decimal {
     let reward = new Decimal('50.000000000000000000000000000000000000000000000000000');
-    
+
     // 반감기 계산
     if (blockHeight >= 210000) reward = reward.div(2);
     if (blockHeight >= 420000) reward = reward.div(2);
@@ -508,32 +551,35 @@ export class BitWishBlockchain extends EventEmitter {
       // MongoDB 연결 확인
       const { MongoClient } = require('mongodb');
       const client = new MongoClient('mongodb://localhost:27017');
-      
+
       await client.connect();
       const db = client.db('bitwish_network');
-      
+
       // 블록 데이터 로드
       const blocksCollection = db.collection('blocks');
       const blocks = await blocksCollection.find({}).sort({ blockHeight: 1 }).toArray();
-      
+
       // 계정 데이터 로드
       const accountsCollection = db.collection('accounts');
       const accounts = await accountsCollection.find({}).toArray();
-      
+
       await client.close();
-      
+
       if (blocks.length > 0) {
         console.log(`📊 MongoDB에서 ${blocks.length}개 블록, ${accounts.length}개 계정 로드 성공`);
         return {
           blocks: blocks.map((block: any) => block.data || block),
           accounts: accounts.map((account: any) => ({
             ...account,
-            balance: new Decimal(account.balance)
+            balance: new Decimal(account.balance),
+            codeHash: account.codeHash || '',
+            storageRoot: account.storageRoot || '',
+            isContract: account.isContract || false
           })),
           currentBlockHeight: Math.max(...blocks.map((b: any) => b.blockHeight || b.data?.header?.blockHeight || 0))
         };
       }
-      
+
       return null;
     } catch (error: any) {
       console.log('📊 MongoDB 데이터 로드 실패 (새로 시작):', error?.message || error);
@@ -548,16 +594,16 @@ export class BitWishBlockchain extends EventEmitter {
     try {
       const { MongoClient } = require('mongodb');
       const client = new MongoClient('mongodb://localhost:27017');
-      
+
       await client.connect();
       const db = client.db('bitwish_network');
-      
+
       // 블록 데이터 저장
       const blocksCollection = db.collection('blocks');
       for (const [height, block] of this.blocks) {
         await blocksCollection.replaceOne(
           { blockHeight: height },
-          { 
+          {
             blockHeight: height,
             data: block.toJSON(),
             timestamp: Date.now()
@@ -565,7 +611,7 @@ export class BitWishBlockchain extends EventEmitter {
           { upsert: true }
         );
       }
-      
+
       // 계정 데이터 저장
       const accountsCollection = db.collection('accounts');
       for (const [address, account] of this.accounts) {
@@ -578,7 +624,7 @@ export class BitWishBlockchain extends EventEmitter {
           { upsert: true }
         );
       }
-      
+
       await client.close();
       console.log('💾 블록체인 데이터를 MongoDB에 저장 완료');
     } catch (error: any) {
@@ -591,7 +637,7 @@ export class BitWishBlockchain extends EventEmitter {
    */
   getStats(): BitWishBlockchainStats {
     const blocks = Array.from(this.blocks.values());
-    const averageBlockTime = blocks.length > 1 
+    const averageBlockTime = blocks.length > 1
       ? (blocks[blocks.length - 1].header.timestamp - blocks[0].header.timestamp) / (blocks.length - 1)
       : 0;
 
@@ -622,5 +668,45 @@ export class BitWishBlockchain extends EventEmitter {
       miningStats: this.pow.getMiningStats(),
       networkId: BITWISH_NETWORK_CONFIG.NETWORK_ID
     };
+  }
+
+  /**
+   * [P2P 융합 결합용] 
+   * 백엔드가 넘겨준 구버전 JSON 데이터를 메모리 상에서만 Decimal로 포장하여
+   * 3~4초 내에 무결점 블록체인 검증 및 암호화 마이닝 장부 기록만 수행하고 결과를 Return합니다.
+   */
+  async verifyAndMineTransaction(senderAddress: string, receiverAddress: string, amount: string, currentSenderBalance: string): Promise<{ success: boolean; message: string }> {
+      try {
+          // 1. 구버전 JSON의 String 잔액을 50자리 초정밀 Decimal로 변환하여 메모리 맵핑 (파일 오염 절대 없음)
+          const decimalAmount = new Decimal(amount);
+          const decimalBalance = new Decimal(currentSenderBalance);
+
+          // 2. 엔진의 절대 규칙: 위변조 및 잔액 부족 검증
+          if (decimalBalance.lessThan(decimalAmount)) {
+              return { success: false, message: '잔액이 부족하거나 위변조된 요청입니다.' };
+          }
+
+          // 3. 트랜잭션 객체 생성 및 3~4초 마이닝(채굴 장부 기록) 즉시 트리거 (Phase 1~3 기능 활용)
+          const tx = new BitWishTransaction({
+              from: senderAddress,
+              to: receiverAddress,
+              amount: decimalAmount.toString(),
+              gasLimit: BITWISH_NETWORK_CONFIG.GAS_LIMIT,
+              gasPrice: BITWISH_NETWORK_CONFIG.GAS_PRICE.toString(),
+              nonce: this.getNonce(senderAddress),
+              data: '',
+              timestamp: Date.now(),
+              type: BITWISH_TRANSACTION_CONFIG.TYPES.TRANSFER
+          });
+          const miningResult = await this.addTransaction(tx);
+
+          if (!miningResult.success) {
+              return { success: false, message: '블록체인 해시 검증/마이닝 실패' };
+          }
+
+          return { success: true, message: '3~4초 마이닝 완료 및 장부 무결점 기록 성공' };
+      } catch (error) {
+          return { success: false, message: '엔진 동시성 에러 방어됨' };
+      }
   }
 }

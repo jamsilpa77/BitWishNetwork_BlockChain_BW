@@ -82,64 +82,39 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
                     // 실제 지갑 주소를 키로 사용
                     let referralStats = referralBonusService.getReferralStats(walletAddress);
 
-                    // 지갑에는 추천인이 있는데 서비스 데이터(저장소)에는 없는 경우 -> 복구 수행
-                    if (realReferralCount > 0 && referralStats.referredUsers.length < realReferralCount) {
-                        console.log(`[MiningStatusModal] 데이터 복구 시작: 지갑(${realReferralCount}명) vs 저장소(${referralStats.referredUsers.length}명)`);
-
-                        // 3-1. 내 추천 코드 확보 (없으면 생성)
-                        let myCode = referralStats.referralCode;
-                        if (!myCode) {
-                            const codeResult = referralBonusService.generateReferralCode(walletAddress);
-                            if (codeResult.success) myCode = codeResult.referralCode!;
-                        }
-
-                        // 3-2. 부족한 수만큼 서비스의 정식 가입 메서드를 호출하여 데이터 생성 및 저장
-                        if (myCode) {
-                            const missingCount = realReferralCount - referralStats.referredUsers.length;
-                            for (let i = 0; i < missingCount; i++) {
-                                // 가상의 유저 생성하여 정식 가입 절차 밟음 -> 서비스가 알아서 저장소에 기록함
-                                const fakeUserId = `recovered_${Date.now()}_${i}`;
-                                referralBonusService.joinWithReferralCode(myCode, fakeUserId, {
-                                    walletAddress: fakeUserId,
-                                    kycStatus: 'APPROVED' // 승인 상태로 가정
-                                } as any);
-                            }
-                            // 복구 후 데이터 다시 로드
-                            referralStats = referralBonusService.getReferralStats(walletAddress);
-                            console.log('[MiningStatusModal] 데이터 복구 및 영구 저장 완료');
-                        }
-                    }
+                    // [Step 1 집행] 가짜 유저 생성 및 데이터 오염(Poisoning) 회로 완전 삭제
+                    // 시스템은 이제 임의로 숫자를 맞추지 않고 오직 서버의 실시간 데이터만 신뢰함.
 
                     // 4. 상태 업데이트 (화면 표시)
-                    // 추천 보너스 비율 계산 (1명당 2%)
-                    const referralBonusRateVal = new Decimal(referralStats.referredUsers.length).mul(2.0);
+                    // [Step 3] UI의 자의적 보너스율 재계산 로직 제거
+                    // 서버 DB에 기록된 실제 보너스 수치를 그대로 신뢰하여 표출
+                    const referralCount = userData.miningState?.referralCount || 0;
+                    const referralBonusRateValue = new Decimal(userData.miningState?.referralBonusRate || '0').mul(100);
 
                     // 출석 상태
                     const isAttendanceActive = userData.miningState?.isAttendanceActive || false;
                     const attendanceBonusRateVal = isAttendanceActive ? new Decimal(5.0) : new Decimal(0.0);
 
-                    // 기본 보상률 계산 (기본 0.25 + 출석 5% + 추천 6% 등)
-                    // 수식: 기본 * (1 + 출석% + 추천%)
-                    const baseRateOrigin = new Decimal(0.25);
+                    // 서버에서 이미 계산된 최종 보너스 및 보상률을 반영
+                    const finalBaseRate = new Decimal(userData.miningState?.currentTotalRate || '0.25');
                     const dailyMaxOrigin = new Decimal(6.0);
 
-                    const totalBonusPercent = attendanceBonusRateVal.plus(referralBonusRateVal); // 예: 5 + 6 = 11
-                    const multiplier = new Decimal(1).plus(totalBonusPercent.div(100)); // 1.11
-
-                    const finalBaseRate = baseRateOrigin.mul(multiplier);
+                    // 일일 최대 보상률도 동일한 배율(multiplier) 적용을 위해 서버 보너스율 기반 계산
+                    const multiplier = new Decimal(1).plus(new Decimal(userData.miningState?.referralBonusRate || '0'))
+                        .plus(isAttendanceActive ? 0.05 : 0)
+                        .plus(userData.miningState?.partnerStatus === 'REGISTERED' ? 0.25 : 0);
                     const finalDailyMaxRate = dailyMaxOrigin.mul(multiplier);
 
                     setUserStats({
                         baseRate: finalBaseRate,
                         dailyMaxRate: finalDailyMaxRate,
-                        referralCount: referralStats.referredUsers.length, // 서비스 데이터 기준 표시
-                        referralBonusRate: referralBonusRateVal,
+                        referralCount: referralCount,
+                        referralBonusRate: referralBonusRateValue, // 2.0% (DB 값) 정상 표시
                         isAttendanceActive: isAttendanceActive,
                         attendanceBonusRate: attendanceBonusRateVal,
-                        // 저장소에서 가져온 실제 데이터 표시
                         referralBonusStorage: new Decimal(referralStats.bonusStorage || 0),
                         referralRewardStorage: new Decimal(referralStats.rewardStorage || 0),
-                        partnerStatus: 'NOT_REGISTERED'
+                        partnerStatus: userData.miningState?.partnerStatus || 'NOT_REGISTERED'
                     });
 
                     // 마이닝 상태 반영

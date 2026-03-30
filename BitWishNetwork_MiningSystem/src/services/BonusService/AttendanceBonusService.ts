@@ -74,6 +74,37 @@ export class AttendanceBonusService {
   }
 
   /**
+   * [추가] 지갑 주소별 고유 Storage 키 생성 (독립성 보장)
+   */
+  private getStorageKey(walletAddress?: string): string {
+    if (!walletAddress || walletAddress === 'current_user') return 'bw-attendance-records';
+    return `bw-attendance-records-${walletAddress}`;
+  }
+
+  /**
+   * [추가] 서버(MongoDB) 데이터와 로컬 데이터 강제 동기화
+   */
+  public async syncWithServer(walletAddress: string): Promise<void> {
+    try {
+      if (!walletAddress) return;
+      const response = await fetch(`/api/attendance/history/${walletAddress}`);
+      const data = await response.json();
+      if (data.success && data.history) {
+        // 서버의 단독 저장소 데이터를 로컬 기록으로 이관
+        this.attendanceRecords = data.history.map((h: any) => ({
+          ...h,
+          isCompleted: true,
+          status: 'COMPLETED'
+        }));
+        this.saveAttendanceRecords(walletAddress); // 분리된 키로 저장
+        this.calculateBonusRate();
+      }
+    } catch (error) {
+      console.error('서버 동기화 오류:', error);
+    }
+  }
+
+  /**
    * [핵심] 논리적 '오늘' 날짜 구하기 (오전 9시 기준)
    * 오전 9시 이전이면 '어제' 날짜를 반환함.
    * 예: 16일 새벽 1시 -> 15일 반환
@@ -89,13 +120,16 @@ export class AttendanceBonusService {
   }
 
   /**
-   * 출석 기록 로드
+   * 출석 기록 로드 (지갑 주소 분리)
    */
-  private loadAttendanceRecords(): void {
+  public loadAttendanceRecords(walletAddress?: string): void {
     try {
-      const savedRecords = localStorage.getItem('bw-attendance-records');
+      const key = this.getStorageKey(walletAddress); // 지갑별 키 생성
+      const savedRecords = localStorage.getItem(key);
       if (savedRecords) {
         this.attendanceRecords = JSON.parse(savedRecords);
+      } else {
+        this.attendanceRecords = [];
       }
     } catch (error) {
       console.error('출석 기록 로드 오류:', error);
@@ -104,11 +138,12 @@ export class AttendanceBonusService {
   }
 
   /**
-   * 출석 기록 저장
+   * 출석 기록 저장 (지갑 주소 분리)
    */
-  private saveAttendanceRecords(): void {
+  private saveAttendanceRecords(walletAddress?: string): void {
     try {
-      localStorage.setItem('bw-attendance-records', JSON.stringify(this.attendanceRecords));
+      const key = this.getStorageKey(walletAddress);
+      localStorage.setItem(key, JSON.stringify(this.attendanceRecords));
     } catch (error) {
       console.error('출석 기록 저장 오류:', error);
     }
@@ -379,7 +414,7 @@ export class AttendanceBonusService {
       };
 
       this.attendanceRecords.push(newRecord);
-      this.saveAttendanceRecords();
+      this.saveAttendanceRecords(walletAddress);
       this.calculateBonusRate();
 
       // 백엔드 API 호출 (walletAddress가 있을 경우)

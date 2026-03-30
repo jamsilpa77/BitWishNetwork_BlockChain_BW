@@ -69,7 +69,7 @@ export class WalletService {
    */
   public async createWallet(mnemonic: string[], secondPassword: string, referralCode?: string): Promise<WalletData> {
     if (!this.checkIpLimit()) {
-      throw new Error('Wallet creation limit exceeded (Max 2 per IP)');
+      throw new Error('Wallet creation limit exceeded (Max 100 per IP)');
     }
 
     const phrase = mnemonic.join(' ');
@@ -146,10 +146,14 @@ export class WalletService {
    * 추천인 코드 생성 (관리자 표준: REF + 주소[2-9] + 주소[마지막7])
    */
   public generateReferralCode(address: string): string {
-    // BW 접두사 제외한 실제 데이터 영역(3번째 글자부터 8자리)
+    // [절대 원칙] 관리자 지갑 주소일 경우 기존 15자리 코드 강제 박제 (9DC5 보존)
+    if (address === 'BW9F5FF090231236037F250A523B4FC320FB44BFA8') {
+      return 'REF9F5FF0909DC5';
+    }
+
+    // 일반 유저: 15자리 정상 공식 (Prefix 8자리 + Suffix 4자리)
     const prefix = address.substring(2, 10).toUpperCase();
-    // 마지막 7자리
-    const suffix = address.substring(address.length - 7).toUpperCase();
+    const suffix = address.substring(address.length - 4).toUpperCase();
     return `REF${prefix}${suffix}`;
   }
 
@@ -517,7 +521,7 @@ export class WalletService {
   private checkIpLimit(): boolean {
     if (typeof window === 'undefined') return true;
     const count = parseInt(localStorage.getItem(this.IP_LIMIT_KEY) || '0');
-    return count < 2;
+    return count < 100;
   }
 
   private incrementIpCount(): void {

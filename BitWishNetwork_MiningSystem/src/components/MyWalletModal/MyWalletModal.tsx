@@ -36,12 +36,14 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
         referralReward: number;
         referralBonus: number;
         myReferralCode?: string;
+        referralList?: any[];
     }>({
         balance: 0,
         availableBalance: 0,
         referralReward: 0,
         referralBonus: 0,
-        myReferralCode: ''
+        myReferralCode: '',
+        referralList: []
     }); // [Step 4 Fix] null 상태 제거하여 실시간 동기화 즉시 활성화
     const [isRotating, setIsRotating] = useState(false);
 
@@ -68,7 +70,8 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                     referralReward: parseFloat(u?.referralRewardStorage || '0'), // 1BW
                     referralBonus: parseFloat(u?.referralBonusStorage || '0'),   // 2%
 
-                    myReferralCode: u?.myReferralCode || ''
+                    myReferralCode: u?.myReferralCode || '',
+                    referralList: u?.referralList || []
                 });
             }
         } catch (e) {
@@ -374,7 +377,58 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                             </div>
                         </div>
                     )}
-                    {activeTab !== 'overview' && (
+                    {activeTab === 'referralRewards' && (
+                        <div className="referral-list-container" style={{ padding: '10px' }}>
+                            <h4 style={{ color: '#111827', marginBottom: '15px', fontSize: '16px', fontWeight: 'bold' }}>- 가입자 목록 -</h4>
+                            <div className="referral-history-table-wrapper" style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '12px' }}>
+                                    <thead style={{ backgroundColor: '#F9FAFB', borderBottom: '2px solid #E5E7EB' }}>
+                                        <tr>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>가입자</th>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>가입날짜</th>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>지급 보상(1BW)</th>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>지급 보너스(2%)</th>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>KYC 현황</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {((walletData as any)?.referralList || []).length > 0 ? (
+                                            ((walletData as any).referralList).map((ref: any, idx: number) => (
+                                                <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                                                    <td style={{ padding: '10px 5px', fontWeight: 'bold', color: '#374151' }}>
+                                                        {ref.childWalletAddress ? `BW${ref.childWalletAddress.substring(2, 8)}...` : '-'}
+                                                    </td>
+                                                    <td style={{ padding: '10px 5px', color: '#6B7280' }}>
+                                                        {new Date(ref.joinedAt).toLocaleString('ko-KR', {
+                                                            year: 'numeric', month: '2-digit', day: '2-digit',
+                                                            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                                                        }).replace(/\//g, '.')}
+                                                    </td>
+                                                    <td style={{ padding: '10px 5px', fontWeight: 'bold', color: ref.is1BWMePaid ? '#2563EB' : '#DC2626' }}>
+                                                        {ref.is1BWMePaid ? '지급' : '미지급'}
+                                                    </td>
+                                                    <td style={{ padding: '10px 5px', fontWeight: 'bold', color: ref.is2PercentMePaid ? '#2563EB' : '#DC2626' }}>
+                                                        {ref.is2PercentMePaid ? '지급' : '미지급'}
+                                                    </td>
+                                                    <td style={{ padding: '10px 5px', fontWeight: 'bold', color: ref.kycDetailStatus === '승인' ? '#2563EB' : '#DC2626' }}>
+                                                        {ref.kycDetailStatus || '미승인'}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={5} style={{ padding: '40px', color: '#9CA3AF' }}>가입 내역이 없습니다.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#F3F4F6', borderRadius: '5px', fontSize: '11px', color: '#4B5563' }}>
+                                💡 본인의 추천 코드로 가입자가 발생하면 내역에 즉시 등록됩니다.
+                            </div>
+                        </div>
+                    )}
+                    {(activeTab !== 'overview' && activeTab !== 'referralRewards') && (
                         <div className="overview-container">
                             <p style={{ textAlign: 'center', color: '#999', marginTop: '50px' }}>
                                 {getTranslation('wallet.dashboard.tabs.' + activeTab)} - Coming Soon

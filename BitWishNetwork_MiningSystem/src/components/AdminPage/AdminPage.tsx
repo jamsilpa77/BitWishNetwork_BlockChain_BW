@@ -33,12 +33,13 @@ const AdminPage: React.FC = () => {
     const [referralData, setReferralData] = useState<any>(null);
     const [referralLoading, setReferralLoading] = useState<boolean>(false);
     const [referralError, setReferralError] = useState<string>('');
-    const [hasLoadedInitialData, setHasLoadedInitialData] = useState<boolean>(false);
     const [isSearchMode, setIsSearchMode] = useState<boolean>(false); // 검색 모드 상태 추가
+    const [isRefreshing, setIsRefreshing] = useState<boolean>(false); // [작업 1 개선] 새로고침 전용 로딩 상태 추가
 
     // [추천 보상 현황] 전용 state 추가
     const [rewardStatusDetail, setRewardStatusDetail] = useState<any>(null);
     const [totalRewardIssued, setTotalRewardIssued] = useState<number>(0);
+    const [totalBonusRateSum, setTotalBonusRateSum] = useState<string>("0.00");
     const [rewardSearchAddress, setRewardSearchAddress] = useState<string>('');
     const [rewardLoading, setRewardLoading] = useState<boolean>(false);
 
@@ -49,6 +50,7 @@ const AdminPage: React.FC = () => {
             const data = await response.json();
             if (data.success) {
                 setTotalRewardIssued(data.totalIssued);
+                setTotalBonusRateSum(data.totalBonusRate); // [수리] 0.00% 원인 해결
             }
         } catch (err) {
             console.error('전체 보상 합계 조회 실패:', err);
@@ -79,6 +81,53 @@ const AdminPage: React.FC = () => {
             setRewardLoading(false);
         }
     };
+
+    // [작업 1 개정] 개별 데이터 기반 통합 실시간 엔진탑재
+    const [realTimeTotal, setRealTimeTotal] = useState<number>(0);
+
+    // 데이터가 로드될 때마다 기준점 합계 동기화
+    React.useEffect(() => {
+        if (referralData && referralData.monthlyTotal) {
+            setRealTimeTotal(parseFloat(referralData.monthlyTotal));
+        }
+    }, [referralData]);
+
+    React.useEffect(() => {
+        const timer = setInterval(() => {
+            setReferralData((prev: any) => {
+                if (!prev || !prev.records) return prev;
+
+                // 1. 개별 유저의 진짜 채굴량 실시간 가운팅
+                const newRecords = prev.records.map((r: any) => {
+                    if (r.isMining) {
+                        const rate = parseFloat(r.currentTotalRate || '0.25');
+                        const increment = rate / 3600;
+                        return {
+                            ...r,
+                            dailyMiningAmount: (parseFloat(r.dailyMiningAmount) + increment).toFixed(8)
+                        };
+                    }
+                    return r;
+                });
+
+                // 2. 가공된 개별 수치를 모두 더해 "전체 가입자 총 채굴량" 실시간 산출
+                const newTotal = newRecords.reduce((sum: number, r: any) => {
+                    return sum + parseFloat(r.dailyMiningAmount);
+                }, 0);
+
+                setRealTimeTotal(newTotal);
+
+                return {
+                    ...prev,
+                    monthlyTotal: newTotal.toFixed(8),
+                    records: newRecords
+                };
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [referralData === null]);
+
 
     // 탭 변경 시 전체 통계 로딩
     React.useEffect(() => {
@@ -210,10 +259,10 @@ const AdminPage: React.FC = () => {
     };
 
 
-    // 추천 보너스 데이터 검색
+    // 추천 보너스 데이터 검색 (개별 주소 검색 로직 고도화)
     const handleSearchReferral = async () => {
         if (!referralSearchAddress.trim()) {
-            setReferralError('지갑 주소를 입력하세요');
+            alert('지갑 주소를 입력하세요');
             return;
         }
 
@@ -221,7 +270,8 @@ const AdminPage: React.FC = () => {
         setReferralError('');
 
         try {
-            const response = await fetch(`http://localhost:5001/api/admin/referral/${referralSearchAddress}?year=${selectedYear}&month=${selectedMonth}`);
+            // [Step 2] 날짜 파라미터 제거 (전체 조회 보장)
+            const response = await fetch(`http://localhost:5001/api/admin/referral/${referralSearchAddress}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -229,20 +279,43 @@ const AdminPage: React.FC = () => {
 
             const data = await response.json();
 
-            if (data.success) {
-                setReferralData(data.data);
-                setIsSearchMode(true); // 검색 성공 시 검색 모드 활성화
+            if (data.success && data.data && data.data.records) {
+                // [핵심 지시 사항] 검색한 주소만 목록에 뜨도록 필터링 확약
+                const filtered = data.data.records.filter((r: any) =>
+                    r.referrerAddress.toLowerCase() === referralSearchAddress.toLowerCase() ||
+                    r.referredAddress.toLowerCase() === referralSearchAddress.toLowerCase()
+                );
+
+                setReferralData({
+                    ...data.data,
+                    records: filtered
+                });
+                setIsSearchMode(true);
             } else {
-                setReferralError(data.message || '데이터를 찾을 수 없습니다');
+                setReferralError('데이터를 찾을 수 없습니다');
                 setReferralData(null);
                 setIsSearchMode(false);
             }
         } catch (err: any) {
             console.error('추천 검색 오류:', err);
-            setReferralError(`서버 오류: ${err.message || '알 수 없는 오류'}`);
+            setReferralError('서버 연결 실패');
             setReferralData(null);
         } finally {
             setReferralLoading(false);
+        }
+    };
+
+    // [작업 1 개선] 지능형 새로고침 함수 (검색 모드 유지 및 로딩 분리)
+    const handleSmartRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            if (isSearchMode && referralSearchAddress) {
+                await handleSearchReferral(); // 검색 중이면 기존 검색 결과 최신화
+            } else {
+                await fetchAllReferrals(); // 전체 목록이면 전체 목록 최신화
+            }
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
@@ -252,7 +325,8 @@ const AdminPage: React.FC = () => {
         setReferralError('');
 
         try {
-            const response = await fetch(`http://localhost:5001/api/admin/referral/all?year=${selectedYear}&month=${selectedMonth}`);
+            // [Step 2] 날짜 파라미터 제거 (전체 조회를 위해 ?year=...&month=... 삭제)
+            const response = await fetch(`http://localhost:5001/api/admin/referral/all`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -277,11 +351,10 @@ const AdminPage: React.FC = () => {
 
     // 탭 변경 감지 및 자동 데이터 로딩
     React.useEffect(() => {
-        if (activeTab === 'referral' && !hasLoadedInitialData) {
+        if (activeTab === 'referral' && !referralData) {
             fetchAllReferrals();
-            setHasLoadedInitialData(true);
         }
-    }, [activeTab, hasLoadedInitialData]);
+    }, [activeTab]);
 
     // 유틸리티 함수: 날짜 포맷팅 (년, 월, 일, 시, 분, 초)
     const formatDateTime = (isoString: string): string => {
@@ -302,12 +375,14 @@ const AdminPage: React.FC = () => {
     // 유틸리티 함수: KYC 상태 텍스트
     const getKycStatusText = (status: string): string => {
         const statusMap: { [key: string]: string } = {
-            'APPROVED': '✅ 승인',
-            'REJECTED': '❌ 불승인',
-            'PENDING': '⏳ 보류',
-            'NOT_APPLIED': '미신청' // 미신청 추가 (텍스트 수정됨)
+            'APPLIED': '신청',
+            'NOT_APPLIED': '미신청',
+            'REVIEWING': '심사중',
+            'APPROVED': '승인',
+            'REJECTED': '미승인',
+            'PENDING': '보류'
         };
-        return statusMap[status] || '알 수 없음';
+        return statusMap[status] || status || '알 수 없음';
     };
 
 
@@ -351,7 +426,7 @@ const AdminPage: React.FC = () => {
                     className={`admin-tab ${activeTab === 'referral' ? 'active' : ''}`}
                     onClick={() => setActiveTab('referral')}
                 >
-                    🎁 추천 보너스
+                    🎁 가입자 목록
                 </button>
                 <button
                     className={`admin-tab ${activeTab === 'rewardStatus' ? 'active' : ''}`}
@@ -610,63 +685,50 @@ const AdminPage: React.FC = () => {
 
                 {activeTab === 'referral' && (
                     <div className="admin-panel">
-                        <h2>🎁 추천 보너스 관리</h2>
+                        <h2>🎁 가입자 목록 관리</h2>
                         <div className="test-section">
-                            <p className="warning-text">⚠️ 추천 보너스 현황 조회</p>
+                            <p className="warning-text">⚠️ 가입자 현황 조회</p>
 
                             <div className="search-box">
                                 <input
                                     type="text"
-                                    placeholder="추천인 지갑 주소 입력"
+                                    placeholder="지갑 주소 입력"
                                     className="admin-input"
                                     value={referralSearchAddress}
                                     onChange={(e) => setReferralSearchAddress(e.target.value)}
                                     disabled={referralLoading}
                                 />
-                                <div className="date-selectors">
-                                    <select
-                                        value={selectedYear}
-                                        onChange={(e) => setSelectedYear(Number(e.target.value))}
-                                        className="admin-select"
-                                    >
-                                        <option value={2024}>2024년</option>
-                                        <option value={2025}>2025년</option>
-                                        <option value={2026}>2026년</option>
-                                    </select>
-                                    <select
-                                        value={selectedMonth}
-                                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                                        className="admin-select"
-                                    >
-                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                            <option key={m} value={m}>{m}월</option>
-                                        ))}
-                                    </select>
-                                </div>
                                 <button
-                                    className="admin-button primary"
+                                    className="admin-button primary search-button-fixed"
                                     onClick={handleSearchReferral}
-                                    disabled={referralLoading}
+                                    disabled={referralLoading || isRefreshing}
                                 >
-                                    {referralLoading ? '검색 중...' : '월별 검색'}
+                                    {referralLoading && !isRefreshing ? '검색 중...' : '주소 검색'}
+                                </button>
+                                {/* [작업 1 개정] 진짜 데이터 기반 지능형 새로고침 적용 */}
+                                <button
+                                    className="admin-button secondary refresh-icon-button"
+                                    onClick={handleSmartRefresh}
+                                    title="목록 새로고침"
+                                    disabled={referralLoading || isRefreshing}
+                                >
+                                    {isRefreshing ? '...' : '🔄'}
                                 </button>
                             </div>
+
 
                             {referralError && (
                                 <div className="error-message">{referralError}</div>
                             )}
 
                             {referralData && (
-                                <div className="attendance-result-box">
-                                    <h3>✅ {selectedMonth}월 추천 보너스 현황</h3>
+                                <div className={`attendance-result-box ${isRefreshing ? 'refreshing' : ''}`}>
+                                    <h3>✅ 가입자 정보 확인</h3>
                                     <div className="attendance-summary">
                                         <div className="summary-item">
                                             <span className="summary-label">전체 가입자 총 채굴량:</span>
-                                            <span
-                                                className="summary-value hoverable-amount"
-                                                title={formatPrecise(referralData.monthlyTotal)}
-                                            >
-                                                {formatShort(referralData.monthlyTotal)} BW
+                                            <span className="summary-value active">
+                                                {parseFloat(realTimeTotal.toString()).toFixed(8)} BW
                                             </span>
                                         </div>
                                     </div>
@@ -675,7 +737,7 @@ const AdminPage: React.FC = () => {
                                         <div className="attendance-table-container">
                                             <h4>
                                                 {isSearchMode && referralSearchAddress.trim()
-                                                    ? `가입자: ${referralSearchAddress} ${selectedMonth}월 전체 목록`
+                                                    ? `가입자: ${referralSearchAddress} 전체 검색 결과`
                                                     : '전체 가입자 목록'
                                                 }
                                             </h4>
@@ -737,7 +799,7 @@ const AdminPage: React.FC = () => {
                                     ) : (
                                         <div className="no-data-message">
                                             <p className="no-data-icon">📭</p>
-                                            <p className="no-data-text">{selectedMonth}월 추천 가입자가 없습니다</p>
+                                            <p className="no-data-text">추천 가입자가 없습니다</p>
                                         </div>
                                     )}
                                 </div>
@@ -752,9 +814,18 @@ const AdminPage: React.FC = () => {
 
                         <div className="test-section">
                             <h3>추천 보상 전체 지급 상태</h3>
-                            <div className="total-summary-card">
-                                <span className="total-label">전체 지급 보상</span>
-                                <span className="total-value">{formatPrecise(totalRewardIssued)} BW</span>
+
+                            <div className="summary-split-container">
+                                <div className="total-summary-card reward-card">
+                                    <span className="total-label">전체 지급 보상</span>
+                                    <span className="total-value">{formatPrecise(totalRewardIssued)} BW</span>
+                                </div>
+                                <div className="total-summary-card bonus-card">
+                                    <span className="total-label">전체 지급 보너스</span>
+                                    <span className="total-value" style={{ color: '#a855f7' }}>
+                                        {totalBonusRateSum} %
+                                    </span>
+                                </div>
                             </div>
 
                             <div className="search-box" style={{ marginTop: '30px' }}>
@@ -803,7 +874,14 @@ const AdminPage: React.FC = () => {
                                     </div>
 
                                     <div className="referral-list-section" style={{ marginTop: '40px' }}>
-                                        <h4>👥 내 코드로 가입된 가입자 목록</h4>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                            <h4 style={{ margin: 0 }}>👥 내 코드로 가입된 가입자 목록</h4>
+                                            <div style={{ display: 'flex', gap: '15px', fontSize: '0.95rem', fontWeight: 'bold' }}>
+                                                <span style={{ color: '#f59e0b' }}>전체 보상 ({parseFloat(rewardStatusDetail.totalReward || "0").toFixed(2)} BW)</span>
+                                                <span style={{ color: '#a855f7' }}>전체 보너스 ({rewardStatusDetail.totalBonusRate || "0.00"} %)</span>
+                                            </div>
+                                        </div>
+
                                         {rewardStatusDetail.referralList && rewardStatusDetail.referralList.length > 0 ? (
                                             <table className="attendance-table">
                                                 <thead>
@@ -811,6 +889,8 @@ const AdminPage: React.FC = () => {
                                                         <th>가입자 지갑 주소</th>
                                                         <th>가입 날짜</th>
                                                         <th>보상 지급 상태</th>
+                                                        <th>보너스 지급 상태</th>
+                                                        <th>KYC 상태</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -819,6 +899,12 @@ const AdminPage: React.FC = () => {
                                                             <td className="wallet-cell">{ref.childWalletAddress}</td>
                                                             <td>{formatDateTime(ref.joinedAt)}</td>
                                                             <td style={{ color: '#4caf50', fontWeight: 'bold' }}>✅ 지급완료 (1 BW)</td>
+                                                            <td style={{ color: '#a855f7', fontWeight: 'bold' }}>지급완료 ({parseFloat(ref.bonusRate || "0").toFixed(0)} %)</td>
+                                                            <td>
+                                                                <span className={`kyc-status-${(ref.kycStatus || 'NOT_APPLIED').toLowerCase()}`}>
+                                                                    {getKycStatusText(ref.kycStatus || 'NOT_APPLIED')}
+                                                                </span>
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

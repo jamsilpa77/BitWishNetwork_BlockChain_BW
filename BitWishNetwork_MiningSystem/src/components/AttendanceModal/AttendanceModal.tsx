@@ -44,25 +44,26 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onCh
 
     // [중요] 초기화 및 데이터 로드 (서비스 이용)
     useEffect(() => {
-        if (isOpen) {
-            const now = new Date();
-            setCurrentDate(now);
-            setViewDate(now);
+        const initAttendance = async () => {
+            if (isOpen && walletAddress) {
+                // 1. 서비스 초기화 및 해당 지갑의 독자적 로컬 데이터 로딩
+                attendanceService.initializeService();
+                attendanceService.loadAttendanceRecords(walletAddress);
+                
+                // 2. 서버로부터 '진짜' 출석 내역을 가져와 로컬 저장소 강제 갱신
+                await attendanceService.syncWithServer(walletAddress);
 
-            // 서비스 초기화 및 데이터 로드
-            attendanceService.initializeService();
-            const records = attendanceService.getAttendanceRecords();
-            const recordDates = records.map(r => r.date); // 'YYYY-MM-DD'
-            setAttendanceData(recordDates);
+                // 3. 동기화된 데이터로 UI 렌더링
+                const recordDates = attendanceService.getAttendanceRecords().map(r => r.date);
+                setAttendanceData(recordDates);
 
-            // 오늘 출석 및 보너스 상태 확인
-            const status = attendanceService.getAttendanceStatus(); // 'COMPLETED', 'AVAILABLE', 'EXPIRED'
-            const rate = attendanceService.calculateBonusRate();
-
-            setIsCheckedToday(status === 'COMPLETED');
-            setBonusRate(rate);
-        }
-    }, [isOpen, attendanceService]);
+                const status = attendanceService.getAttendanceStatus();
+                setIsCheckedToday(status === 'COMPLETED');
+                setBonusRate(attendanceService.calculateBonusRate());
+            }
+        };
+        initAttendance();
+    }, [isOpen, walletAddress, attendanceService]);
 
     // [폴링 추가] 관리자 초기화 신호를 이 모달에서도 감지하여 즉시 UI 갱신 (선택사항이나 안전장치로 추가)
     useEffect(() => {

@@ -60,6 +60,26 @@ export class LanguageManager {
         language: '언어',
         theme: '테마'
       },
+      // 익스플로러 관련
+      explorer: {
+        title: 'BW 블록 익스플로러',
+        searchPlaceholder: '지갑 주소 / 트랜잭션 해시 검색',
+        searchBtn: '검색',
+        syncing: '현재 네트워크 데이터를 동기화 중입니다. 블록 리스트가 표시된 후 다시 검색해 주세요.',
+        searchResultFound: '이(가) 현재 생성 블록 리스트에 존재합니다.',
+        searchResultNotFound: '현재 네트워크 리스트에서 해당 데이터를 찾을 수 없습니다.',
+        invalidQuery: '유효하지 않은 검색어입니다. 올바른 BW 주소 또는 64자리 해시를 입력해 주세요.',
+        latestHeight: '최근 블록 높이',
+        avgBlockTime: '평균 블록 시간',
+        network: '네트워크',
+        latestBlocks: '최근 생성 블록',
+        height: '높이',
+        hash: '해시',
+        miner: '채굴자',
+        timestamp: '시간',
+        loading: '데이터 로딩 중...',
+        unknown: '알 수 없음'
+      },
       // 마이닝 관련
       mining: {
         title: '실시간 BW 채굴 상태 현황',
@@ -368,7 +388,27 @@ export class LanguageManager {
         language: 'Language',
         theme: 'Theme'
       },
-      mining: {
+      // Explorer 관련
+      explorer: {
+        title: 'BW BLOCK EXPLORER',
+        searchPlaceholder: 'Search by Address / Txn Hash',
+        searchBtn: 'SEARCH',
+        syncing: 'Syncing blockchain data... Please try again after data is loaded.',
+        searchResultFound: 'is present in the current block list.',
+        searchResultNotFound: 'Could not find the data in the current network list.',
+        invalidQuery: 'Invalid search query. Please enter a valid BW Address or 64-char Hash.',
+        latestHeight: 'LATEST HEIGHT',
+        avgBlockTime: 'AVG BLOCK TIME',
+        network: 'NETWORK',
+        latestBlocks: 'Latest Blocks',
+        height: 'Height',
+        hash: 'Hash',
+        miner: 'Miner',
+        timestamp: 'Timestamp',
+        loading: 'Loading dynamic data...',
+        unknown: 'Unknown'
+      },
+       mining: {
         title: 'Real-time BW Mining Status',
         startMining: 'Start Mining',
         stopMining: 'Stop Mining',
@@ -737,6 +777,26 @@ export class LanguageManager {
         language: '言語',
         theme: 'テーマ'
       },
+      // エクスプローラー関連
+      explorer: {
+        title: 'BW ブロックエクスプローラー',
+        searchPlaceholder: 'ウォレットアドレス / トランザクションハッシュで検索',
+        searchBtn: '検索',
+        syncing: '現在ネットワークデータを同期中です。ブロックリストが表示された後、再度検索してください。',
+        searchResultFound: 'が現在の生成ブロックリストに存在します。',
+        searchResultNotFound: '現在のネットワークリストで該当データを見つけることができません。',
+        invalidQuery: '無効な検索クエリです。正しいBWアドレスまたは64桁のハッシュを入力してください。',
+        latestHeight: '最新ブロックの高さ',
+        avgBlockTime: '平均ブロック時間',
+        network: 'ネットワーク',
+        latestBlocks: '最新生成ブロック',
+        height: '高さ',
+        hash: 'ハッシュ',
+        miner: 'マイナー',
+        timestamp: 'タイムスタンプ',
+        loading: 'データ読み込み中...',
+        unknown: '不明'
+      },
       mining: {
         title: 'リアルタイムBWマイニング状況',
         startMining: 'マイニング開始',
@@ -1059,6 +1119,26 @@ export class LanguageManager {
         wallet: '钱包',
         language: '语言',
         theme: '主题'
+      },
+      // 浏览器相关
+      explorer: {
+        title: 'BW 区块浏览器',
+        searchPlaceholder: '通过地址 / 交易哈希搜索',
+        searchBtn: '搜索',
+        syncing: '当前正在同步网络数据。请在显示区块列表后重新搜索。',
+        searchResultFound: '存在于当前生成的区块列表中。',
+        searchResultNotFound: '在当前网络列表中找不到该数据。',
+        invalidQuery: '无效的搜索查询。请输入有效的 BW 地址或 64 位哈希值。',
+        latestHeight: '最新区块高度',
+        avgBlockTime: '平均区块时间',
+        network: '网络',
+        latestBlocks: '最新生成区块',
+        height: '高度',
+        hash: '哈希',
+        miner: '矿工',
+        timestamp: '时间戳',
+        loading: '数据加载中...',
+        unknown: '未知'
       },
       mining: {
         title: '实时BW挖矿状态',

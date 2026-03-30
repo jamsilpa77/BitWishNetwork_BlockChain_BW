@@ -53,7 +53,7 @@ const HomePage: React.FC = () => {
     const [realTimeSyncService] = useState(() => RealTimeSyncService.getInstance()); // [Task B] 싱글톤으로 교체 (중요!)
     const [precisionCalculator] = useState(() => new PrecisionCalculator());
 
-    const [currentLanguage, setCurrentLanguage] = useState<Language>('ko');
+    const [currentLanguage, setCurrentLanguage] = useState<Language>(() => (localStorage.getItem('bw_lang') as Language) || 'ko');
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [miningStatus, setMiningStatus] = useState<RealTimeMiningStatus | null>(null);
     const [networkStatus, setNetworkStatus] = useState<NetworkStatus>('DISCONNECTED');
@@ -266,6 +266,8 @@ const HomePage: React.FC = () => {
         try {
             setCurrentLanguage(language);
             languageManager.setLanguage(language);
+            // [최종 보강] 시스템 전역 언어 설정 저장 로직 추가
+            localStorage.setItem('bw_lang', language);
         } catch (error) {
             console.error('언어 변경 오류:', error);
         }
@@ -560,7 +562,13 @@ const HomePage: React.FC = () => {
                             <div className="status-card">
                                 <div className="card-icon bar-chart-icon">📊</div>
                                 <div className="card-content">
-                                    <div className="card-value">{globalStats.issuanceRate}%</div>
+                                    <div 
+                                        className="card-value" 
+                                        title={`${new Decimal(globalStats.issuanceRate || 0).toFixed(8)}%`}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        {new Decimal(globalStats.issuanceRate || 0).toFixed(2)}%
+                                    </div>
                                     <div className="card-title">{getTranslation('mining.issuanceRate')}</div>
                                     <div className="card-description">{getTranslation('mining.realtimeData')}</div>
                                 </div>
