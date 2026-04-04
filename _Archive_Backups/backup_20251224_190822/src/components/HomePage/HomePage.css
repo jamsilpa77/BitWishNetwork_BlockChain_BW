@@ -1,0 +1,935 @@
+/**
+ * BitWishNetwork BW 포인트 채굴 시스템
+ * 현재 토큰 이코노미는 완벽한 가상 이코노미입니다.
+ * 추후 KYC 시스템 구현과 블록체인 연결 지갑까지 완성하면 
+ * KYC 승인 후 실제 BW 토큰이 마이그레이션 되는 방식입니다.
+ * 
+ * ⚠️ 중요 준수 사항: 전역 모달, 공통 변수 함수 절대 포함하지 않는다
+ * ❌ 전역 변수 사용 금지
+ * ❌ 공통 함수 사용 금지  
+ * ❌ 공통 클래스 사용 금지
+ * ❌ 전역 모달 사용 금지
+ * ❌ 중복 코드 사용 금지
+ * ❌ 다른 컴포넌트와 상태 공유 금지
+ * ❌ 전역 상태 관리 라이브러리 사용 금지
+ * 
+ * ✅ 모든 파일 첫 줄부터 주석에 절대 준수사항 명시 추가
+ * ✅ 자체 보안 검증만 사용
+ * ✅ 50단위 부동소수점 정밀 계산형식으로 구현 하지만 UI 홈페이지 이미지상 소수즘 8자리만 표기한다. 
+ * ✅ BitWish Network 전용 시스템만 사용
+ * ✅ 모든 텍스트는 한국어, 영어, 일어, 중국어포함 동남아권 언어 변경 되도록 모든 기능에 완벽하게 구현한다. 
+ *        단 절대 복잡하게 파일들을 만들지 않도록한다. 
+ * ✅ 마이닝 페이지는 완벽한 독립성 보장과 완벽한 데이터베이스 MongDB 하이브리드 완벽 저장소 구현한다. 
+ * ✅ 유저는 1명이든 천만명이든 개인 단독 데이터베이스 MongDB 하이브리드 완벽 저장소를 구현한다.
+ */
+
+/* 홈페이지 기본 스타일 */
+.home-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.home-page.dark-mode {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+}
+
+/* 헤더 스타일 */
+.home-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.home-page.dark-mode .home-header {
+  background: rgba(26, 26, 46, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 로고 스타일 */
+.logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.logo-text {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+  line-height: 1;
+}
+
+.home-page.dark-mode .logo-text {
+  background: linear-gradient(45deg, #64b5f6, #42a5f5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-subtitle {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.home-page.dark-mode .logo-subtitle {
+  color: #ccc;
+}
+
+/* 네비게이션 메뉴 */
+.navigation-menu {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.nav-item {
+  position: relative;
+}
+
+.nav-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: #333;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.home-page.dark-mode .nav-button {
+  color: #fff;
+}
+
+.home-page.dark-mode .nav-button:hover {
+  background: rgba(100, 181, 246, 0.2);
+  box-shadow: 0 4px 12px rgba(100, 181, 246, 0.3);
+}
+
+/* 드롭다운 메뉴 - 호버형 */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-width: 200px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.dropdown:hover .dropdown-content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.home-page.dark-mode .dropdown-content {
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-content button {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #333;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dropdown-content button:last-child {
+  border-bottom: none;
+}
+
+.dropdown-content button:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.home-page.dark-mode .dropdown-content button {
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.home-page.dark-mode .dropdown-content button:hover {
+  background: rgba(100, 181, 246, 0.2);
+  color: #64b5f6;
+}
+
+/* 언어 드롭다운 스크롤 */
+.language-dropdown {
+  min-width: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.language-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.language-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.language-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.language-scroll::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 3px;
+}
+
+.language-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
+}
+
+.home-page.dark-mode .language-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.home-page.dark-mode .language-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 181, 246, 0.3);
+}
+
+.home-page.dark-mode .language-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 181, 246, 0.5);
+}
+
+/* 헤더 컨트롤 */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* 네비 아이콘 스타일 */
+.nav-icon {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-icon:hover {
+  background: rgba(102, 126, 234, 0.2);
+  transform: scale(1.1);
+}
+
+.home-page.dark-mode .nav-icon {
+  background: rgba(100, 181, 246, 0.2);
+  color: #64b5f6;
+}
+
+.home-page.dark-mode .nav-icon:hover {
+  background: rgba(100, 181, 246, 0.3);
+}
+
+.language-selector {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.language-selector:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.home-page.dark-mode .language-selector {
+  background: #2a2a3e;
+  border-color: #444;
+  color: #fff;
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover {
+  background: rgba(102, 126, 234, 0.2);
+  transform: scale(1.1);
+}
+
+.home-page.dark-mode .theme-toggle {
+  background: rgba(100, 181, 246, 0.2);
+  color: #64b5f6;
+}
+
+/* 메인 콘텐츠 */
+.home-main {
+  flex: 1;
+  padding: 3rem 0;
+}
+
+/* 마이닝 상태 섹션 */
+.mining-status-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.status-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.home-page.dark-mode .status-container {
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+.home-page.dark-mode .status-title {
+  color: #fff;
+}
+
+/* 상태 그리드 */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.status-card {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.status-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.home-page.dark-mode .status-card {
+  background: rgba(42, 42, 62, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.home-page.dark-mode .status-card::before {
+  background: linear-gradient(90deg, #64b5f6, #42a5f5);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.card-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.home-page.dark-mode .card-header h3 {
+  color: #fff;
+}
+
+.status-indicator {
+  font-size: 1.2rem;
+}
+
+.card-content {
+  text-align: center;
+}
+
+.status-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0.5rem 0;
+}
+
+.home-page.dark-mode .status-text {
+  color: #fff;
+}
+
+.last-update {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+}
+
+.home-page.dark-mode .last-update {
+  color: #ccc;
+}
+
+.supply-amount,
+.issued-amount,
+.remaining-amount,
+.rate-amount,
+.blocks-amount {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #667eea;
+  margin: 0.5rem 0;
+  font-family: 'Courier New', monospace;
+}
+
+.home-page.dark-mode .supply-amount,
+.home-page.dark-mode .issued-amount,
+.home-page.dark-mode .remaining-amount,
+.home-page.dark-mode .rate-amount,
+.home-page.dark-mode .blocks-amount {
+  color: #64b5f6;
+}
+
+.supply-description,
+.issued-description,
+.remaining-description,
+.rate-description,
+.blocks-description {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+}
+
+.home-page.dark-mode .supply-description,
+.home-page.dark-mode .issued-description,
+.home-page.dark-mode .remaining-description,
+.home-page.dark-mode .rate-description,
+.home-page.dark-mode .blocks-description {
+  color: #ccc;
+}
+
+/* 액션 섹션 */
+.action-section {
+  max-width: 1200px;
+  margin: 3rem auto 0;
+  padding: 0 2rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-button {
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.primary-button {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.primary-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+.secondary-button {
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.secondary-button:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.home-page.dark-mode .secondary-button {
+  background: rgba(42, 42, 62, 0.9);
+  color: #64b5f6;
+  border-color: #64b5f6;
+}
+
+.home-page.dark-mode .secondary-button:hover {
+  background: #64b5f6;
+  color: white;
+}
+
+.tertiary-button {
+  background: transparent;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.tertiary-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+  transform: translateY(-2px);
+}
+
+.home-page.dark-mode .tertiary-button {
+  color: #64b5f6;
+  border-color: #64b5f6;
+}
+
+.home-page.dark-mode .tertiary-button:hover {
+  background: rgba(100, 181, 246, 0.1);
+}
+
+/* 푸터 */
+.home-footer {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 2rem 0;
+  margin-top: auto;
+}
+
+.home-page.dark-mode .home-footer {
+  background: rgba(26, 26, 46, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.footer-text {
+  color: #666;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.home-page.dark-mode .footer-text {
+  color: #ccc;
+}
+
+.footer-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.footer-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.footer-link:hover {
+  color: #764ba2;
+}
+
+.home-page.dark-mode .footer-link {
+  color: #64b5f6;
+}
+
+.home-page.dark-mode .footer-link:hover {
+  color: #42a5f5;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .navigation-menu {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .action-button {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-text {
+    font-size: 2rem;
+  }
+
+  .status-container {
+    padding: 1rem;
+  }
+
+  .status-card {
+    padding: 1rem;
+  }
+
+  .supply-amount,
+  .issued-amount,
+  .remaining-amount,
+  .rate-amount,
+  .blocks-amount {
+    font-size: 1.4rem;
+  }
+}
+
+/* 실시간 블록체인 상태 섹션 */
+.blockchain-status-section {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 3rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.home-page.dark-mode .blockchain-status-section {
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.status-main-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.home-page.dark-mode .status-main-title {
+  color: #fff;
+}
+
+.chain-icon {
+  font-size: 2rem;
+}
+
+.mining-bonus-button {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 auto 1rem;
+  transition: all 0.3s ease;
+}
+
+.mining-bonus-button:hover {
+  background: #e55a2b;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(255, 107, 53, 0.3);
+}
+
+.pickaxe-icon {
+  font-size: 1.2rem;
+}
+
+.status-description {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.home-page.dark-mode .status-description {
+  color: #ccc;
+}
+
+.last-update-time {
+  font-size: 0.9rem;
+  color: #888;
+  margin: 0;
+}
+
+.home-page.dark-mode .last-update-time {
+  color: #aaa;
+}
+
+/* 상태 카드 그리드 */
+.status-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.status-card-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.status-card {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.home-page.dark-mode .status-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.home-page.dark-mode .status-card:hover {
+  box-shadow: 0 12px 24px rgba(255, 255, 255, 0.1);
+}
+
+.card-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.card-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 0.5rem;
+  font-family: 'Courier New', monospace;
+}
+
+.home-page.dark-mode .card-value {
+  color: #64b5f6;
+}
+
+/* Multi-line Value Styling for UI Overflow Fix */
+.card-value.multi-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  gap: 0.2rem;
+  font-size: 1rem;
+  /* Reset base size */
+}
+
+.value-integer {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #667eea;
+  letter-spacing: -0.5px;
+}
+
+.value-decimal {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #888;
+  opacity: 0.9;
+  letter-spacing: 0;
+}
+
+.home-page.dark-mode .value-integer {
+  color: #64b5f6;
+}
+
+.home-page.dark-mode .value-decimal {
+  color: #aaa;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.home-page.dark-mode .card-title {
+  color: #fff;
+}
+
+.card-description {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.home-page.dark-mode .card-description {
+  color: #ccc;
+}
+
+/* 새로고침 섹션 */
+.refresh-section {
+  text-align: center;
+}
+
+.refresh-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+.refresh-button:hover {
+  background: #5a6fd8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+}
+
+.refresh-icon {
+  font-size: 1.2rem;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .status-card-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .status-main-title {
+    font-size: 2rem;
+  }
+
+  .blockchain-status-section {
+    padding: 2rem;
+    margin: 1rem;
+  }
+}

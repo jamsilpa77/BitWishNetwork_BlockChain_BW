@@ -71,29 +71,41 @@ export class RealTimeSyncService {
 
   /**
    * [신규] 배경 채굴 티커 시작 (창이 닫혀도 유지됨)
-   * @param baseRate 시간당 채굴률 (예: 0.25)
+   * @param baseRate 시간당 1차 채굴률
+   * @param referralBonusRate 2% 추천 보너스율
    */
-  public startMiningTicker(baseRate: number): void {
+  public startMiningTicker(totalRate: number, referralBonusRate: number = 0): void {
     if (this.miningTicker) clearInterval(this.miningTicker);
 
-    this.currentBaseRate = new Decimal(baseRate);
+    this.currentBaseRate = new Decimal(totalRate); // totalRate (이미 모든 보너스 포함된 최종 속도)
     const perSecondRate = this.currentBaseRate.div(3600);
+    
+    // [Phase 1 Fixed] 지갑의 '추천보너스보관함(2%)'을 위한 별도 초당 증분율 추출
+    // 주의: totalRate는 최종합이므로, baseRate 기준을 0.25로 역산출하거나, 
+    // 서버가 주는 baseRate * referralBonusRate 공식 그대로 씁니다.
+    const baseMiningRate = new Decimal(MINING_CONSTANTS.HOURLY_BASE_RATE || 0.25);
+    const bonusPerSecondRate = baseMiningRate.mul(referralBonusRate).div(3600);
 
     this.miningTicker = setInterval(() => {
       if (this.realTimeStatus.currentIssued >= 0) {
-        // Decimal 정밀 연산 후 업데이트
+        // 1. 메인 채굴량 정밀 연산 및 업데이트
         const current = new Decimal(this.realTimeStatus.currentIssued);
         const next = current.plus(perSecondRate);
 
+        // 2. [Phase 1 Fixed] 2% 추천 보너스 실시간 카운팅 정밀 연산 및 업데이트
+        const currentBonus = new Decimal(this.realTimeStatus.referralBonusStorage || 0);
+        const nextBonus = currentBonus.plus(bonusPerSecondRate);
+
         this.realTimeStatus.currentIssued = next.toNumber();
+        this.realTimeStatus.referralBonusStorage = nextBonus.toNumber();
         this.realTimeStatus.lastUpdate = new Date();
 
-        // 지갑 등 모든 구독자에게 1초마다 방송
+        // 지갑 등 모든 구독자에게 1초마다 방송 (나의 지갑 카운팅 강제 동기화)
         this.notifySubscribers();
       }
     }, 1000);
 
-    console.log('[RealTimeSync] 배경 채굴 티커 시작됨. Rate:', baseRate);
+    console.log('[RealTimeSync] 지갑/홈페이지 실시간 1초 카운팅 엔진(2% 보너스 포함) 가동 시작');
   }
 
   /**
@@ -118,9 +130,12 @@ export class RealTimeSyncService {
         this.updateLocalStatusFromServer(status.miningState);
 
         // [보강] 초기화 시 이미 채굴 중이라면, 서버에서 준 totalRate로 배경 티커 즉시 가동
-        if (status.miningState.isMining && status.miningState.totalRate > 0) {
-          console.log('[RealTimeSync] 초기화 중 채굴 상태 감지 -> 티커 자동 시작:', status.miningState.totalRate);
-          this.startMiningTicker(status.miningState.totalRate);
+        // [Phase 1 Fixed] 2% 추천 보너스 티커 동시 가동 여부를 위해 referralBonusRate도 함께 전달
+        if (status.miningState.isMining && status.miningState.currentTotalRate > 0) {
+          const totalRate = parseFloat(status.miningState.currentTotalRate);
+          const referralRate = parseFloat(status.miningState.referralBonusRate || '0');
+          console.log('[RealTimeSync] 지갑 초기화 중 채굴 상태 감지 -> 티커 자동 시작 (Rate:', totalRate, 'BonusRate:', referralRate, ')');
+          this.startMiningTicker(totalRate, referralRate);
         }
       }
 

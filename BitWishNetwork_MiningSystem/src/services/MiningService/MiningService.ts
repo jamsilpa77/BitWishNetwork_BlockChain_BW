@@ -71,6 +71,9 @@ export class MiningService {
     accumulatedReward: number;
     currentRate: number;
     isAttendanceActive: boolean;
+    referralBonusStorage: number;
+    referralRewardStorage: number;
+    referralBonusRate: number;
   }> {
     try {
       if (!walletAddress) {
@@ -82,6 +85,7 @@ export class MiningService {
 
       if (data.success && data.miningState) {
         const state = data.miningState;
+        const user = data.user;
 
         let status: MiningStatus = MINING_STATUS.STOPPED as MiningStatus;
         if (state.isMining) {
@@ -101,7 +105,10 @@ export class MiningService {
           miningTime,
           accumulatedReward: parseFloat(state.accumulatedReward || '0'),
           currentRate: parseFloat(state.currentTotalRate || '0.25'),
-          isAttendanceActive: state.isAttendanceActive || false
+          isAttendanceActive: state.isAttendanceActive || false,
+          referralBonusStorage: user ? parseFloat(user.referralBonusStorage || '0') : 0,
+          referralRewardStorage: user ? parseFloat(user.referralRewardStorage || '0') : 0,
+          referralBonusRate: parseFloat(state.referralBonusRate || '0')
         };
       }
 
@@ -110,7 +117,10 @@ export class MiningService {
         miningTime: 0,
         accumulatedReward: 0,
         currentRate: 0.25,
-        isAttendanceActive: false
+        isAttendanceActive: false,
+        referralBonusStorage: 0,
+        referralRewardStorage: 0,
+        referralBonusRate: 0
       };
     } catch (error) {
       console.error('Get mining status error:', error);
@@ -119,7 +129,10 @@ export class MiningService {
         miningTime: 0,
         accumulatedReward: 0,
         currentRate: 0.25,
-        isAttendanceActive: false
+        isAttendanceActive: false,
+        referralBonusStorage: 0,
+        referralRewardStorage: 0,
+        referralBonusRate: 0
       };
     }
   }

@@ -1,0 +1,379 @@
+/**
+ * BitWishNetwork BW 포인트 채굴 시스템
+ * 현재 토큰 이코노미는 완벽한 가상 이코노미입니다.
+ * 추후 KYC 시스템 구현과 블록체인 연결 지갑까지 완성하면 
+ * KYC 승인 후 실제 BW 토큰이 마이그레이션 되는 방식입니다.
+ * 
+ * ⚠️ 중요 준수 사항: 전역 모달, 공통 변수 함수 절대 포함하지 않는다
+ * ❌ 전역 변수 사용 금지
+ * ❌ 공통 함수 사용 금지  
+ * ❌ 공통 클래스 사용 금지
+ * ❌ 전역 모달 사용 금지
+ * ❌ 중복 코드 사용 금지
+ * ❌ 다른 컴포넌트와 상태 공유 금지
+ * ❌ 전역 상태 관리 라이브러리 사용 금지
+ * 
+ * ✅ 모든 파일 첫 줄부터 주석에 절대 준수사항 명시 추가
+ * ✅ 자체 보안 검증만 사용
+ * ✅ 50단위 부동소수점 정밀 계산형식으로 구현 하지만 UI 홈페이지 이미지상 소수즘 8자리만 표기한다. 
+ * ✅ BitWish Network 전용 시스템만 사용
+ * ✅ 모든 텍스트는 한국어, 영어, 일어, 중국어포함 언어 변경 되도록 모든 기능에 완벽하게 구현한다.  
+ *        단 절대 복잡하게 파일들을 만들지 않도록한다. 
+ * ✅ 마이닝 페이지는 완벽한 독립성 보장과 완벽한 데이터베이스 MongDB 하이브리드 완벽 저장소 구현한다. 
+ * ✅ 유저는 1명이든 천만명이든 개인 단독 데이터베이스 MongDB 하이브리드 완벽 저장소를 구현한다.
+ */
+
+/* 언어 선택기 기본 스타일 */
+.language-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.language-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: #333;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+}
+
+.language-button:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  transform: translateY(-1px);
+}
+
+.language-button:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+.language-flag {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.language-name {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-arrow {
+  font-size: 0.8rem;
+  color: #666;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+/* 드롭다운 스타일 */
+.language-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin-top: 0.25rem;
+  animation: slideDown 0.3s ease;
+}
+
+.dropdown-content {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+/* 언어 옵션 스타일 */
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #333;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  text-align: left;
+  position: relative;
+}
+
+.language-option:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.language-option.active {
+  background: rgba(102, 126, 234, 0.15);
+  color: #667eea;
+  font-weight: 600;
+}
+
+.language-option:focus {
+  outline: 2px solid #667eea;
+  outline-offset: -2px;
+}
+
+.option-flag {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.option-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.option-native {
+  font-weight: 500;
+  color: #333;
+}
+
+.language-option.active .option-native {
+  color: #667eea;
+}
+
+.option-english {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 400;
+}
+
+.checkmark {
+  color: #667eea;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* 다크 모드 스타일 */
+.language-selector.dark-mode .language-button {
+  background: #2a2a3e;
+  border-color: #444;
+  color: #fff;
+}
+
+.language-selector.dark-mode .language-button:hover {
+  border-color: #64b5f6;
+  box-shadow: 0 2px 8px rgba(100, 181, 246, 0.2);
+}
+
+.language-selector.dark-mode .language-button:focus {
+  outline-color: #64b5f6;
+}
+
+.language-selector.dark-mode .dropdown-arrow {
+  color: #ccc;
+}
+
+.language-selector.dark-mode .language-dropdown {
+  background: #2a2a3e;
+  border-color: #444;
+}
+
+.language-selector.dark-mode .language-option {
+  color: #fff;
+}
+
+.language-selector.dark-mode .language-option:hover {
+  background: rgba(100, 181, 246, 0.1);
+}
+
+.language-selector.dark-mode .language-option.active {
+  background: rgba(100, 181, 246, 0.2);
+  color: #64b5f6;
+}
+
+.language-selector.dark-mode .language-option:focus {
+  outline-color: #64b5f6;
+}
+
+.language-selector.dark-mode .option-native {
+  color: #fff;
+}
+
+.language-selector.dark-mode .language-option.active .option-native {
+  color: #64b5f6;
+}
+
+.language-selector.dark-mode .option-english {
+  color: #ccc;
+}
+
+.language-selector.dark-mode .checkmark {
+  color: #64b5f6;
+}
+
+/* 애니메이션 */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 스크롤바 스타일 */
+.dropdown-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.dropdown-content::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.dropdown-content::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.language-selector.dark-mode .dropdown-content::-webkit-scrollbar-track {
+  background: #444;
+}
+
+.language-selector.dark-mode .dropdown-content::-webkit-scrollbar-thumb {
+  background: #666;
+}
+
+.language-selector.dark-mode .dropdown-content::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .language-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    min-width: 100px;
+  }
+
+  .language-name {
+    display: none;
+  }
+
+  .language-option {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .option-text {
+    gap: 0.0625rem;
+  }
+
+  .option-english {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .language-button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    min-width: 80px;
+  }
+
+  .language-flag {
+    font-size: 1rem;
+  }
+
+  .dropdown-arrow {
+    font-size: 0.7rem;
+  }
+
+  .language-option {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .option-flag {
+    font-size: 1rem;
+    width: 20px;
+  }
+}
+
+/* 접근성 */
+@media (prefers-reduced-motion: reduce) {
+
+  .language-button,
+  .language-option,
+  .dropdown-arrow,
+  .language-dropdown {
+    transition: none;
+  }
+
+  .language-dropdown {
+    animation: none;
+  }
+}
+
+/* 고대비 모드 */
+@media (prefers-contrast: high) {
+  .language-button {
+    border-width: 2px;
+  }
+
+  .language-option {
+    border-bottom: 1px solid #333;
+  }
+
+  .language-option:last-child {
+    border-bottom: none;
+  }
+}
+
+/* 포커스 가시성 */
+.language-option:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: -2px;
+}
+
+.language-selector.dark-mode .language-option:focus-visible {
+  outline-color: #64b5f6;
+}
+
+/* 선택된 옵션 강조 */
+.language-option.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #667eea;
+}
+
+.language-selector.dark-mode .language-option.active::before {
+  background: #64b5f6;
+}

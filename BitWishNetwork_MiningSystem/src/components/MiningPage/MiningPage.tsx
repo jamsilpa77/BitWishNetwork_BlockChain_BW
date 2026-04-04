@@ -63,6 +63,11 @@ const MiningPage: React.FC = () => {
   const [referralBonus, setReferralBonus] = useState<ReferralBonus | null>(null);
   const [partnerBonus, setPartnerBonus] = useState<PartnerBonus | null>(null);
   const [walletAddress, setWalletAddress] = useState<string>('');
+  
+  // [Phase 1 Fixed] 추천보상보관함 및 보너스 보관함 실시간 상태 연동
+  const [referralRewardStorage, setReferralRewardStorage] = useState<number>(0);
+  const [referralBonusStorage, setReferralBonusStorage] = useState<number>(0);
+  const [referralBonusRate, setReferralBonusRate] = useState<number>(0);
 
   // 1. Helper Functions Definitions
   const getTranslation = useCallback((key: string) => {
@@ -121,6 +126,11 @@ const MiningPage: React.FC = () => {
       setMiningTime(status.miningTime);
       setAccumulatedReward(status.accumulatedReward);
 
+      // [Phase 1 Fixed] 서버에서 전송된 추천 관련 보관함과 비율을 마이닝 페이지 UI에 동기화
+      setReferralRewardStorage(status.referralRewardStorage);
+      setReferralBonusStorage(status.referralBonusStorage);
+      setReferralBonusRate(status.referralBonusRate);
+
       // 서버에서 출석 보너스가 활성화되어 있다면 UI 상태도 업데이트
       if (status.isAttendanceActive) {
         setAttendanceBonus('COMPLETED');
@@ -158,10 +168,17 @@ const MiningPage: React.FC = () => {
 
       const rewardPerSecond = totalRate / 3600;
       setAccumulatedReward(prev => prev + rewardPerSecond);
+
+      // [Phase 1 Fixed] 2% 추천 보너스 보관함 초당 카운팅 동기화 로직 추가
+      // referralBonusRate (예: 0.02) 를 기반으로 초당 수익을 구해 보너스 보관함 전용으로 증분시킴
+      if (referralBonusRate > 0) {
+        const bonusPerSecond = (baseRate * referralBonusRate) / 3600;
+        setReferralBonusStorage(prev => prev + bonusPerSecond);
+      }
     } catch (error) {
       console.error('누적 보상 업데이트 오류:', error);
     }
-  }, [attendanceBonus, referralBonusService, partnerBonus, partnerBonusService]);
+  }, [attendanceBonus, referralBonusService, partnerBonus, partnerBonusService, referralBonusRate]);
 
   // 4. Effects
   useEffect(() => {

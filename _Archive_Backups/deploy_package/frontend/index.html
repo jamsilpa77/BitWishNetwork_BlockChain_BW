@@ -1,0 +1,65 @@
+<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BitWishNetwork - BW 포인트 채굴 시스템</title><meta name="description" content="BitWishNetwork BW 포인트 채굴 시스템 - 가상 이코노미 기반 마이닝 플랫폼"><meta name="keywords" content="BitWish, BW, 마이닝, 채굴, 블록체인, 가상 이코노미"><meta name="author" content="BitWishNetwork Development Team"><meta property="og:title" content="BitWishNetwork - BW 포인트 채굴 시스템"><meta property="og:description" content="BitWishNetwork BW 포인트 채굴 시스템 - 가상 이코노미 기반 마이닝 플랫폼"><meta property="og:type" content="website"><meta property="og:url" content="https://bitwish.network"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="BitWishNetwork - BW 포인트 채굴 시스템"><meta name="twitter:description" content="BitWishNetwork BW 포인트 채굴 시스템 - 가상 이코노미 기반 마이닝 플랫폼"><link rel="icon" type="image/x-icon" href="/favicon.ico"><link rel="preload" href="/fonts/bitwish-font.woff2" as="font" type="font/woff2" crossorigin><style>/* Critical CSS for initial page load */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top: 3px solid #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #00d4ff;
+            text-align: center;
+        }</style><meta name="description" content="BitWishNetwork BW 포인트 채굴 및 보너스 시스템"><meta name="keywords" content="bitcoin, mining, blockchain, cryptocurrency, bitwish, bw, point, bonus"><script defer="defer" src="/vendors.39fab40b1a810d1ff09e.js"></script><script defer="defer" src="/main.e6490b10a381a2fb1736.js"></script></head><body><div class="loading-screen" id="loadingScreen"><div><div class="loading-spinner"></div><div class="loading-text">BitWishNetwork 로딩 중...</div></div></div><div id="root"></div><script>if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }</script><script>// Hide loading screen when app is ready
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loadingScreen = document.getElementById('loadingScreen');
+                if (loadingScreen) {
+                    loadingScreen.style.opacity = '0';
+                    loadingScreen.style.transition = 'opacity 0.5s ease-out';
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                    }, 500);
+                }
+            }, 1000);
+        });</script></body></html>

@@ -213,8 +213,11 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
     // [신규] 마이닝 상태 변화 시 서비스 티커 제어
     useEffect(() => {
         if (isMining && userStats.baseRate.gt(0)) {
-            // 마이닝 시작 시 서비스에 채굴 엔진 가동 명령 (Rate 전달)
-            realTimeSyncService.startMiningTicker(userStats.baseRate.toNumber());
+            // [Phase 1 추가수술] 마이닝 시작 시 엔진에 2% 추천 보너스율 함께 전달 (누락 버그 해결)
+            realTimeSyncService.startMiningTicker(
+                userStats.baseRate.toNumber(), 
+                userStats.referralBonusRate.toNumber() / 100
+            );
         } else {
             // 마이닝 중지 시 엔진 정지
             realTimeSyncService.stopMiningTicker();

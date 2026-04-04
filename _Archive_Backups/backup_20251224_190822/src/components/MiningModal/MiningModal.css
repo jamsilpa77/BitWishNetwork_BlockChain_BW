@@ -1,0 +1,569 @@
+/**
+ * BitWishNetwork BW 포인트 채굴 시스템 - 마이닝 모달 스타일
+ * 유저 전용 마이닝 모달 컴포넌트 스타일
+ * 
+ * ⚠️ 중요 준수 사항: 전역 모달, 공통 변수 함수 절대 포함하지 않는다
+ * ❌ 전역 변수 사용 금지
+ * ❌ 공통 함수 사용 금지  
+ * ❌ 공통 클래스 사용 금지
+ * ❌ 전역 모달 사용 금지
+ * ❌ 중복 코드 사용 금지
+ * ❌ 다른 컴포넌트와 상태 공유 금지
+ * ❌ 전역 상태 관리 라이브러리 사용 금지
+ * ❌ 스텔라 관련 코드 사용 금지
+ * 
+ * ✅ 주석에 "유저/관리자에 따라 전용" 명시 추가
+ * ✅ 자체 보안 검증만 사용
+ * ✅ 50단위 부동소수점 정밀 계산 로직구현 하지만 UI에 표시 될때는 소수점 8자리까지 표시되도록
+ * ✅ BitWish Network 전용 시스템만 사용
+ * ✅ 모든 텍스트는 한국어, 영어, 일어, 중국어포함 언어 변경 되도록 모든 기능에 완벽하게 구현한다. 
+ * ✅ 유저/관리자 각가 마이닝 페이지는 완벽한 독립성 보장
+ * ✅ 유저/관리자 각각 마이닝 페이지는 완벽한 각 완벽한 데이터베이스 MongoDB 하이브리드 저장소를 완벽하게 가진다
+ */
+
+/* 마이닝 모달 오버레이 */
+.mining-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* 마이닝 모달 */
+.mining-modal {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 다크 모드 */
+.dark-mode .mining-modal {
+  background: rgba(26, 26, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* 모달 헤더 */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dark-mode .modal-title {
+  color: #fff;
+}
+
+.settings-icon {
+  font-size: 1.2rem;
+}
+
+.close-button {
+  background: #666;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.close-button:hover {
+  background: #f44336;
+  transform: scale(1.1);
+}
+
+/* 모달 설명 */
+.modal-description {
+  background: #f0f8ff;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  color: #333;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.dark-mode .modal-description {
+  background: rgba(100, 181, 246, 0.1);
+  color: #fff;
+}
+
+/* 보너스 설정 버튼들 */
+.bonus-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.bonus-button {
+  padding: 1rem;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  text-align: center;
+  line-height: 1.2;
+  min-height: 80px;
+  justify-content: center;
+}
+
+.attendance-bonus {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+}
+
+.referral-bonus {
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+}
+
+.partner-bonus {
+  background: linear-gradient(135deg, #FF9800, #F57C00);
+}
+
+.profile-settings {
+  background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+}
+
+.bonus-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.bonus-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.bonus-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #333;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  display: block;
+}
+
+/* 지갑 정보 */
+.wallet-info {
+  background: #fffacd;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid #ffeb3b;
+}
+
+.dark-mode .wallet-info {
+  background: rgba(255, 235, 59, 0.1);
+  border: 1px solid rgba(255, 235, 59, 0.3);
+}
+
+.wallet-header {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #333;
+}
+
+.dark-mode .wallet-header {
+  color: #fff;
+}
+
+.bulb-icon {
+  font-size: 1rem;
+}
+
+.wallet-address {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #333;
+  word-break: break-all;
+  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.dark-mode .wallet-address {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.wallet-note {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.dark-mode .wallet-note {
+  color: #ccc;
+}
+
+/* 연결 상태 및 업데이트 */
+.connection-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.connection-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.dark-mode .connection-info {
+  color: #fff;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.connected {
+  background: #4CAF50;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+}
+
+.status-dot.disconnected {
+  background: #f44336;
+  box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
+}
+
+.last-update {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.dark-mode .last-update {
+  color: #ccc;
+}
+
+/* 마이닝 상태 섹션 */
+.mining-status-section {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .mining-status-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #333;
+}
+
+.dark-mode .status-title {
+  color: #fff;
+}
+
+.lightning-icon {
+  font-size: 1.2rem;
+}
+
+.status-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.status-item {
+  margin-bottom: 1rem;
+}
+
+.status-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 0.25rem;
+  font-family: 'Courier New', monospace;
+}
+
+.dark-mode .status-value {
+  color: #64b5f6;
+}
+
+.status-value.active {
+  color: #4CAF50;
+}
+
+.status-value.inactive {
+  color: #f44336;
+}
+
+.status-label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.dark-mode .status-label {
+  color: #ccc;
+}
+
+/* 실시간 마이닝 섹션 */
+.realtime-mining-section {
+  background: #e8f5e8;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #4CAF50;
+}
+
+.dark-mode .realtime-mining-section {
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.mining-reward-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.dark-mode .mining-reward-title {
+  color: #fff;
+}
+
+.mining-reward-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.reward-item {
+  text-align: center;
+}
+
+.reward-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #4CAF50;
+  margin-bottom: 0.25rem;
+  font-family: 'Courier New', monospace;
+}
+
+.reward-label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.dark-mode .reward-label {
+  color: #ccc;
+}
+
+.mining-status-text {
+  text-align: center;
+  font-weight: 600;
+  color: #4CAF50;
+  font-size: 1rem;
+  padding: 0.5rem;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+}
+
+/* 액션 버튼들 */
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.action-button {
+  padding: 1rem;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.start-mining {
+  background: #9C27B0;
+}
+
+.start-mining:hover {
+  background: #7B1FA2;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(156, 39, 176, 0.3);
+}
+
+.stop-mining {
+  background: #f44336;
+}
+
+.stop-mining:hover {
+  background: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(244, 67, 54, 0.3);
+}
+
+.my-wallet {
+  background: #666;
+}
+
+.my-wallet:hover {
+  background: #555;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(102, 102, 102, 0.3);
+}
+
+.close-modal {
+  background: #333;
+}
+
+.close-modal:hover {
+  background: #222;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(51, 51, 51, 0.3);
+}
+
+.action-icon {
+  font-size: 1rem;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .mining-modal {
+    width: 95%;
+    padding: 1rem;
+    max-height: 95vh;
+  }
+
+  .bonus-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .status-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .mining-reward-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .action-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .modal-title {
+    font-size: 1.2rem;
+  }
+
+  .bonus-button {
+    padding: 0.8rem;
+    font-size: 0.8rem;
+    min-height: 70px;
+  }
+
+  .bonus-text {
+    font-size: 0.7rem;
+  }
+
+  .action-button {
+    padding: 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .bonus-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .action-buttons {
+    grid-template-columns: 1fr;
+  }
+}
