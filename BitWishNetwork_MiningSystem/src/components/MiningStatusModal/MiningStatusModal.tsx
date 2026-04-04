@@ -113,7 +113,8 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
                         isAttendanceActive: isAttendanceActive,
                         attendanceBonusRate: attendanceBonusRateVal,
                         referralBonusStorage: new Decimal(referralStats.bonusStorage || 0),
-                        referralRewardStorage: new Decimal(referralStats.rewardStorage || 0),
+                        // [Phase 1 Fixed] 로컬 스토리지 데이터 파기, 나의 지갑 탭과 100% 동일하게 서버 최신 API 데이터 직결
+                        referralRewardStorage: new Decimal(userData.user?.referralRewardStorage || 0),
                         partnerStatus: userData.miningState?.partnerStatus || 'NOT_REGISTERED'
                     });
 
