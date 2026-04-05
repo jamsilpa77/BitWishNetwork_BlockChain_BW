@@ -165,46 +165,53 @@ export class UserController {
 
             console.log(`[REFERRAL] Referrer validated: ${referrer.walletAddress}`);
 
-            // 추천인의 보너스 레코드 업데이트
-            const referrerBonusRecord = await BonusRecord.findOne({ walletAddress: referrer.walletAddress });
-            if (referrerBonusRecord) {
-                referrerBonusRecord.referralList.push({
-                    childWalletAddress: newWalletAddress,
-                    joinedAt: new Date(),
-                    accumulatedBonus: '0.00000000000000000000000000000000000000000000000000',
-                    isKycVerified: false,
-                    rewardStatus: 'PENDING'
-                });
+            // [Phase 2 최종완성] 1. 추천인 보너스 장부 '원자적 결합(upsert: true)' 으로 전면 교체
+            // 비동기 지연으로 장부가 없어도 즉시 무조건 생성하여 추천인 명단을 절대 유실하지 않게 강제 보장함
+            const referrerBonusRecord = await BonusRecord.findOneAndUpdate(
+                { walletAddress: referrer.walletAddress },
+                {
+                    $push: {
+                        referralList: {
+                            childWalletAddress: newWalletAddress,
+                            joinedAt: new Date(),
+                            accumulatedBonus: '0.00000000000000000000000000000000000000000000000000',
+                            isKycVerified: false,
+                            rewardStatus: 'PENDING'
+                        }
+                    },
+                    $setOnInsert: {
+                        referralBonusStorage: '0.00000000000000000000000000000000000000000000000000'
+                    }
+                },
+                { new: true, upsert: true }
+            );
 
-                // 추천인에게 1BW 즉시 지급
-                const currentReward = new Decimal(referrerBonusRecord.referralRewardStorage || '0');
-                referrerBonusRecord.referralRewardStorage = currentReward.plus(1).toString();
+            // 추천인에게 코드 제공 대가 1BW 지정 지급
+            const refCurrentReward = new Decimal(referrerBonusRecord.referralRewardStorage || '0');
+            referrerBonusRecord.referralRewardStorage = refCurrentReward.plus(1).toString();
+            await referrerBonusRecord.save();
+            console.log(`[REFERRAL] Referrer bonus perfectly updated - Reward: ${referrerBonusRecord.referralRewardStorage}`);
 
-                await referrerBonusRecord.save();
-                console.log(`[REFERRAL] Referrer bonus updated - Reward: ${referrerBonusRecord.referralRewardStorage}`);
-            }
+            // [Phase 2 최종완성] 2. 단순 +1 명수놀이 파기, '진짜 식별된 명단 숫자'로 마이닝 속도 연동 결합
+            const realReferralCount = referrerBonusRecord.referralList.length;
 
-            // 추천인의 마이닝 상태 원자적 업데이트 (실적 누락 방지)
             const updatedMiningState = await MiningState.findOneAndUpdate(
                 { walletAddress: referrer.walletAddress },
-                { $inc: { referralCount: 1 } },
+                { $set: { referralCount: realReferralCount } },
                 { new: true, upsert: true }
             );
 
             if (updatedMiningState) {
-                // [정상화 공식] 기본 가입 보너스(0.02) + (추천 인원 * 0.02) 
+                // 실존하는 명단 수(realReferralCount) 기반으로 2% 배율 철저 계산
                 const initialBonus = new Decimal(0.02);
-                const referralCount = new Decimal(updatedMiningState.referralCount || 0);
-                const newReferralRate = initialBonus.plus(referralCount.mul(0.02));
+                const newReferralRate = initialBonus.plus(new Decimal(realReferralCount).mul(0.02));
 
-                // 수치 업데이트
                 updatedMiningState.referralBonusRate = newReferralRate.toString();
 
                 const baseRate = new Decimal(updatedMiningState.currentBaseRate || '0.25');
                 const attendanceRate = updatedMiningState.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                 const partnerRate = updatedMiningState.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
 
-                // 최종 마이닝율 재산출 및 저장
                 updatedMiningState.currentTotalRate = baseRate
                     .mul(new Decimal(1).plus(attendanceRate))
                     .mul(new Decimal(1).plus(newReferralRate))
@@ -212,17 +219,12 @@ export class UserController {
                     .toString();
 
                 await updatedMiningState.save();
-                console.log(`[REFERRAL] Referrer mining updated - NewCount: ${updatedMiningState.referralCount}, Rate: ${updatedMiningState.currentTotalRate}`);
+                console.log(`[REFERRAL] Referrer mining correctly tied to RealCount: ${realReferralCount}, Rate: ${updatedMiningState.currentTotalRate}`);
             }
 
-            // 가입자에게도 1BW 즉시 지급
-            const newUserBonusRecord = await BonusRecord.findOne({ walletAddress: newWalletAddress });
-            if (newUserBonusRecord) {
-                const currentReward = new Decimal(newUserBonusRecord.referralRewardStorage || '0');
-                newUserBonusRecord.referralRewardStorage = currentReward.plus(1).toString();
-                await newUserBonusRecord.save();
-                console.log(`[REFERRAL] New user 1BW reward: ${newUserBonusRecord.referralRewardStorage}`);
-            }
+            // [Phase 2 최종완성] 3. 신규 가입자 2BW 중복 지급 결함 트리거 영구 삭제 (Dead Code 파기)
+            // 신규 가입자(newUser)는 이미 위의 'register' 함수 실행 순간 무조건 1.0 BW를 받고 내려오기 때문에, 여기서 한 번 더 주면 생태계가 붕괴됨.
+            // 기존에 불필요하게 newUserBonusRecord를 찾아서 currentReward.plus(1)을 중복 집행하던 논리적 오류 블록 전체를 완전 삭제함.
 
             // [3월 3일 Step 2 복구] 가입자 본인의 마이닝 2% 보항 보너스 엔진 장착
             let newUserMiningState = await MiningState.findOne({ walletAddress: newWalletAddress });
