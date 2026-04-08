@@ -175,8 +175,11 @@ router.post('/register-reward', async (req, res) => {
         );
 
         // 정밀 연산 (Decimal.js 사용) - 가입자
-        const currentRefedReward = new Decimal(referredBonus.referralRewardStorage || '0');
-        referredBonus.referralRewardStorage = currentRefedReward.plus('1').toFixed(8);
+        // [Phase 2-1 최종완성] 가입자 본인(referredUser)에게 1BW를 중복 지급하던 독버섯 로직 영구 삭제
+        // 가입자는 이미 UserController.ts의 register 단계에서 1.0 BW를 받고 내려왔으므로 여기서의 추가 지급은 데이터 파괴임.
+        if (new Decimal(referredBonus.referralRewardStorage || '0').isZero()) {
+            referredBonus.referralRewardStorage = new Decimal(1).toString();
+        }
         await referredBonus.save();
 
         // 4. 추천인의 MiningState 업데이트 (추천인 수 및 보너스율 2%p 증가)

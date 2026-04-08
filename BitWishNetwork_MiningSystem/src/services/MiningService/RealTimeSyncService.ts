@@ -79,7 +79,7 @@ export class RealTimeSyncService {
 
     this.currentBaseRate = new Decimal(totalRate); // totalRate (이미 모든 보너스 포함된 최종 속도)
     const perSecondRate = this.currentBaseRate.div(3600);
-    
+
     // [Phase 1 Fixed] 지갑의 '추천보너스보관함(2%)'을 위한 별도 초당 증분율 추출
     // 주의: totalRate는 최종합이므로, baseRate 기준을 0.25로 역산출하거나, 
     // 서버가 주는 baseRate * referralBonusRate 공식 그대로 씁니다.
@@ -126,15 +126,16 @@ export class RealTimeSyncService {
     this.walletAddress = address;
     try {
       const status = await apiService.getUserStatus(address);
-      if (status && status.miningState) {
-        this.updateLocalStatusFromServer(status.miningState);
+      const miningData = status?.data?.miningState || status?.miningState;
+
+      if (miningData) {
+        this.updateLocalStatusFromServer(miningData);
 
         // [보강] 초기화 시 이미 채굴 중이라면, 서버에서 준 totalRate로 배경 티커 즉시 가동
-        // [Phase 1 Fixed] 2% 추천 보너스 티커 동시 가동 여부를 위해 referralBonusRate도 함께 전달
-        if (status.miningState.isMining && status.miningState.currentTotalRate > 0) {
-          const totalRate = parseFloat(status.miningState.currentTotalRate);
-          const referralRate = parseFloat(status.miningState.referralBonusRate || '0');
-          console.log('[RealTimeSync] 지갑 초기화 중 채굴 상태 감지 -> 티커 자동 시작 (Rate:', totalRate, 'BonusRate:', referralRate, ')');
+        if (miningData.isMining && miningData.currentTotalRate > 0) {
+          const totalRate = parseFloat(miningData.currentTotalRate);
+          const referralRate = parseFloat(miningData.referralBonusRate || '0');
+          console.log('[RealTimeSync] 초기화 시 채굴 데이터 복구 성공 -> 티커 재가동');
           this.startMiningTicker(totalRate, referralRate);
         }
       }
@@ -201,14 +202,19 @@ export class RealTimeSyncService {
     } catch (e) { }
 
     try {
-      // 배경 티커가 업데이트하고 있는 현재 메모리 값을 서버로 보냄
+      // [Phase 3 집행] 배경 티커가 업데이트하고 있는 현재 메모리 값을 서버로 보냄 (보너스 포함)
       const currentAmount = this.precisionCalculator.formatBW(
         new Decimal(this.realTimeStatus.currentIssued)
       );
+      const currentBonus = this.precisionCalculator.formatBW(
+        new Decimal(this.realTimeStatus.referralBonusStorage || 0)
+      );
 
-      const response = await apiService.syncMiningData(this.walletAddress, currentAmount);
+      // 서버로 채굴량과 보너스량을 동시에 전송하여 동기화
+      const response = await apiService.syncMiningData(this.walletAddress, currentAmount, currentBonus);
 
-      if (response && response.success) {
+      if (response && response.success && response.data) {
+        // 서버에서 반환된 '최종 박제 데이터'로 로컬 상태 동기화 (리셋 방지)
         this.updateLocalStatusFromServer(response.data);
         this.syncCount++;
         this.lastSyncTime = new Date();

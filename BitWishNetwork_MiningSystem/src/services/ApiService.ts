@@ -85,11 +85,12 @@ class ApiService {
      * @param walletAddress 지갑 주소
      * @param currentAmount 현재 클라이언트 측 계산값 (검증용)
      */
-    public async syncMiningData(walletAddress: string, currentAmount: string): Promise<any> {
+    public async syncMiningData(walletAddress: string, currentAmount: string, currentBonus: string): Promise<any> {
         try {
             const response = await this.client.post('/mining/sync', {
                 walletAddress,
-                clientAmount: currentAmount
+                clientAmount: currentAmount,
+                clientBonus: currentBonus
             });
             return response.data;
         } catch (error) {

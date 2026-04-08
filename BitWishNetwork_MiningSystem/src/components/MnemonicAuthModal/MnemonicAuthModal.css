@@ -1,0 +1,311 @@
+.mnemonic-auth-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(12px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.mnemonic-auth-container {
+    background: linear-gradient(145deg, #1a202c, #2d3748);
+    border-radius: 28px;
+    padding: 36px;
+    width: 95%;
+    max-width: 550px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnemonic-auth-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.mnemonic-auth-header h2 {
+    margin: 0;
+    font-size: 1.7rem;
+    color: #63b3ed;
+    font-weight: 800;
+}
+
+.mnemonic-auth-header .subtitle {
+    color: #fc8181;
+    font-size: 0.95rem;
+    margin-top: 8px;
+    font-weight: 600;
+}
+
+.mnemonic-auth-body {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.mnemonic-auth-body .description {
+    color: #cbd5e0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px 18px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.mnemonic-inputs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+@media (max-width: 480px) {
+    .mnemonic-inputs-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.mnemonic-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mnemonic-input-group label {
+    font-size: 0.85rem;
+    color: #a0aec0;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+.mnemonic-input-group input {
+    width: 100%;
+    padding: 14px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.mnemonic-input-group input:focus {
+    outline: none;
+    border-color: #63b3ed;
+    box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.2);
+}
+
+
+.error-message {
+    background-color: rgba(255, 68, 68, 0.1);
+    color: #ff4444;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+    border: 1px solid rgba(255, 68, 68, 0.2);
+    margin-top: 15px;
+}
+
+/* 2단계 브릿지 추가 스타일 */
+.address-verify-stage, .mnemonic-verify-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.cache-recovery-warning {
+    background: rgba(236, 201, 75, 0.1);
+    border: 1px solid rgba(236, 201, 75, 0.3);
+    border-radius: 12px;
+    padding: 15px;
+    color: #ecc94b;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    text-align: left;
+    margin-bottom: 5px;
+    border-left: 4px solid #ecc94b;
+}
+
+.address-input-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.premium-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 12px 15px;
+    color: #ffffff;
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.light-mode .premium-input {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #333333;
+}
+
+.premium-input:focus {
+    border-color: #4facfe;
+    background: rgba(79, 172, 254, 0.1);
+    outline: none;
+    box-shadow: 0 0 15px rgba(79, 172, 254, 0.2);
+}
+
+.address-check-btn {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 0 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.address-check-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 242, 254, 0.4);
+}
+
+.success-text {
+    color: #00e676 !important;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.check-icon {
+    font-size: 18px;
+}
+
+/* 애니메이션 */
+.animate-fade-in {
+    animation: fadeIn 0.4s ease-out;
+}
+
+.animate-slide-up {
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 다크/라이트 모드 추가 정합성 */
+.light-mode .mnemonic-auth-container {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.light-mode .mnemonic-auth-header h2 {
+    color: #222;
+}
+
+.light-mode .description {
+    color: #666;
+}
+
+.light-mode .mnemonic-input-group label {
+    color: #444;
+}
+
+.light-mode .mnemonic-input-group input {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #333;
+}
+
+.mnemonic-auth-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 32px;
+}
+
+.verify-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(90deg, #3182ce, #63b3ed);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.verify-btn:hover:not(:disabled) {
+    box-shadow: 0 5px 15px rgba(66, 153, 225, 0.4);
+    transform: translateY(-2px);
+}
+
+.verify-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #a0aec0;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 8px;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+
+/* Light Mode Support (Optional but standard) */
+.light-mode .mnemonic-auth-container {
+    background: #ffffff;
+    color: #2d3748;
+    border: 1px solid #e2e8f0;
+}
+
+.light-mode .mnemonic-auth-header .subtitle {
+    color: #e53e3e;
+}
+
+.light-mode .mnemonic-auth-body .description {
+    background: #f7fafc;
+    color: #4a5568;
+}
+
+.light-mode .mnemonic-input-group input {
+    background-color: #edf2f7;
+    border: 1px solid #cbd5e0;
+    color: #2d3748;
+}
+
+.light-mode .mnemonic-input-group input:focus {
+    border-color: #3182ce;
+}

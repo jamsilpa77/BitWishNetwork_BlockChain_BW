@@ -194,16 +194,6 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
         if (isMining) {
             timerId = setInterval(() => {
                 setMiningTime(prev => prev + 1);
-
-                // [신규] 10초마다 보너스 보관함 로직 수행 (창이 열려있을 때)
-                const currentTime = miningTime + 1;
-                if (currentTime > 0 && currentTime % 10 === 0) {
-                    const result = referralBonusService.applyReferralBonus(walletAddress, 0.25);
-                    if (result.success && (result as any).bonusAmount) {
-                        // 서비스 메모리에 보너스 합산 반영 (그러면 모든 창이 동기화됨)
-                        realTimeSyncService.updateBonusStorage((result as any).bonusAmount!);
-                    }
-                }
             }, 1000);
         }
         return () => {
@@ -216,7 +206,7 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
         if (isMining && userStats.baseRate.gt(0)) {
             // [Phase 1 추가수술] 마이닝 시작 시 엔진에 2% 추천 보너스율 함께 전달 (누락 버그 해결)
             realTimeSyncService.startMiningTicker(
-                userStats.baseRate.toNumber(), 
+                userStats.baseRate.toNumber(),
                 userStats.referralBonusRate.toNumber() / 100
             );
         } else {

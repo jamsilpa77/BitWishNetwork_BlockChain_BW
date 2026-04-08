@@ -109,7 +109,8 @@ export class LanguageManager {
         realtimeData: '실시간 블록체인 데이터',
         registeredUsers: '가입된 사용자',
         refreshStatus: '상태 새로고침',
-        miningBonus: '마이닝 & 보너스'
+        miningBonus: '마이닝 & 보너스',
+        startMiningTooltip: '이 버튼은 지갑 주소와 4~6개의 니모닉 단어만으로 즉시 마이닝장에 입장하는 "스피드 패스"입니다. 브라우저 캐시 삭제 또는 기기 변경 시에는 "나의 지갑"을 통해 최초 1회 인증을 진행해 주세요. 그 즉시 보안 지문이 재설정되어, 이후부터는 다시 이 버튼만으로 영구적인 프리패스가 가능해집니다.'
       },
       // 브랜드 관련
       brand: {
@@ -210,6 +211,22 @@ export class LanguageManager {
         loginSuccess: '인증되었습니다.',
         loginFail: '지갑 주소 또는 비밀번호가 일치하지 않습니다.',
         noPasswordConfirm: '2차 비밀번호가 설정되지 않았습니다.\n지금 설정하시겠습니까?'
+      },
+      mnemonicAuth: {
+        title: '니모닉 파편 보안 인증',
+        subtitle: '보안 유예 시간이 만료되었습니다',
+        desc: '지갑 복구 구문(24단어) 중 지정된 번호의 단어를 입력하세요.',
+        verify: '본인 인증 완료',
+        error: '입력한 단어가 니모닉과 일치하지 않습니다.',
+        wordLabel: '번 단어:',
+        placeholder: '단어를 입력하세요',
+        addressLabel: '지갑 주소 확인',
+        addressPlaceholder: 'BW + 40자리 주소를 입력하세요',
+        verifyAddress: '주소 확인',
+        addressSuccess: '지갑 주소가 확인되었습니다.',
+        addressError: '유효하지 않은 지갑 주소입니다.',
+        backToAddress: '주소 다시 입력',
+        cacheGuide: '⚠️ 브라우저 캐시 삭제 또는 기기 변경 후 첫 접속이신가요? "나의 지갑" 메뉴에서 단 한번만 지갑을 열어주세요. 그 즉시 보안 지문이 재설정되어, 이후부터는 다시 이 가벼운 인증만으로 즉시 마이닝장에 입장하실 수 있습니다.'
       },
       secondPassword: {
         title: 'BitWish 2차 비밀번호 설정',
@@ -431,7 +448,8 @@ export class LanguageManager {
         refreshStatus: 'Refresh Status',
         miningBonus: 'Mining & Bonus',
         createWallet: 'Create Wallet',
-        myWallet: 'My Wallet'
+        myWallet: 'My Wallet',
+        startMiningTooltip: 'This "Speed Pass" allows instant entry using only 4-6 mnemonic words. If you\'ve cleared your cache or changed devices, please authenticate via "My Wallet" once. The system will automatically re-enable this instant-entry feature for permanent use.'
       },
       walletAuth: {
         title: 'My Wallet Access',
@@ -455,6 +473,22 @@ export class LanguageManager {
         loginSuccess: 'Authenticated successfully.',
         loginFail: 'Wallet address or password does not match.',
         noPasswordConfirm: '2nd password is not set.\nWould you like to set it now?'
+      },
+      mnemonicAuth: {
+        title: 'Mnemonic Fragment Security',
+        subtitle: 'Security grace period has expired',
+        desc: 'Enter the words corresponding to the indices from your 24-word seed.',
+        verify: 'Verify Identity',
+        error: 'The entered words do not match your mnemonic.',
+        wordLabel: 'Word #',
+        placeholder: 'Enter word',
+        addressLabel: 'Wallet Address Verification',
+        addressPlaceholder: 'Enter BW + 40-digit address',
+        verifyAddress: 'Verify Address',
+        addressSuccess: 'Wallet address verified.',
+        addressError: 'Invalid wallet address.',
+        backToAddress: 'Back to Address',
+        cacheGuide: '⚠️ First access after clearing cache or changing device? Please open your wallet once in the "My Wallet" menu. This will instantly reset your security fingerprint, allowing future entry via this speed pass.'
       },
       secondPassword: {
         title: 'Set BitWish 2nd Password',
@@ -820,7 +854,8 @@ export class LanguageManager {
         refreshStatus: '状況更新',
         miningBonus: 'マイニング＆ボーナス',
         createWallet: 'ウォレット作成',
-        myWallet: 'マイウォレット'
+        myWallet: 'マイウォレット',
+        startMiningTooltip: 'この「スピードパス」は、ニーモニック4〜6単語だけで採굴場に即時入場できるシステムです。キャッシュ削除や機体変更時には、「マイウォレット」で一度認証を行ってください。自動的にセキュリティが設定され、以降は単語入力だけで永久に即時入場が可能になります。'
       },
       walletAuth: {
         title: 'マイウォレットアクセス',
@@ -1102,6 +1137,22 @@ export class LanguageManager {
         cancelled: 'パートナー登録がキャンセルされました。',
         cancelError: 'パートナー登録キャンセル中にエラーが発生しました。'
       },
+      mnemonicAuth: {
+        title: 'ニーモニック・フラグメント認証',
+        subtitle: 'セキュリティ猶予期限が切れました',
+        desc: '24語のシードフレーズの中から、指定された番号の単語を入力してください。',
+        verify: '本人確認完了',
+        error: '入力された単語がニーモニックと一致しません。',
+        wordLabel: '番目の単語:',
+        placeholder: '単語を入力してください',
+        addressLabel: 'ウォレットアドレス確認',
+        addressPlaceholder: 'BW + 40桁のアドレスを入力してください',
+        verifyAddress: 'アドレス確認',
+        addressSuccess: 'ウォレットアドレスが確認されました。',
+        addressError: '無効なウォレットアドレスです。',
+        backToAddress: 'アドレス再入力',
+        cacheGuide: '⚠️ キャッシュ削除または機体変更後の初回アクセスですか？「マイウォレット」メニューで一度だけ認証を行ってください。自動的にセキュリティ設定が復旧され、以降は単語入力だけで即時入場が可能になります。'
+      },
 
     });
 
@@ -1163,7 +1214,8 @@ export class LanguageManager {
         refreshStatus: '刷新状态',
         miningBonus: '挖矿和奖励',
         createWallet: '创建钱包',
-        myWallet: '我的钱包'
+        myWallet: '我的钱包',
+        startMiningTooltip: '此“极速通行证”仅需 4-6 个助记词即可立即进入矿场。若清理了浏览器缓存或更换设备，请通过“我的钱包”验证一次。系统将自动重置安全指纹，之后即可再次使用此按钮实现永久永久的极速入场。'
       },
       walletAuth: {
         title: '我的钱包访问权限',
@@ -1369,6 +1421,22 @@ export class LanguageManager {
         cannotCancel: '无法取消合作伙伴注册。',
         cancelled: '合作伙伴注册已取消。',
         cancelError: '合作伙伴注册取消过程中发生错误。'
+      },
+      mnemonicAuth: {
+        title: '助记词片段安全验证',
+        subtitle: '安全宽限期已过期',
+        desc: '从您的24位助记词中输入对应编号的单词。',
+        verify: '完成身份验证',
+        error: '输入的单词与您的助记词不匹配。',
+        wordLabel: '号单词:',
+        placeholder: '请输入单词',
+        addressLabel: '钱包地址验证',
+        addressPlaceholder: '请输入 BW + 40位地址',
+        verifyAddress: '验证地址',
+        addressSuccess: '钱包地址已通过验证。',
+        addressError: '无效的钱包地址。',
+        backToAddress: '重新输入地址',
+        cacheGuide: '⚠️ 清理缓存或更换设备后的首次访问？请在“我的钱包”菜单中验证一次。系统将自动重置安全指纹，之后即可再次使用此极速验证入场。'
       },
 
     });

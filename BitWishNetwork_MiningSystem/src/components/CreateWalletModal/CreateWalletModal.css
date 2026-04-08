@@ -381,3 +381,76 @@
 .complete-btn:hover {
     opacity: 0.9;
 }
+
+/* --- 다크 모드 지원 (Dark Mode Support) --- */
+body.dark-mode .create-wallet-modal {
+    background: #1e1e1e;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+}
+
+body.dark-mode .modal-header {
+    border-bottom-color: #333;
+}
+
+body.dark-mode .modal-title,
+body.dark-mode .body-title,
+body.dark-mode .input-label,
+body.dark-mode .verification-label,
+body.dark-mode .seed-word {
+    color: #ffffff;
+}
+
+body.dark-mode .body-description {
+    color: #adb5bd;
+}
+
+body.dark-mode .referral-guide-btn {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+body.dark-mode .referral-guide-tooltip {
+    background-color: rgba(30, 30, 30, 0.85);
+    border-color: #444;
+    color: #e0e0e0;
+    backdrop-filter: blur(10px);
+}
+
+body.dark-mode .referral-input,
+body.dark-mode .verification-input {
+    background: #2d2d2d;
+    color: #ffffff;
+    border-color: #4285F4;
+}
+
+body.dark-mode .referral-input::placeholder,
+body.dark-mode .verification-input::placeholder {
+    color: #666;
+}
+
+body.dark-mode .seed-grid {
+    background: #151515;
+}
+
+body.dark-mode .seed-item {
+    background: #252525;
+    border-color: #333;
+}
+
+body.dark-mode .seed-number {
+    color: #666;
+}
+
+body.dark-mode .header-subtitle {
+    color: #888;
+}
+
+body.dark-mode .close-button {
+    color: #666;
+}
+
+body.dark-mode .close-button:hover {
+    color: #ffffff;
+}

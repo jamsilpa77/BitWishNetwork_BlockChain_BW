@@ -295,34 +295,43 @@ class BitWishNetworkServer {
         return res.json({
           success: true,
           message: '마이닝 상태 조회 성공',
-          data: userData
+          data: {
+            miningState: userData
+          }
         });
       } catch (error) {
         return res.status(500).json({ success: false, error: '상태 조회 중 오류 발생' });
       }
     });
 
-    // 마이닝 데이터 동기화
+    // 마이닝 데이터 동기화 (채굴량 + 보너스 통합 동기화)
     this.app.post('/api/mining/sync', (req, res) => {
       try {
-        const { walletAddress, clientAmount } = req.body;
+        const { walletAddress, clientAmount, clientBonus } = req.body;
         if (!walletAddress) return res.status(400).json({ success: false, message: '지갑 주소 누락' });
 
         let referrals = PersistentStorage.loadFromFile('referrals.json') || { users: {} };
         if (!referrals.users) referrals.users = {};
 
+        // [Phase 1 집행] 채굴량과 추천 보너스 보관함 수치를 동시에 영구 저장소에 박제
         referrals.users[walletAddress] = {
           ...(referrals.users[walletAddress] || {}),
           walletAddress,
           balance: clientAmount,
+          referralBonusStorage: clientBonus || referrals.users[walletAddress]?.referralBonusStorage || '0',
           lastSyncAt: Date.now()
         };
 
         PersistentStorage.saveToFile('referrals.json', referrals);
 
+        // [핵심 보강] 동기화 후 업데이트된 데이터를 그대로 반환하여 클라이언트 리셋을 물리적으로 차단
         return res.json({
           success: true,
-          message: '동기화 완료'
+          message: '동기화 완료',
+          data: {
+            accumulatedReward: referrals.users[walletAddress].balance,
+            referralBonusStorage: referrals.users[walletAddress].referralBonusStorage
+          }
         });
       } catch (error) {
         return res.status(500).json({ success: false, error: '동기화 중 오류 발생' });

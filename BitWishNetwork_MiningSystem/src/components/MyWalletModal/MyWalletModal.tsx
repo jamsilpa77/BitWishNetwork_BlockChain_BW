@@ -55,27 +55,37 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
         setWalletAddress(currentAddress);
 
         try {
-            // [중요] ApiService.getUserStatus는 { success, user, miningState }를 반환함
+            // [중요] ApiService.getUserStatus는 { success, user, miningState }를 보장함
             const response = await apiService.getUserStatus(currentAddress);
+
+            // [핵심] 추천인 통계 및 진짜 목록 조회 (BWD... 코드와 가입 명단 복구용)
+            // fetch 실패를 대비해 try-catch 내부에 배치
+            const referralResponse = await fetch(`/api/referral/stats/${currentAddress}`);
+            const referralData = referralResponse.ok ? await referralResponse.json() : { success: false };
+
+            // [핵심] 월별 채굴 실적 조회
+            const historyResponse = await fetch(`/api/mining/history/${currentAddress}`);
+            const historyData = historyResponse.ok ? await historyResponse.json() : { success: false };
+
             if (response?.success) {
                 const u = response.user;
                 const m = response.miningState;
+                const r = (referralData as any).success ? (referralData as any).data : null;
 
-                // [Step 4 Fix] response.data가 아닌 실제 필드(user, miningState)로 정확히 매핑
                 setWalletData({
                     balance: parseFloat(m?.accumulatedReward || '0'),
                     availableBalance: parseFloat(m?.availableBalance || '0'),
 
-                    // [중요] 사용자 보상 정보 매핑
-                    referralReward: parseFloat(u?.referralRewardStorage || '0'), // 1BW
-                    referralBonus: parseFloat(u?.referralBonusStorage || '0'),   // 2%
-
-                    myReferralCode: u?.myReferralCode || '',
-                    referralList: u?.referralList || []
-                });
+                    // [정밀맵핑] 데이터가 있는 곳(referral stats)을 최우선으로 하고 없으면 기본 유저 정보 사용
+                    referralReward: parseFloat(r?.referralRewardStorage || u?.referralRewardStorage || '0'),
+                    referralBonus: parseFloat(r?.referralBonusStorage || u?.referralBonusStorage || '0'),
+                    myReferralCode: r?.referralCode || u?.myReferralCode || '',
+                    referralList: r?.referralList || u?.referralList || [],
+                    miningHistory: (historyData as any).success ? (historyData as any).history : []
+                } as any);
             }
         } catch (e) {
-            console.error('Wallet fetch error:', e);
+            console.error('Wallet real-time restoration error:', e);
         }
     };
 
@@ -428,7 +438,67 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                             </div>
                         </div>
                     )}
-                    {(activeTab !== 'overview' && activeTab !== 'referralRewards') && (
+                    {/* [최종복구] 채굴 보상 내역 탭 - Job 1 전용 수술 구역 */}
+                    {activeTab === 'miningRewards' && (
+                        <div className="referral-list-container" style={{ padding: '10px' }}>
+                            <h4 style={{ color: '#111827', marginBottom: '15px', fontSize: '16px', fontWeight: 'bold' }}>- 월별 채굴 정산 내역 -</h4>
+                            <div className="referral-history-table-wrapper" style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '13px' }}>
+                                    <thead style={{ backgroundColor: '#F0F9FF', borderBottom: '2px solid #BAE6FD' }}>
+                                        <tr>
+                                            <th style={{ width: '35%', padding: '12px 10px', color: '#0369A1', textAlign: 'left' }}>채굴 시작 일</th>
+                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>채굴량</th>
+                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>보너스</th>
+                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>합계</th>
+                                            <th style={{ width: '11%', padding: '12px 10px', color: '#0369A1' }}>상태</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {((walletData as any)?.miningHistory || []).length > 0 ? (
+                                            (walletData as any).miningHistory.map((item: any, idx: number) => (
+                                                <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
+                                                    <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: '500', color: '#111827' }}>
+                                                        {item.year}.{item.month.toString().padStart(2, '0')}.30 23:59:59
+                                                    </td>
+                                                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{parseFloat(item.minedAmount).toFixed(4)} BW</td>
+                                                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{parseFloat(item.bonusAmount).toFixed(4)} BW</td>
+                                                    <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: '#059669' }}>{(parseFloat(item.totalAmount) || 0).toFixed(4)} BW</td>
+                                                    <td style={{ padding: '12px 10px' }}>
+                                                        <span style={{ fontSize: '11px', backgroundColor: '#F3F4F6', color: '#6B7280', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>채굴마감</span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : null}
+
+                                        {/* [최종수복] 현재 채굴 실시간 행 (레이아웃 고정형 말풍선 8자리 구현) */}
+                                        <tr style={{ backgroundColor: '#F0FDF4', color: '#111827', borderBottom: '2px solid #DCFCE7' }}>
+                                            <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', fontSize: '11.5px', color: '#111827' }}>
+                                                {/* 서버의 miningStartTime을 년-월-일 시:분:초 포맷 전체 출력 */}
+                                                {new Date().toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\//g, '.')}
+                                            </td>
+                                            <td className="mining-amount-cell" style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: '#111827' }} title={`${walletData.balance.toFixed(8)} BW`}>
+                                                {/* 말풍선(title)으로 8자리 노출, 숫자는 4자리로 고정하여 테이블 뒤틀림 방지 */}
+                                                <span>{walletData.balance.toFixed(4)} BW</span>
+                                            </td>
+                                            <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: '#111827' }} title={`${walletData.referralBonus.toFixed(8)} BW`}>
+                                                <span>{walletData.referralBonus.toFixed(4)} BW</span>
+                                            </td>
+                                            <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#059669' }} title={`${(walletData.balance + walletData.referralBonus).toFixed(8)} BW`}>
+                                                <span>{(walletData.balance + walletData.referralBonus).toFixed(4)} BW</span>
+                                            </td>
+                                            <td style={{ padding: '12px 10px' }}>
+                                                <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', animation: 'pulse 2s infinite' }}>채굴중</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p style={{ marginTop: '10px', fontSize: '11px', color: '#666' }}>💡 매월 1일 00:00:00에 전월 채굴량이 확정 목록에 추가됩니다.</p>
+                        </div>
+                    )}
+
+                    {/* [오류방어] 정의되지 않은 탭 처리 */}
+                    {(activeTab !== 'overview' && activeTab !== 'referralRewards' && activeTab !== 'miningRewards') && (
                         <div className="overview-container">
                             <p style={{ textAlign: 'center', color: '#999', marginTop: '50px' }}>
                                 {getTranslation('wallet.dashboard.tabs.' + activeTab)} - Coming Soon

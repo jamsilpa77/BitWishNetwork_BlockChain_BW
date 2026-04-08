@@ -1,0 +1,4 @@
+--- USER A (BWD403...) ---
+{"_id":"69d1fc10693afba1b37b405f","walletAddress":"BWD403933649E57D4B3CDE374F22E83A4E14E0C602","referralBonusStorage":"0.00000000000000000000000000000000000000000000000000","referralRewardStorage":"2","referralList":[],"attendanceHistory":[],"createdAt":"2026-04-05T06:07:12.175Z","updatedAt":"2026-04-05T06:07:12.182Z","__v":0}
+--- USER B (BW546...) ---
+{"_id":"69d10644693afba1b373ede7","walletAddress":"BW546C0A1376B5D8372BC66ACCE44C0751AD3842B6","referralBonusStorage":"0.00000000000000000000000000000000000000000000000000","referralRewardStorage":"2","referralList":[],"attendanceHistory":[],"createdAt":"2026-04-04T12:38:28.814Z","updatedAt":"2026-04-04T12:38:28.831Z","__v":0}

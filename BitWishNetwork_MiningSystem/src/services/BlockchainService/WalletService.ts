@@ -36,6 +36,7 @@ export class WalletService {
   private readonly STORAGE_KEY = 'bw_wallet_data';
   private readonly AUTH_SESSION_KEY = 'bw_auth_session';
   private readonly IP_LIMIT_KEY = 'bw_ip_creation_count';
+  private readonly WORD_FINGERPRINTS_KEY = 'bw_word_fingertips';
 
   // 암호화 설정 (표준화)
   private readonly ALGORITHM = 'aes-256-cbc';
@@ -53,11 +54,14 @@ export class WalletService {
   }
 
   /**
-   * 검증을 위한 4개의 랜덤 인덱스 생성 (1~24)
+   * 검증을 위한 4~6개의 랜덤 인덱스 생성 (1~24)
    */
   public generateVerificationIndices(): number[] {
     const indices = new Set<number>();
-    while (indices.size < 4) {
+    // [3-3] 4개에서 6개 사이의 랜덤한 단어 개수 결정
+    const targetCount = Math.floor(Math.random() * 3) + 4; 
+    
+    while (indices.size < targetCount) {
       const randomIndex = Math.floor(Math.random() * 24) + 1;
       indices.add(randomIndex);
     }
@@ -136,6 +140,7 @@ export class WalletService {
     }
 
     this.saveWalletToStorage(walletData);
+    this.generateMnemonicFingerprints(mnemonic, address); // [3-3] 보안 지문 식립
     this.incrementIpCount();
     this.setAuthSession(address);
 
@@ -191,6 +196,18 @@ export class WalletService {
 
     const currentHash = this.generateHash(password, salt);
     if (currentHash !== storedHash) return false;
+
+    // [3-3] 기존 유저 자동 보강: 지문이 없거나 레거시 방식일 경우 즉시 재발급하여 식립
+    const fingerprintKey = `${this.WORD_FINGERPRINTS_KEY}_${address.toLowerCase()}`;
+    if (!localStorage.getItem(fingerprintKey)) {
+      try {
+        const mnemonic = this.decryptMnemonic(localWallet?.encryptedMnemonic || '', password);
+        this.generateMnemonicFingerprints(mnemonic.split(' '), address);
+        console.log(`[WalletService] Security fingerprints migrated for ${address}`);
+      } catch (e) {
+        console.warn('[WalletService] Security migration failed:', e);
+      }
+    }
 
     // 4. [자가치유] 검증 성공 시, 로컬 데이터가 없거나 깨져있다면 서버 데이터 받아와서 복구
     // 이를 통해 "지갑 가져오기" 절차 없이도 로그인만으로 복구 가능
@@ -288,8 +305,8 @@ export class WalletService {
         encryptedMnemonic: wallet.encryptedMnemonic
       });
 
-      // 3. 마이닝 데이터 동기화 트리거
-      await apiService.syncMiningData(address, "0");
+      // 3. 마이닝 데이터 동기화 트리거 (보너스 필드 규격 준수)
+      await apiService.syncMiningData(address, "0", "0");
 
       console.log('[WalletService] Password persisted successfully.');
     } catch (e) {
@@ -423,6 +440,9 @@ export class WalletService {
       // 4. 스토리지 저장 및 세션 설정
       this.saveWalletToStorage(walletData);
       this.setAuthSession(address);
+      
+      // [결정적 보강] 복구 시에도 4~6단어 파편 인증을 위한 보안 지문을 즉시 식립
+      this.generateMnemonicFingerprints(phrase.split(' '), address);
 
       return walletData;
     } catch (e) {
@@ -468,8 +488,109 @@ export class WalletService {
     return crypto.pbkdf2Sync(password, salt, this.PBKDF2_ITERATIONS, 64, 'sha512').toString('hex');
   }
 
+  private cachedMnemonicWords: string[] | null = null; // 인증을 위한 메모리 내 캐시 (비밀번호 없이 단어 대조용)
+
   /**
-   * 니모닉 암호화 (AES-256-CBC)
+   * 니모닉 복호화 단어 배열 반환 및 캐싱
+   */
+  public getMnemonicWords(password?: string): string[] {
+    // 1. 이미 메모리에 캐시되어 있다면 즉시 반환 (비밀번호 불필요)
+    if (this.cachedMnemonicWords) return this.cachedMnemonicWords;
+
+    // 2. 캐시가 없고 비밀번호가 제공된 경우에만 복호화 시도
+    if (password) {
+      const wallet = this.getWalletFromStorage();
+      if (!wallet || !wallet.encryptedMnemonic) throw new Error('No wallet found');
+      const mnemonic = this.decryptMnemonic(wallet.encryptedMnemonic, password);
+      this.cachedMnemonicWords = mnemonic.split(' ');
+      return this.cachedMnemonicWords;
+    }
+
+    throw new Error('Password required for initial mnemonic decryption');
+  }
+
+  /**
+   * 니모닉 파편 검증 (4~6단어) - [3-3] 해시 지문 대조 방식으로 전면 개편
+   */
+  public async verifyMnemonicFragment(indices: number[], inputWords: string[], address?: string): Promise<boolean> {
+    try {
+      if (!indices || !inputWords || indices.length !== inputWords.length) return false;
+      
+      // [결정적 보강] 보안 지문은 지갑 주소별로 고유하게 관리되어야 함 (충돌 방지)
+      const targetAddress = (address || this.getCurrentWalletAddress())?.trim().toLowerCase();
+      if (!targetAddress) return false;
+
+      const fingerprints = this.getMnemonicFingerprints(targetAddress);
+      if (!fingerprints) {
+          console.warn(`[WalletService] No fingerprints found for address: ${targetAddress}`);
+          return false;
+      }
+
+      for (let i = 0; i < indices.length; i++) {
+        const indexVal = indices[i];
+        const inputWord = inputWords[i];
+        if (indexVal === undefined || inputWord === undefined) continue;
+
+        const idx = indexVal - 1;
+        const storedHash = fingerprints[idx];
+        
+        // [정밀 보강] 입력 단어와 지갑 주소(Salt)를 모두 Trim 처리하여 공백으로 인한 오류 원천 차단
+        const inputHash = crypto.createHash('sha512')
+          .update(inputWord.trim().toLowerCase() + targetAddress)
+          .digest('hex');
+        
+        if (!storedHash || storedHash !== inputHash) {
+          return false;
+        }
+      }
+      return true;
+    } catch (e) {
+      console.error('[WalletService] Fragment verification failed:', e);
+      return false;
+    }
+  }
+
+  /**
+   * [3-3] 24개 단어별 보안 지문(Hash) 생성 및 주소별 고유 저장
+   */
+  private generateMnemonicFingerprints(mnemonic: string[], address: string): void {
+    if (typeof window === 'undefined') return;
+    
+    const normalizedAddress = address.trim().toLowerCase();
+    const hashes = mnemonic.map(word => 
+      crypto.createHash('sha512')
+        .update(word.trim().toLowerCase() + normalizedAddress)
+        .digest('hex')
+    );
+    
+    // 주소별 고유 키 사용 (기존 전역 키 충돌 해결)
+    const key = `${this.WORD_FINGERPRINTS_KEY}_${normalizedAddress}`;
+    localStorage.setItem(key, JSON.stringify(hashes));
+    console.log(`[WalletService] Security fingerprints secured for address: ${normalizedAddress}`);
+  }
+
+  /**
+   * [3-3] 저장된 주소별 보안 지문 목록 조회 (레거시 폴백 지원)
+   */
+  private getMnemonicFingerprints(address: string): string[] | null {
+    if (typeof window === 'undefined') return null;
+    const normalizedAddress = address.trim().toLowerCase();
+    const key = `${this.WORD_FINGERPRINTS_KEY}_${normalizedAddress}`;
+    
+    // 1. 주소별 최신 지문 확인
+    let data = localStorage.getItem(key);
+    
+    // 2. [레거시 폴백] 주소별 지문이 없으면 옛날 전역 지문 확인
+    if (!data) {
+        console.log(`[WalletService] Specific fingerprints missing for ${normalizedAddress}, checking legacy global key...`);
+        data = localStorage.getItem(this.WORD_FINGERPRINTS_KEY);
+    }
+    
+    return data ? JSON.parse(data) : null;
+  }
+
+  /**
+   * 니모닉 복호화 (AES-256-CBC)
    */
   private encryptMnemonic(mnemonic: string, password: string): string {
     const salt = crypto.randomBytes(16);

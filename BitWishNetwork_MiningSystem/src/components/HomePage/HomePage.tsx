@@ -38,8 +38,9 @@ import CreateWalletModal from '../../components/CreateWalletModal/CreateWalletMo
 import MyWalletModal from '../../components/MyWalletModal/MyWalletModal';
 import ReferralModal from '../../components/ReferralModal/ReferralModal';
 import WalletAuthModal from '../../components/WalletAuthModal/WalletAuthModal';
-import MiningAuthModal from '../MiningAuthModal/MiningAuthModal';
-import SecondPasswordModal from '../SecondPasswordModal/SecondPasswordModal';
+import MnemonicAuthModal from '../MnemonicAuthModal/MnemonicAuthModal';
+// import MiningAuthModal from '../MiningAuthModal/MiningAuthModal';
+// import SecondPasswordModal from '../SecondPasswordModal/SecondPasswordModal';
 import { walletService } from '../../services/BlockchainService/WalletService';
 import './HomePage.css';
 
@@ -85,6 +86,7 @@ const HomePage: React.FC = () => {
     const [isWalletAuthModalOpen, setIsWalletAuthModalOpen] = useState(false);
     const [isMiningAuthModalOpen, setIsMiningAuthModalOpen] = useState(false);
     const [isSecondPasswordModalOpen, setIsSecondPasswordModalOpen] = useState(false);
+    const [isMnemonicModalOpen, setIsMnemonicModalOpen] = useState(false);
 
     const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
     const [tickerInterval, setTickerInterval] = useState<NodeJS.Timeout | null>(null); // [신규] 홈페이지 전용 티커
@@ -298,9 +300,31 @@ const HomePage: React.FC = () => {
      */
     const handleStartMining = (): void => {
         try {
-            setIsMiningAuthModalOpen(true);
+            // [Phase 2] 10분 하이패스 세션 연동
+            // @ts-ignore
+            if (walletService.checkAuthSession()) {
+                const sessionStr = localStorage.getItem('bw_mining_auth');
+                if (sessionStr) {
+                    const sessionData = JSON.parse(sessionStr);
+                    if (sessionData.address) {
+                        setAuthenticatedAddress(sessionData.address);
+                        setIsMiningModalOpen(true);
+                        return;
+                    }
+                }
+            }
+            
+            // [Phase 3] 세션 만료 시 니모닉 파편 인증 모달 호출
+            const currentAddr = walletService.getCurrentWalletAddress();
+            if (currentAddr) {
+                setAuthenticatedAddress(currentAddr);
+                setIsMnemonicModalOpen(true);
+            } else {
+                // 저장된 지갑이 없으면 지갑 인증 모달로 유도
+                setIsWalletAuthModalOpen(true);
+            }
         } catch (error) {
-            console.error('마이닝 모달 열기 오류:', error);
+            console.error('마이닝 시작 핸들러 오류:', error);
         }
     };
 
@@ -497,9 +521,13 @@ const HomePage: React.FC = () => {
                             <span className="chain-icon">⛓️</span>
                             {getTranslation('mining.title')}
                         </h1>
-                        <button className="mining-bonus-button" onClick={handleStartMining}>
+                        <button 
+                            className="mining-bonus-button" 
+                            onClick={handleStartMining}
+                            title={getTranslation('mining.startMiningTooltip')}
+                        >
                             <span className="pickaxe-icon">⛏️</span>
-                            {getTranslation('mining.miningBonus')}
+                            {getTranslation('mining.startMining')}
                         </button>
                         <p className="status-description">{getTranslation('mining.description')}</p>
                         <p className="last-update-time">
@@ -562,8 +590,8 @@ const HomePage: React.FC = () => {
                             <div className="status-card">
                                 <div className="card-icon bar-chart-icon">📊</div>
                                 <div className="card-content">
-                                    <div 
-                                        className="card-value" 
+                                    <div
+                                        className="card-value"
                                         title={`${new Decimal(globalStats.issuanceRate || 0).toFixed(8)}%`}
                                         style={{ cursor: 'pointer' }}
                                     >
@@ -665,6 +693,7 @@ const HomePage: React.FC = () => {
                 />
             )}
 
+            {/* 
             {isMiningAuthModalOpen && (
                 <MiningAuthModal
                     isOpen={isMiningAuthModalOpen}
@@ -696,6 +725,7 @@ const HomePage: React.FC = () => {
                     currentLanguage={currentLanguage}
                 />
             )}
+            */}
 
             {isReferralModalOpen && (
                 <ReferralModal
@@ -703,6 +733,26 @@ const HomePage: React.FC = () => {
                     onClose={() => setIsReferralModalOpen(false)}
                     currentLanguage={currentLanguage}
                     walletAddress={authenticatedAddress}
+                />
+            )}
+
+            {isMnemonicModalOpen && (
+                <MnemonicAuthModal
+                    isOpen={isMnemonicModalOpen}
+                    onClose={() => setIsMnemonicModalOpen(false)}
+                    onSuccess={(address) => {
+                        setAuthenticatedAddress(address);
+                        const sessionData = {
+                            address: address,
+                            timestamp: Date.now(),
+                            method: 'MNEMONIC_FRAGMENT_AUTH'
+                        };
+                        localStorage.setItem('bw_mining_auth', JSON.stringify(sessionData));
+                        setIsMnemonicModalOpen(false);
+                        setIsMiningModalOpen(true);
+                    }}
+                    walletAddress={authenticatedAddress}
+                    currentLanguage={currentLanguage}
                 />
             )}
         </div>

@@ -63,7 +63,7 @@ const MiningPage: React.FC = () => {
   const [referralBonus, setReferralBonus] = useState<ReferralBonus | null>(null);
   const [partnerBonus, setPartnerBonus] = useState<PartnerBonus | null>(null);
   const [walletAddress, setWalletAddress] = useState<string>('');
-  
+
   // [Phase 1 Fixed] 추천보상보관함 및 보너스 보관함 실시간 상태 연동
   const [referralRewardStorage, setReferralRewardStorage] = useState<number>(0);
   const [referralBonusStorage, setReferralBonusStorage] = useState<number>(0);

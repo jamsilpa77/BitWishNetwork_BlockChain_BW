@@ -1,0 +1,8 @@
+W1_Bonus:
+{"_id":"692ceae369df7d5f1d921daa","walletAddress":"BW6330A20CAFA9EF6F0203DE34F8C3E3F076C9B0E8","referralBonusStorage":"0","referralRewardStorage":"1","referralList":[],"attendanceHistory":[],"createdAt":"2025-12-01T01:09:55.152Z","updatedAt":"2026-03-18T08:11:22.111Z","__v":1}
+W1_Mining:
+{"_id":"692ceae369df7d5f1d921da8","walletAddress":"BW6330A20CAFA9EF6F0203DE34F8C3E3F076C9B0E8","isMining":false,"miningStartTime":null,"accumulatedReward":"0","currentBaseRate":"0.25000000000000000000000000000000000000000000000000","currentTotalRate":"0.25","isAttendanceActive":false,"attendanceDate":null,"referralCount":0,"referralBonusRate":"0","partnerStatus":"NOT_REGISTERED","lastSyncTime":"2026-03-18T08:11:22.109Z","createdAt":"2025-12-01T01:09:55.149Z","updatedAt":"2026-03-18T08:11:22.109Z","__v":0}
+W2_Bonus:
+{"_id":"692cf7768c4c0ee9c4eb3865","walletAddress":"BW958ACBEA657953450332FFF0FD66ABB0FA994005","referralBonusStorage":"0","referralRewardStorage":"1","referralList":[],"attendanceHistory":[],"__v":0,"updatedAt":"2026-03-01T05:00:51.933Z"}
+W2_Mining:
+{"_id":"692cf7768c4c0ee9c4eb3868","walletAddress":"BW958ACBEA657953450332FFF0FD66ABB0FA994005","isMining":false,"accumulatedReward":"0","currentBaseRate":"0.25000000000000000000000000000000000000000000000000","currentTotalRate":"0.255","referralCount":0,"referralBonusRate":"0.02","__v":0,"isAttendanceActive":false,"lastSyncTime":"2026-03-01T05:00:51.924Z","miningStartTime":null,"partnerStatus":"NOT_REGISTERED","updatedAt":"2026-03-01T05:00:51.924Z","attendanceDate":null}

@@ -68,7 +68,7 @@ export class UserController {
             const bonusRecord = new BonusRecord({
                 walletAddress,
                 referralBonusStorage: '0.00000000000000000000000000000000000000000000000000',
-                referralRewardStorage: '1.00000000000000000000000000000000000000000000000000', // 가입 즉시 1BW 지급 원복
+                referralRewardStorage: '0.00000000000000000000000000000000000000000000000000', // ️[Phase 2-1 수술] 1.0에서 0.0으로 원복하여 중복 지급 차단
                 referralList: [],
                 attendanceHistory: []
             });
