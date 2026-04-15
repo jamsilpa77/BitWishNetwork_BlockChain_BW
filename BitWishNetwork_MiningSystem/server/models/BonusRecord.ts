@@ -25,7 +25,7 @@ export interface IBonusRecord extends Document {
         joinedAt: Date;
         accumulatedBonus: string;
         isKycVerified: boolean;
-        rewardStatus: 'PENDING' | 'PAID';
+        rewardStatus: 'PENDING' | 'PAID' | 'COMPLETED';
     }>;
 
     // 4. 출석 체크 기록
@@ -54,7 +54,7 @@ const BonusRecordSchema: Schema = new Schema({
         isKycVerified: { type: Boolean, default: false },
         rewardStatus: {
             type: String,
-            enum: ['PENDING', 'PAID'],
+            enum: ['PENDING', 'PAID', 'COMPLETED'],
             default: 'PENDING'
         }
     }],

@@ -76,11 +76,17 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                     balance: parseFloat(m?.accumulatedReward || '0'),
                     availableBalance: parseFloat(m?.availableBalance || '0'),
 
-                    // [정밀맵핑] 데이터가 있는 곳(referral stats)을 최우선으로 하고 없으면 기본 유저 정보 사용
+                    // [Priority 3] 데이터 매핑 세이프 가드: 서버에서 넘어온 규격이 UI와 일치하도록 최종 조율
                     referralReward: parseFloat(r?.referralRewardStorage || u?.referralRewardStorage || '0'),
                     referralBonus: parseFloat(r?.referralBonusStorage || u?.referralBonusStorage || '0'),
                     myReferralCode: r?.referralCode || u?.myReferralCode || '',
-                    referralList: r?.referralList || u?.referralList || [],
+                    referralList: (r?.referralList || u?.referralList || []).map((item: any) => ({
+                        ...item,
+                        // [최후 방어선] 서버에서 누락될 수 있는 상태값들을 기본값으로 방어
+                        kycDetailStatus: item.kycDetailStatus || (item.isKycVerified ? '승인' : '미승인'),
+                        is1BWMePaid: item.is1BWMePaid ?? (item.rewardStatus?.toUpperCase() === 'PAID' || item.rewardStatus?.toUpperCase() === 'COMPLETED'),
+                        is2PercentMePaid: item.is2PercentMePaid ?? (item.rewardStatus?.toUpperCase() === 'PAID' || item.rewardStatus?.toUpperCase() === 'COMPLETED')
+                    })),
                     miningHistory: (historyData as any).success ? (historyData as any).history : []
                 } as any);
             }
@@ -405,8 +411,10 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                         {((walletData as any)?.referralList || []).length > 0 ? (
                                             ((walletData as any).referralList).map((ref: any, idx: number) => (
                                                 <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                                                    <td style={{ padding: '10px 5px', fontWeight: 'bold', color: '#374151' }}>
-                                                        {ref.childWalletAddress ? `BW${ref.childWalletAddress.substring(2, 8)}...` : '-'}
+                                                    <td style={{ padding: '10px 5px', fontWeight: 'bold', color: ref.isParentRow ? '#DC2626' : '#2563EB' }}>
+                                                        {ref.isParentRow
+                                                            ? (ref.childWalletAddress || ref.walletAddress || '-')
+                                                            : ((ref.childWalletAddress || ref.walletAddress) ? `BW${String(ref.childWalletAddress || ref.walletAddress).substring(2, 8)}...` : '-')}
                                                     </td>
                                                     <td style={{ padding: '10px 5px', color: '#6B7280' }}>
                                                         {new Date(ref.joinedAt).toLocaleString('ko-KR', {

@@ -26,9 +26,21 @@ Decimal.set({ precision: 50 });
 router.get('/list/:walletAddress', async (req, res) => {
     try {
         const { walletAddress } = req.params;
+        const addr = walletAddress.toLowerCase();
 
-        // 1. BonusRecord 조회
-        const bonusRecord = await BonusRecord.findOne({ walletAddress });
+        // 1. DB 조회 및 BonusRecord 창조 (10단계 이식)
+        const user = await User.findOne({ walletAddress: new RegExp('^' + addr + '$', 'i') });
+        let bonusRecord = await BonusRecord.findOne({ walletAddress: new RegExp('^' + addr + '$', 'i') });
+        const miningState = await MiningState.findOne({ walletAddress: new RegExp('^' + addr + '$', 'i') });
+
+        if (!bonusRecord && user) {
+            bonusRecord = await BonusRecord.create({
+                walletAddress: user.walletAddress,
+                referralList: [],
+                referralBonusStorage: '0.00000000',
+                referralRewardStorage: '0.00000000'
+            });
+        }
 
         if (!bonusRecord) {
             return res.json({
@@ -42,8 +54,111 @@ router.get('/list/:walletAddress', async (req, res) => {
             });
         }
 
-        // 2. MiningState 조회 (추천인 수 확인)
-        const miningState = await MiningState.findOne({ walletAddress });
+        // [Priority 2] 중복 제거 및 관계 유효성 실시간 검증 (Self-Purging)
+        const uniqueMap = new Map();
+        let isListDirty = false;
+
+        if (user) {
+            // 목록에 있는 자식들의 최신 상태를 DB에서 한 번에 조회 (In-place Verification)
+            const childAddresses = bonusRecord.referralList.map(r => r.childWalletAddress);
+            const actualChildren = await User.find({ walletAddress: { $in: childAddresses } });
+            const actualChildrenMap = new Map(actualChildren.map(u => [u.walletAddress.toLowerCase(), u]));
+
+            for (const item of bonusRecord.referralList) {
+                const cAddr = item.childWalletAddress.toLowerCase();
+                const childUser = actualChildrenMap.get(cAddr);
+                
+                // [Purge] 이 자식이 더 이상 나를 부모로 인정하지 않는 경우 (계층 이동 발생)
+                if (!childUser) {
+                    isListDirty = true;
+                    continue; // 목록에서 삭제
+                }
+
+                // 부모 식별용 키 (15/18자리 호환성 고려)
+                const parentKey = (user.myReferralCode || '').substring(0, 11);
+                const isStillMyChild = 
+                    (childUser.referrerCode || '').trim().toLowerCase() === (user.myReferralCode || '').trim().toLowerCase() ||
+                    (childUser.referrerCode || '').trim().toLowerCase() === (user.walletAddress || '').trim().toLowerCase() ||
+                    (childUser.referrerCode || '').startsWith(parentKey);
+
+                if (!isStillMyChild) {
+                    console.log(`[Purge] Ghost child detected: ${cAddr}. Removing from ${addr}...`);
+                    isListDirty = true;
+                    continue; // 목록에서 삭제
+                }
+
+                if (uniqueMap.has(cAddr)) {
+                    isListDirty = true;
+                    const existing = uniqueMap.get(cAddr);
+                    if (existing.rewardStatus === 'PENDING' && (item.rewardStatus === 'PAID' || item.rewardStatus === 'COMPLETED')) {
+                        uniqueMap.set(cAddr, item);
+                    }
+                } else {
+                    if (item.rewardStatus === 'PENDING') {
+                        item.rewardStatus = 'PAID';
+                        isListDirty = true;
+                    }
+                    uniqueMap.set(cAddr, item);
+                }
+            }
+        } else {
+            // 부모 데이터가 없는 경우 안전을 위해 중복 제거만 우선 수행
+            for (const item of bonusRecord.referralList) {
+                const cAddr = item.childWalletAddress.toLowerCase();
+                if (!uniqueMap.has(cAddr)) {
+                    uniqueMap.set(cAddr, item);
+                }
+            }
+        }
+
+        if (isListDirty) {
+            console.log(`[Cleaner/Purge] Sanitizing referral list for ${addr}...`);
+            bonusRecord.referralList = Array.from(uniqueMap.values());
+            await bonusRecord.save();
+
+            // [Sync] 추천인 수 및 보너스율도 실시간으로 다시 계산하여 정규화
+            await MiningState.findOneAndUpdate(
+                { walletAddress: addr },
+                { 
+                    $set: { 
+                        referralCount: bonusRecord.referralList.length,
+                        referralBonusRate: (bonusRecord.referralList.length * 0.02).toString()
+                    }
+                }
+            );
+        }
+
+        // [11단계] Healer 로직 (쌍끌이 예외 검색 및 자동 복구)
+        if (user) {
+            // [Healer 2.0] 부모 식별코드 전수 조사 (신/구 버전 및 지갑주소 변종 동시 대응)
+            const parentBase = (user.myReferralCode || '').substring(0, 11); // "REF" + 핵심 8자리 유니크 키
+            const searchQuery = {
+                $or: [
+                    { referrerCode: new RegExp('^\\s*' + (user.myReferralCode || '').trim() + '\\s*$', 'i') },
+                    { referrerCode: new RegExp('^\\s*' + (user.walletAddress || '').trim() + '\\s*$', 'i') },
+                    { referrerCode: new RegExp('^' + parentBase, 'i') } // 15자리/18자리 등 버전과 관계없이 핵심 키가 일치하는 모든 자식 포함
+                ]
+            };
+            const actualCount = await User.countDocuments(searchQuery);
+            if (bonusRecord.referralList.length < actualCount) {
+                console.log(`[Healer/List] Syncing history gap for ${addr}...`);
+                const children = await User.find(searchQuery);
+
+                for (const child of children) {
+                    const alreadyRecorded = bonusRecord.referralList.some(r => r.childWalletAddress === child.walletAddress);
+                    if (!alreadyRecorded) {
+                        bonusRecord.referralList.push({
+                            childWalletAddress: child.walletAddress,
+                            joinedAt: child.createdAt || new Date(),
+                            rewardStatus: 'PAID',
+                            accumulatedBonus: '1.00000000',
+                            isKycVerified: false
+                        });
+                    }
+                }
+                await bonusRecord.save();
+            }
+        }
 
         // 3. 가입자 목록 포맷팅
         const formattedList = bonusRecord.referralList.map(item => ({
@@ -52,8 +167,36 @@ router.get('/list/:walletAddress', async (req, res) => {
             accumulatedBonus: new Decimal(item.accumulatedBonus || '0').toFixed(8),
             accumulatedBonusFull: item.accumulatedBonus, // 50자리 전체
             isKycVerified: item.isKycVerified,
-            rewardStatus: item.rewardStatus
+            kycDetailStatus: item.isKycVerified ? '승인' : '미승인',
+            rewardStatus: item.rewardStatus,
+            is1BWMePaid: item.rewardStatus?.toUpperCase() === 'PAID' || item.rewardStatus?.toUpperCase() === 'COMPLETED',
+            is2PercentMePaid: item.rewardStatus?.toUpperCase() === 'PAID' || item.rewardStatus?.toUpperCase() === 'COMPLETED'
         }));
+
+        // [해결 2] 최상단 부모 행 고정 삽입 (실시간 코드 동기화 로직 적용)
+        if (user && user.referrerCode && user.referrerCode.trim() !== '') {
+            // 부모의 현재 최신 15자리 정규 코드를 찾기 위한 역추적 조회
+            const parentKey = user.referrerCode.substring(0, 11); // "REF" + 유니크 8자리
+            const parentUser = await User.findOne({
+                myReferralCode: new RegExp('^' + parentKey, 'i')
+            });
+
+            // 부모 유저가 존재하면 실시간 정규 코드를, 아니면 기존 레코드를 출력
+            const finalParentCode = parentUser ? parentUser.myReferralCode : user.referrerCode;
+
+            formattedList.unshift({
+                isParentRow: true,
+                walletAddress: finalParentCode,
+                joinedAt: user.createdAt || new Date(),
+                accumulatedBonus: '0.00000000',
+                accumulatedBonusFull: '0.00000000',
+                isKycVerified: user.isKycVerified,
+                kycDetailStatus: user.isKycVerified ? '승인' : '미승인',
+                rewardStatus: 'PAID',
+                is1BWMePaid: true,
+                is2PercentMePaid: true
+            } as any);
+        }
 
         // 4. 응답 데이터 구성
         return res.json({
@@ -83,10 +226,21 @@ router.get('/list/:walletAddress', async (req, res) => {
 router.get('/stats/:walletAddress', async (req, res) => {
     try {
         const { walletAddress } = req.params;
+        const addr = walletAddress.toLowerCase();
 
-        const user = await User.findOne({ walletAddress });
-        const bonusRecord = await BonusRecord.findOne({ walletAddress });
-        const miningState = await MiningState.findOne({ walletAddress });
+        const user = await User.findOne({ walletAddress: new RegExp('^' + addr + '$', 'i') });
+        let bonusRecord = await BonusRecord.findOne({ walletAddress: new RegExp('^' + addr + '$', 'i') });
+        const miningState = await MiningState.findOne({ walletAddress: new RegExp('^' + addr + '$', 'i') });
+
+        // [7단계] 에러로 장부가 텅 빈 채 접속한 회원을 구제하기 위해 접속 즉시 빈 장부를 영구 창조
+        if (!bonusRecord && user) {
+            bonusRecord = await BonusRecord.create({
+                walletAddress: user.walletAddress,
+                referralList: [],
+                referralBonusStorage: '0.00000000',
+                referralRewardStorage: '0.00000000'
+            });
+        }
 
         if (!user || !bonusRecord || !miningState) {
             return res.json({
@@ -102,6 +256,133 @@ router.get('/stats/:walletAddress', async (req, res) => {
             });
         }
 
+        // [Priority 2] 자가 치유(Self-Healing) 및 유령 데이터 정화 (Self-Purging)
+        const uniqueStatsMap = new Map();
+        let isStatsDirty = false;
+
+        if (user) {
+            const statChildAddresses = bonusRecord.referralList.map(r => r.childWalletAddress);
+            const actualStatChildren = await User.find({ walletAddress: { $in: statChildAddresses } });
+            const actualStatChildrenMap = new Map(actualStatChildren.map(u => [u.walletAddress.toLowerCase(), u]));
+
+            for (const item of bonusRecord.referralList) {
+                const cAddr = item.childWalletAddress.toLowerCase();
+                const childUser = actualStatChildrenMap.get(cAddr);
+                
+                // [Purge] 계층 이동이 확인된 자녀는 통계에서도 즉시 제거
+                if (!childUser) {
+                    isStatsDirty = true;
+                    continue;
+                }
+
+                const parentKey = (user.myReferralCode || '').substring(0, 11);
+                const isStillMyChild = 
+                    (childUser.referrerCode || '').trim().toLowerCase() === (user.myReferralCode || '').trim().toLowerCase() ||
+                    (childUser.referrerCode || '').trim().toLowerCase() === (user.walletAddress || '').trim().toLowerCase() ||
+                    (childUser.referrerCode || '').startsWith(parentKey);
+
+                if (!isStillMyChild) {
+                    isStatsDirty = true;
+                    continue;
+                }
+
+                if (uniqueStatsMap.has(cAddr)) {
+                    isStatsDirty = true;
+                    const existing = uniqueStatsMap.get(cAddr);
+                    if (existing.rewardStatus === 'PENDING' && (item.rewardStatus === 'PAID' || item.rewardStatus === 'COMPLETED')) {
+                        uniqueStatsMap.set(cAddr, item);
+                    }
+                } else {
+                    if (item.rewardStatus === 'PENDING') {
+                        item.rewardStatus = 'PAID';
+                        isStatsDirty = true;
+                    }
+                    uniqueStatsMap.set(cAddr, item);
+                }
+            }
+        }
+
+        if (isStatsDirty) {
+            console.log(`[Cleaner/Purge] Sanitizing stats list for ${addr}...`);
+            bonusRecord.referralList = Array.from(uniqueStatsMap.values());
+            await bonusRecord.save();
+
+            // [Sync] 통계 장부 세척 시 마이닝 상태(카운트/율)도 동기화
+            await MiningState.findOneAndUpdate(
+                { walletAddress: addr },
+                { 
+                    $set: { 
+                        referralCount: bonusRecord.referralList.length,
+                        referralBonusRate: (bonusRecord.referralList.length * 0.02).toString()
+                    }
+                }
+            );
+        }
+
+        // [Healer 2.0] 통계 복구를 위한 전수 조사 쿼리 (동일 대응)
+        const parentBaseStats = (user.myReferralCode || '').substring(0, 11);
+        const searchQuery = {
+            $or: [
+                { referrerCode: new RegExp('^\\s*' + (user.myReferralCode || '').trim() + '\\s*$', 'i') },
+                { referrerCode: new RegExp('^\\s*' + (user.walletAddress || '').trim() + '\\s*$', 'i') },
+                { referrerCode: new RegExp('^' + parentBaseStats, 'i') }
+            ]
+        };
+        const actualCount = await User.countDocuments(searchQuery);
+        if (bonusRecord.referralList.length < actualCount) {
+            console.log(`[Healer] Detecting history gap for ${walletAddress}. Syncing with User database...`);
+            const children = await User.find(searchQuery);
+
+            for (const child of children) {
+                const alreadyRecorded = bonusRecord.referralList.some(r => r.childWalletAddress === child.walletAddress);
+                if (!alreadyRecorded) {
+                    bonusRecord.referralList.push({
+                        childWalletAddress: child.walletAddress,
+                        joinedAt: child.createdAt || new Date(),
+                        accumulatedBonus: '0.00000000000000000000000000000000000000000000000000',
+                        isKycVerified: child.isKycVerified,
+                        rewardStatus: 'PAID' // 이미 보너스율에 반영된 상태이므로 PAID로 간주
+                    });
+                }
+            }
+            await bonusRecord.save();
+        }
+
+        // [해결 2] 통계 목록 내 부모 행 실시간 코드 동기화 (비동기 스코프 안정화 버전)
+        let finalParentCodeStats = user.referrerCode;
+        if (user && user.referrerCode && user.referrerCode.trim() !== '') {
+            const parentKeyStats = user.referrerCode.substring(0, 11);
+            const parentUserStats = await User.findOne({
+                myReferralCode: new RegExp('^' + parentKeyStats, 'i')
+            });
+            if (parentUserStats) finalParentCodeStats = parentUserStats.myReferralCode;
+        }
+
+        const mappedList = bonusRecord.referralList.map(item => ({
+            childWalletAddress: item.childWalletAddress,
+            joinedAt: item.joinedAt,
+            accumulatedBonus: new Decimal(item.accumulatedBonus || '0').toFixed(8),
+            isKycVerified: item.isKycVerified,
+            kycDetailStatus: item.isKycVerified ? '승인' : '미승인',
+            rewardStatus: item.rewardStatus,
+            is1BWMePaid: item.rewardStatus?.toUpperCase() === 'PAID' || item.rewardStatus?.toUpperCase() === 'COMPLETED',
+            is2PercentMePaid: item.rewardStatus?.toUpperCase() === 'PAID' || item.rewardStatus?.toUpperCase() === 'COMPLETED'
+        }));
+
+        if (user && user.referrerCode && user.referrerCode.trim() !== '') {
+            mappedList.unshift({
+                isParentRow: true,
+                childWalletAddress: finalParentCodeStats,
+                joinedAt: user.createdAt || new Date(),
+                accumulatedBonus: '0.00000000',
+                isKycVerified: user.isKycVerified,
+                kycDetailStatus: user.isKycVerified ? '승인' : '미승인',
+                rewardStatus: 'PAID',
+                is1BWMePaid: true,
+                is2PercentMePaid: true
+            } as any);
+        }
+
         return res.json({
             success: true,
             data: {
@@ -110,13 +391,7 @@ router.get('/stats/:walletAddress', async (req, res) => {
                 referralBonusRate: parseFloat(miningState.referralBonusRate || '0'),
                 referralBonusStorage: new Decimal(bonusRecord.referralBonusStorage || '0').toFixed(8),
                 referralRewardStorage: new Decimal(bonusRecord.referralRewardStorage || '0').toFixed(8),
-                referralList: bonusRecord.referralList.map(item => ({
-                    childWalletAddress: item.childWalletAddress,
-                    joinedAt: item.joinedAt,
-                    accumulatedBonus: new Decimal(item.accumulatedBonus || '0').toFixed(8),
-                    isKycVerified: item.isKycVerified,
-                    rewardStatus: item.rewardStatus
-                }))
+                referralList: mappedList
             }
         });
     } catch (error) {
@@ -139,8 +414,15 @@ router.post('/register-reward', async (req, res) => {
     try {
         console.log(`[Referral] Reward processing for ${referredWallet} with code: ${referralCode}`);
 
-        // 1. 추천인 정보 재검증
-        const referrer = await User.findOne({ myReferralCode: referralCode });
+        // 1. 추천인 정보 재검증 (11단계 쌍끌이 예외 처리)
+        // [해결 3] 추천인 검색 로직 강화: 정규식(RegExp)을 제거하고 완전 일치(Strict Match)로 변경하여 오매핑 차단
+        const targetCode = (referralCode || '').trim();
+        const referrer = await User.findOne({
+            $or: [
+                { myReferralCode: targetCode },
+                { walletAddress: targetCode }
+            ]
+        });
         if (!referrer) {
             console.error(`[Referral] Invalid referrer code: ${referralCode}`);
             return res.status(404).json({ success: false, message: 'Invalid referrer code' });
@@ -208,5 +490,6 @@ router.post('/register-reward', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Server transaction error' });
     }
 });
+
 
 export default router;
