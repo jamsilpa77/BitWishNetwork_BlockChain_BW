@@ -183,6 +183,35 @@ export class LanguageManager {
           },
           footer: {
             close: '닫기'
+          },
+          referralTable: {
+            title: '- 가입자 목록 -',
+            header: {
+              subscriber: '가입자',
+              joinDate: '가입날짜',
+              reward1BW: '지급 보상(1BW)',
+              bonus2Percent: '지급 보너스(2%)',
+              kycStatus: 'KYC 현황'
+            },
+            noHistory: '가입 내역이 없습니다.',
+            guide: '💡 본인의 추천 코드로 가입자가 발생하면 내역에 즉시 등록됩니다.',
+            statusPaid: '지급',
+            statusUnpaid: '미지급',
+            statusApproved: '승인',
+            statusPending: '미승인'
+          },
+          miningTable: {
+            title: '- 월별 채굴 정산 내역 -',
+            header: {
+              startDate: '채굴 시작 일',
+              minedAmount: '채굴량',
+              bonus: '보너스',
+              total: '합계',
+              status: '상태'
+            },
+            statusMining: '채굴중',
+            statusCompleted: '채굴마감',
+            guide: '💡 매월 1일 00:00:00에 전월 채굴량이 확정 목록에 추가됩니다.'
           }
         }
       },
@@ -218,7 +247,7 @@ export class LanguageManager {
         desc: '지갑 복구 구문(24단어) 중 지정된 번호의 단어를 입력하세요.',
         verify: '본인 인증 완료',
         error: '입력한 단어가 니모닉과 일치하지 않습니다.',
-        wordLabel: '번 단어:',
+        wordLabel: '{index}번 단어:',
         placeholder: '단어를 입력하세요',
         addressLabel: '지갑 주소 확인',
         addressPlaceholder: 'BW + 40자리 주소를 입력하세요',
@@ -480,7 +509,7 @@ export class LanguageManager {
         desc: 'Enter the words corresponding to the indices from your 24-word seed.',
         verify: 'Verify Identity',
         error: 'The entered words do not match your mnemonic.',
-        wordLabel: 'Word #',
+        wordLabel: 'Word #{index}',
         placeholder: 'Enter word',
         addressLabel: 'Wallet Address Verification',
         addressPlaceholder: 'Enter BW + 40-digit address',
@@ -601,9 +630,44 @@ export class LanguageManager {
             kyc: 'KYC Application',
             kycDisabled: 'KYC Application (Disabled)'
           },
+          actions: {
+            receive: 'Receive',
+            send: 'Send',
+            otp: 'OTP Settings',
+            kyc: 'KYC Application'
+          },
           footer: {
             address: 'Wallet Address',
             close: 'Close'
+          },
+          referralTable: {
+            title: '- Subscriber List -',
+            header: {
+              subscriber: 'Subscriber',
+              joinDate: 'Join Date',
+              reward1BW: 'Reward(1BW)',
+              bonus2Percent: 'Bonus(2%)',
+              kycStatus: 'KYC Status'
+            },
+            noHistory: 'No subscription history found.',
+            guide: '💡 When a subscriber joins with your referral code, it will be registered instantly.',
+            statusPaid: 'Paid',
+            statusUnpaid: 'Unpaid',
+            statusApproved: 'Approved',
+            statusPending: 'Pending'
+          },
+          miningTable: {
+            title: '- Monthly Mining Settlement history -',
+            header: {
+              startDate: 'Mining Start Date',
+              minedAmount: 'Mined Amount',
+              bonus: 'Bonus',
+              total: 'Total',
+              status: 'Status'
+            },
+            statusMining: 'Mining',
+            statusCompleted: 'Completed',
+            guide: '💡 On the 1st of every month at 00:00:00, the previous month\'s mining amount is added to the finalized list.'
           },
           walletAuth: {
             title: 'My Wallet Access',
@@ -1007,6 +1071,35 @@ export class LanguageManager {
           footer: {
             address: 'ウォレットアドレス',
             close: '閉じる'
+          },
+          referralTable: {
+            title: '- 加入者リスト -',
+            header: {
+              subscriber: '加入者',
+              joinDate: '加入日',
+              reward1BW: '支給報酬(1BW)',
+              bonus2Percent: '支給ボーナス(2%)',
+              kycStatus: 'KYC状況'
+            },
+            noHistory: '加入履歴가ありません。',
+            guide: '💡 ご自身の紹介コードで加入者が発生すると、即座に履歴に登録されます。',
+            statusPaid: '支給',
+            statusUnpaid: '未支給',
+            statusApproved: '承認',
+            statusPending: '未承認'
+          },
+          miningTable: {
+            title: '- 月間マイニング精算履歴 -',
+            header: {
+              startDate: 'マイニング開始日',
+              minedAmount: 'マイニング量',
+              bonus: 'ボーナス',
+              total: '合計',
+              status: '状態'
+            },
+            statusMining: 'マイニング中',
+            statusCompleted: 'マイニング終了',
+            guide: '💡 毎月1日00:00:00に、前月のマイニング量が確定リストに追加されます。'
           }
         }
       },
@@ -1143,7 +1236,7 @@ export class LanguageManager {
         desc: '24語のシードフレーズの中から、指定された番号の単語を入力してください。',
         verify: '本人確認完了',
         error: '入力された単語がニーモニックと一致しません。',
-        wordLabel: '番目の単語:',
+        wordLabel: '{index}番目の単語:',
         placeholder: '単語を入力してください',
         addressLabel: 'ウォレットアドレス確認',
         addressPlaceholder: 'BW + 40桁のアドレスを入力してください',
@@ -1366,6 +1459,35 @@ export class LanguageManager {
           footer: {
             address: '钱包地址',
             close: '关闭'
+          },
+          referralTable: {
+            title: '- 用户列表 -',
+            header: {
+              subscriber: '用户',
+              joinDate: '加入日期',
+              reward1BW: '发放奖励(1BW)',
+              bonus2Percent: '发放奖金(2%)',
+              kycStatus: 'KYC状态'
+            },
+            noHistory: '没有加入历史。',
+            guide: '💡 当有用户通过您的推荐码加入时，会立即注册到列表中。',
+            statusPaid: '已发放',
+            statusUnpaid: '未发放',
+            statusApproved: '已批准',
+            statusPending: '待批准'
+          },
+          miningTable: {
+            title: '- 每月挖矿结算历史 -',
+            header: {
+              startDate: '开始挖矿日期',
+              minedAmount: '挖矿量',
+              bonus: '奖金',
+              total: '合计',
+              status: '状态'
+            },
+            statusMining: '挖矿中',
+            statusCompleted: '采掘截止',
+            guide: '💡 每月1日00:00:00，上个月的挖矿量将添加到最终列表中。'
           }
         }
       },
@@ -1428,7 +1550,7 @@ export class LanguageManager {
         desc: '从您的24位助记词中输入对应编号的单词。',
         verify: '完成身份验证',
         error: '输入的单词与您的助记词不匹配。',
-        wordLabel: '号单词:',
+        wordLabel: '{index}号单词:',
         placeholder: '请输入单词',
         addressLabel: '钱包地址验证',
         addressPlaceholder: '请输入 BW + 40位地址',
