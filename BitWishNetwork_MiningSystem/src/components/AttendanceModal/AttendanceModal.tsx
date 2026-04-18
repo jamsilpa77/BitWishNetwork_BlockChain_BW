@@ -185,7 +185,13 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onCh
     const currentMonthAttendance = calendarDays.filter(date => date && attendanceData.includes(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`)).length;
 
     const weekDays = [
-        'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
+        getTranslation('attendance.weekDays.sun'),
+        getTranslation('attendance.weekDays.mon'),
+        getTranslation('attendance.weekDays.tue'),
+        getTranslation('attendance.weekDays.wed'),
+        getTranslation('attendance.weekDays.thu'),
+        getTranslation('attendance.weekDays.fri'),
+        getTranslation('attendance.weekDays.sat')
     ];
 
     return (
@@ -253,7 +259,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onCh
                     </div>
                     <p className="status-description">
                         {attendanceService.isAttendanceAvailable() ?
-                            '출석 가능 시간: 오전 9시 ~ 익일 오전 8시 59분 59초'
+                            getTranslation('attendance.timeGuide')
                             : getTranslation('attendance.note')}
                     </p>
                 </div>

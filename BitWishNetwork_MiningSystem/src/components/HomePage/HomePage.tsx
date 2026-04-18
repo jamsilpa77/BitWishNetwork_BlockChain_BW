@@ -686,6 +686,7 @@ const HomePage: React.FC = () => {
                 <WalletAuthModal
                     isOpen={isWalletAuthModalOpen}
                     onClose={() => setIsWalletAuthModalOpen(false)}
+                    currentLanguage={currentLanguage}
                     onSuccess={() => {
                         setIsWalletAuthModalOpen(false);
                         setIsMyWalletModalOpen(true);

@@ -149,8 +149,10 @@ export class LanguageManager {
         dashboard: {
           title: '나의 지갑',
           statusActive: '활성',
-          logout: 'logout',
-          logoutConfirm: '로그아웃 하시겠습니까?',
+          logout: {
+            title: '로그아웃',
+            confirm: '로그아웃 하시겠습니까?'
+          },
           copyAddress: '주소복사',
           refresh: '새로고침',
           address: '지갑 주소',
@@ -179,7 +181,12 @@ export class LanguageManager {
             receive: '송금받기',
             send: '송금하기',
             otp: 'OTP 설정',
-            kyc: 'KYC 신청'
+            kyc: 'KYC 신청',
+            startMining: '마이닝 시작',
+            resetPassword: '2차 비번 초기화'
+          },
+          messages: {
+            miningNotConnected: '마이닝 기능이 연결되지 않았습니다.'
           },
           footer: {
             close: '닫기'
@@ -224,7 +231,9 @@ export class LanguageManager {
         error: '시드 구문이 올바르지 않습니다.',
         securityCheck: '지갑 보안 확인',
         passwordDesc: '지갑 비밀번호를 입력하여 본인 인증을 완료해주세요.',
-        confirm: '확인'
+        confirm: '확인',
+        processing: '처리 중...',
+        recoveryFailed: '지갑 복구에 실패했습니다. 통신 상태를 확인해주세요.'
       },
       miningAuth: {
         title: 'BitWish 지갑 인증',
@@ -328,7 +337,8 @@ export class LanguageManager {
         referralBonusApplied: '추천 보너스가 적용되었습니다.',
         partnerBonusApplied: '가맹점 보너스가 적용되었습니다.',
         error: '오류가 발생했습니다.',
-        success: '성공적으로 처리되었습니다.'
+        success: '성공적으로 처리되었습니다.',
+        miningNotConnected: '마이닝 기능이 연결되지 않았습니다.'
       },
       // 출석 보너스 관련
       attendance: {
@@ -339,6 +349,8 @@ export class LanguageManager {
         bonusRate: '보너스 비율',
         bonusActive: '보너스 활성',
         bonusInactive: '보너스 비활성',
+        weekDays: { sun: '일', mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토' },
+        timeGuide: '출석 가능 시간: 오전 9시 ~ 익일 오전 8시 59분 59초',
         checkAttendance: '출석 체크',
         todayAttendance: '오늘의 출석',
         monthAttendance: '월간 출석',
@@ -486,7 +498,9 @@ export class LanguageManager {
         desc: 'Please enter the 24-word seed phrase you backed up.',
         placeholder: 'Enter seed phrase here...',
         verify: 'Open Wallet',
-        error: 'Invalid seed phrase.'
+        error: 'Invalid seed phrase.',
+        processing: 'Processing...',
+        recoveryFailed: 'Wallet recovery failed. Please check network connection.'
       },
       miningAuth: {
         title: 'BitWish Wallet Authentication',
@@ -585,7 +599,8 @@ export class LanguageManager {
         referralBonusApplied: 'Referral bonus has been applied.',
         partnerBonusApplied: 'Partner bonus has been applied.',
         error: 'An error occurred.',
-        success: 'Successfully processed.'
+        success: 'Successfully processed.',
+        miningNotConnected: 'Mining function not connected.'
       },
       wallet: {
         createTitle: 'Create Wallet',
@@ -614,8 +629,13 @@ export class LanguageManager {
         dashboard: {
           title: 'My Wallet',
           statusActive: 'Active',
-          logout: 'Logout',
+          logout: {
+            title: 'Logout',
+            confirm: 'Do you want to logout?'
+          },
           copyAddress: 'Copy Address',
+          refresh: 'Refresh',
+          address: 'Wallet Address',
           tabs: {
             overview: 'Overview',
             history: 'History',
@@ -627,14 +647,27 @@ export class LanguageManager {
             title: 'Balance',
             realTimeReward: 'Real-time Accumulated Reward',
             realTimeDesc: 'This is the "Real-time Total Holdings" representing the "Real-time Accumulated Reward" of mining rewards.',
-            kyc: 'KYC Application',
-            kycDisabled: 'KYC Application (Disabled)'
+            available: 'Available Balance',
+            availableDesc: 'The Available Balance represents the amount migrated after KYC application and approval, and is the actual tradable amount.'
+          },
+          referral: {
+            title: 'Referral Bonus',
+            storage: 'Referral Reward Storage',
+            bonusStorage: 'Referral Bonus Storage',
+            note: '📌 Migrated to Available Balance 15 days after the referred user passes KYC.',
+            myCode: 'Referral Code:'
           },
           actions: {
             receive: 'Receive',
             send: 'Send',
             otp: 'OTP Settings',
-            kyc: 'KYC Application'
+            kyc: 'KYC Application',
+            kycDisabled: 'KYC Application (Disabled)',
+            startMining: 'Start Mining',
+            resetPassword: 'Reset 2nd Password'
+          },
+          messages: {
+            miningNotConnected: 'Mining function not connected.'
           },
           footer: {
             address: 'Wallet Address',
@@ -716,6 +749,8 @@ export class LanguageManager {
         bonusRate: 'Bonus Rate',
         bonusActive: 'Bonus Active',
         bonusInactive: 'Bonus Inactive',
+        weekDays: { sun: 'SUN', mon: 'MON', tue: 'TUE', wed: 'WED', thu: 'THU', fri: 'FRI', sat: 'SAT' },
+        timeGuide: 'Attendance Time: 9:00 AM ~ Next Day 8:59:59 AM',
         checkAttendance: 'Check Attendance',
         attendanceComplete: 'Attendance Complete',
         attendancePending: 'Attendance Pending',
@@ -927,7 +962,9 @@ export class LanguageManager {
         desc: 'ウォレット作成時にバックアップした24単語のシードフレーズを入力してください。',
         placeholder: 'ここにシードフレーズを入力...',
         verify: 'ウォレットを開く',
-        error: 'シードフレーズが無効です。'
+        error: 'シードフレーズが無効です。',
+        processing: '処理中...',
+        recoveryFailed: 'ウォレットの復元に失敗しました。通信状態を確認してください。'
       },
       miningAuth: {
         title: 'BitWishウォレット認証',
@@ -1009,7 +1046,8 @@ export class LanguageManager {
         referralBonusApplied: '紹介ボーナスが適用されました。',
         partnerBonusApplied: 'パートナーボーナスが適用されました。',
         error: 'エラーが発生しました。',
-        success: '正常に処理されました。'
+        success: '正常に処理されました。',
+        miningNotConnected: 'マイニング機能が接続されていません。'
       },
       wallet: {
         createTitle: 'ウォレット作成',
@@ -1038,7 +1076,10 @@ export class LanguageManager {
         dashboard: {
           title: '私のウォレット',
           statusActive: 'アクティブ',
-          logout: 'ログアウト',
+          logout: {
+            title: 'ログアウト',
+            confirm: 'ログアウトしますか？'
+          },
           copyAddress: 'アドレスをコピー',
           tabs: {
             overview: '概要',
@@ -1066,7 +1107,9 @@ export class LanguageManager {
             send: '送る',
             otp: 'OTP設定',
             kyc: 'KYC申請',
-            kycDisabled: 'KYC申請 (無効)'
+            kycDisabled: 'KYC申請 (無効)',
+            startMining: 'マイニング開始',
+            resetPassword: '2次パスワード初期化'
           },
           footer: {
             address: 'ウォレットアドレス',
@@ -1112,6 +1155,8 @@ export class LanguageManager {
         bonusRate: 'ボーナス率',
         bonusActive: 'ボーナス有効',
         bonusInactive: 'ボーナス無効',
+        weekDays: { sun: '日', mon: '月', tue: '火', wed: '水', thu: '木', fri: '金', sat: '土' },
+        timeGuide: '出席可能時間: 午前9時 ~ 翌日午前8時59分59秒',
         checkAttendance: '出席チェック',
         attendanceComplete: '出席完了',
         attendancePending: '出席待機',
@@ -1203,6 +1248,30 @@ export class LanguageManager {
         noBonusToClaim: '受け取るボーナスがありません。',
         bonusClaimed: '紹介ボーナスが受け取られました。',
         claimError: '紹介ボーナス受け取り中にエラーが発生しました。',
+        // Referral Bonus Modal
+        modal: {
+          title: '友達を招待してBWを稼ぐ',
+          subtitle: '紹介コードを共有し、友達が参加するたびに10%のボーナスを獲得',
+          myCode: '私の紹介コード',
+          copyCode: 'コードをコピー',
+          copied: 'コピー完了！',
+          issueCode: '紹介コード発行',
+          shareVia: '共有する',
+          stats: {
+            invited: '招待した友達',
+            bonusRate: 'ボーナス率',
+            people: '人'
+          },
+          social: {
+            kakao: 'カカオトーク',
+            telegram: 'Telegram',
+            twitter: 'X (Twitter)',
+            facebook: 'Facebook',
+            email: '電子メール'
+          },
+          shareMessage: '私の紹介コード {code} でBitWish Networkに参加し、一緒にBWをマイニングしましょう！',
+          close: '閉じる'
+        },
         noStatus: '紹介状態がありません。',
         invalidBonusRate: '無効なボーナス率です。',
         invalidTotalBonus: '無効な総ボーナスです。',
@@ -1316,7 +1385,9 @@ export class LanguageManager {
         desc: '请输入创建钱包时备份的24个单词助记词。',
         placeholder: '在此输入助记词...',
         verify: '打开钱包',
-        error: '助记词无效。'
+        error: '助记词无效。',
+        processing: '处理中...',
+        recoveryFailed: '钱包恢复失败，请检查网络状态。'
       },
       miningAuth: {
         title: 'BitWish钱包认证',
@@ -1426,7 +1497,10 @@ export class LanguageManager {
         dashboard: {
           title: '我的钱包',
           statusActive: '活跃',
-          logout: '登出',
+          logout: {
+            title: '登出',
+            confirm: '您要登出吗？'
+          },
           copyAddress: '复制地址',
           tabs: {
             overview: '概览',
@@ -1454,7 +1528,12 @@ export class LanguageManager {
             send: '发送',
             otp: 'OTP设置',
             kyc: 'KYC申请',
-            kycDisabled: 'KYC申请 (禁用)'
+            kycDisabled: 'KYC申请 (禁用)',
+            startMining: '开始挖矿',
+            resetPassword: '重置二级密码'
+          },
+          messages: {
+            miningNotConnected: '挖掘功能未连接。'
           },
           footer: {
             address: '钱包地址',
@@ -1493,6 +1572,18 @@ export class LanguageManager {
       },
       // 출석 보너스 관련
       attendance: {
+        title: '出勤奖励',
+        subtitle: '连续出勤天数设置',
+        status: '出勤状态',
+        bonusRate: '奖励比例',
+        bonusActive: '奖励激活',
+        bonusInactive: '奖励未激活',
+        weekDays: { sun: '日', mon: '一', tue: '二', wed: '三', thu: '四', fri: '五', sat: '六' },
+        timeGuide: '出勤检查时间: 上午9点 ~ 次日上午8点59分59秒',
+        note: '出勤检查时间: 上午9点 ~ 次日上午8点59分59秒',
+        checkAttendance: '出勤检查',
+        todayAttendance: '今日出勤',
+        monthAttendance: '本月出勤',
         notAvailable: '当前时间无法进行出勤检查。',
         alreadyChecked: '已完成出勤检查。',
         checked: '出勤检查已完成。',
@@ -1517,6 +1608,30 @@ export class LanguageManager {
         noBonusToClaim: '没有可领取的奖励。',
         bonusClaimed: '推荐奖励已领取。',
         claimError: '推荐奖励领取过程中发生错误。',
+        // Referral Bonus Modal
+        modal: {
+          title: '邀请好友赚取BW',
+          subtitle: '分享推荐代码，每邀请一位好友加入即可获得10%的奖励',
+          myCode: '我的推荐代码',
+          copyCode: '复制代码',
+          copied: '复制成功！',
+          issueCode: '发行推荐代码',
+          shareVia: '分享至',
+          stats: {
+            invited: '邀请的好友',
+            bonusRate: '奖励率',
+            people: '人'
+          },
+          social: {
+            kakao: 'KakaoTalk',
+            telegram: 'Telegram',
+            twitter: 'X (Twitter)',
+            facebook: 'Facebook',
+            email: '电子邮件'
+          },
+          shareMessage: '使用我的推荐代码 {code} 加入 BitWish Network，一起挖 BW 吧！',
+          close: '关闭'
+        },
         noStatus: '没有推荐状态。',
         invalidBonusRate: '无效的奖励率。',
         invalidTotalBonus: '无效的总奖励。',

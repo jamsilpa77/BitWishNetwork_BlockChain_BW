@@ -48,7 +48,7 @@ const WalletAuthModal: React.FC<WalletAuthModalProps> = ({ isOpen, onClose, onSu
                 onSuccess();
                 setMnemonic('');
             } else {
-                setError(t('walletAuth.error') || '지갑 복구에 실패했습니다. 통신 상태를 확인해주세요.');
+                setError(t('walletAuth.recoveryFailed'));
             }
         } catch (e) {
             setError('Error: ' + (e instanceof Error ? e.message : String(e)));
@@ -86,7 +86,7 @@ const WalletAuthModal: React.FC<WalletAuthModalProps> = ({ isOpen, onClose, onSu
                         </button>
 
                         <button className="confirm-button" onClick={handleLogin} disabled={isProcessing}>
-                            {isProcessing ? '처리 중...' : t('walletAuth.verify')}
+                            {isProcessing ? t('walletAuth.processing') : t('walletAuth.verify')}
                         </button>
                     </div>
                 </div>

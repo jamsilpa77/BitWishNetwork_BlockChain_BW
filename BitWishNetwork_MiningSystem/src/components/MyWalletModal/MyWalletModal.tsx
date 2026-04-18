@@ -163,7 +163,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                     <span>{getTranslation('wallet.dashboard.statusActive')}</span>
                                 </div>
                                 <button className="logout-btn" onClick={() => {
-                                    if (!window.confirm(getTranslation('wallet.logout.confirm') || '로그아웃 하시겠습니까?')) return;
+                                    if (!window.confirm(getTranslation('wallet.dashboard.logout.confirm') || '로그아웃 하시겠습니까?')) return;
 
                                     localStorage.removeItem('wallet_auth_session');
                                     localStorage.removeItem('bw_auth_session');
@@ -180,7 +180,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
 
                                     window.dispatchEvent(new Event('BW_WALLET_LOGOUT'));
                                     onClose();
-                                }}>{getTranslation('wallet.dashboard.logout')}</button>
+                                }}>{getTranslation('wallet.dashboard.logout.title')}</button>
 
                                 <button className={`refresh-btn ${isRotating ? 'rotating' : ''}`} onClick={handleRefresh}>
                                     ↻
@@ -201,59 +201,30 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                             <button
                                 className="mining-start-btn"
                                 style={{
-                                    backgroundColor: '#4CAF50', // Green
+                                    backgroundColor: '#2563EB', // 비비드 블루 (Vivid Blue)
                                     color: 'white',
                                     border: 'none',
-                                    padding: '5px 12px',
-                                    borderRadius: '5px',
-                                    fontSize: '13px',
+                                    padding: '10px 22px',       // 크기 확대
+                                    borderRadius: '8px',        // 세련된 라운딩
+                                    fontSize: '15px',           // 폰트 확대
                                     cursor: 'pointer',
-                                    fontWeight: 'bold',
+                                    fontWeight: '900',          // 굵기 극대화
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '5px'
+                                    gap: '8px',
+                                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)', // 시인성 강화
+                                    transition: 'all 0.2s ease'
                                 }}
                                 onClick={() => {
                                     if (onOpenMining) {
                                         onClose(); // Close wallet modal first
                                         onOpenMining(walletAddress); // [Fix] Pass walletAddress
                                     } else {
-                                        alert('Mining function not connected.');
+                                        alert(getTranslation('wallet.dashboard.messages.miningNotConnected'));
                                     }
                                 }}
                             >
-                                ⛏️ 마이닝 시작
-                            </button>
-
-                            {/* 2차 비번 초기화 버튼 (Moved Here) */}
-                            <button
-                                className="reset-pw-btn"
-                                style={{
-                                    backgroundColor: '#FF9800',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '5px 12px',
-                                    borderRadius: '5px',
-                                    fontSize: '13px',
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '5px'
-                                }}
-                                onClick={async () => {
-                                    if (window.confirm('정말로 2차 비밀번호를 초기화하시겠습니까?\n(마이닝 페이지 접속 시 새로 설정해야 합니다)')) {
-                                        const success = await walletService.resetSecondPassword(walletAddress);
-                                        if (success) {
-                                            alert('2차 비밀번호가 초기화되었습니다.\n마이닝 페이지에서 새 비밀번호를 설정해주세요.');
-                                            onClose();
-                                        } else {
-                                            alert('초기화 실패. 다시 시도해주세요.');
-                                        }
-                                    }
-                                }}
-                            >
-                                2차 비번 초기화
+                                ⛏️ {getTranslation('wallet.dashboard.actions.startMining')}
                             </button>
                         </div>
                     </div>
@@ -300,7 +271,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                             <div className="cards-grid">
                                 {/* Balance Card */}
                                 <div className="info-card balance-card">
-                                    <h3 className="card-title" style={{ display: 'block', fontSize: '1.2rem', fontWeight: 800, color: '#111827', marginBottom: '20px', marginTop: 0 }}>잔액</h3>
+                                    <h3 className="card-title" style={{ display: 'block', fontSize: '1.2rem', fontWeight: 800, color: '#111827', marginBottom: '20px', marginTop: 0 }}>{getTranslation('wallet.dashboard.balance.title')}</h3>
 
                                     <div className="balance-row">
                                         <span className="balance-label">{getTranslation('wallet.dashboard.balance.realTimeReward')}:</span>
@@ -327,18 +298,18 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
 
                                 {/* Referral Bonus Card */}
                                 <div className="info-card referral-card">
-                                    <h3 className="card-title purple-text" style={{ display: 'block', fontSize: '1.2rem', fontWeight: 800, color: '#7C3AED', marginBottom: '20px', marginTop: 0 }}>추천 보너스</h3>
+                                    <h3 className="card-title purple-text" style={{ display: 'block', fontSize: '1.2rem', fontWeight: 800, color: '#7C3AED', marginBottom: '20px', marginTop: 0 }}>{getTranslation('wallet.dashboard.referral.title')}</h3>
 
                                     <div className="balance-row">
                                         {/* [Step 2-2 Fix] UI 텍스트 강제 표준화 (1BW 가입보상) */}
-                                        <span className="balance-label">추천 보상 보관함:</span>
+                                        <span className="balance-label">{getTranslation('wallet.dashboard.referral.storage')}:</span>
                                         <span className="balance-value orange">{(walletData?.referralReward || 0).toFixed(8)}<span className="unit">BW</span></span>
                                     </div>
 
                                     <div className="balance-row mt-20">
                                         <div className="balance-label-multiline">
                                             {/* [Step 2-2 Fix] UI 텍스트 강제 표준화 (마이닝 페이지와 100% 일치) */}
-                                            <div>추천 보너스 보관함</div>
+                                            <div>{getTranslation('wallet.dashboard.referral.bonusStorage')}</div>
                                         </div>
                                         <span className="balance-value-wrapper">
                                             <span className="balance-value orange">{(walletData?.referralBonus || 0).toFixed(8)}<span className="unit">BW</span></span>
@@ -347,7 +318,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
 
                                     <div className="referral-code-box" style={{ marginTop: '20px', marginBottom: '15px', padding: '12px', backgroundColor: '#e0f7fa', borderRadius: '8px', border: '1px solid #b2ebf2', textAlign: 'center' }}>
                                         <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#006064', marginBottom: '5px' }}>
-                                            추천인 코드:
+                                            {getTranslation('wallet.dashboard.referral.myCode')}
                                         </div>
                                         <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#00838f', letterSpacing: '1px', wordBreak: 'break-all' }}>
                                             {walletData?.myReferralCode || '-'}
@@ -395,16 +366,16 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                     )}
                     {activeTab === 'referralRewards' && (
                         <div className="referral-list-container" style={{ padding: '10px' }}>
-                            <h4 style={{ color: '#111827', marginBottom: '15px', fontSize: '16px', fontWeight: 'bold' }}>- 가입자 목록 -</h4>
+                            <h4 style={{ color: '#111827', marginBottom: '15px', fontSize: '16px', fontWeight: 'bold' }}>{getTranslation('wallet.dashboard.referralTable.title')}</h4>
                             <div className="referral-history-table-wrapper" style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '12px' }}>
                                     <thead style={{ backgroundColor: '#F9FAFB', borderBottom: '2px solid #E5E7EB' }}>
                                         <tr>
-                                            <th style={{ padding: '12px 5px', color: '#374151' }}>가입자</th>
-                                            <th style={{ padding: '12px 5px', color: '#374151' }}>가입날짜</th>
-                                            <th style={{ padding: '12px 5px', color: '#374151' }}>지급 보상(1BW)</th>
-                                            <th style={{ padding: '12px 5px', color: '#374151' }}>지급 보너스(2%)</th>
-                                            <th style={{ padding: '12px 5px', color: '#374151' }}>KYC 현황</th>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>{getTranslation('wallet.dashboard.referralTable.header.subscriber')}</th>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>{getTranslation('wallet.dashboard.referralTable.header.joinDate')}</th>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>{getTranslation('wallet.dashboard.referralTable.header.reward1BW')}</th>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>{getTranslation('wallet.dashboard.referralTable.header.bonus2Percent')}</th>
+                                            <th style={{ padding: '12px 5px', color: '#374151' }}>{getTranslation('wallet.dashboard.referralTable.header.kycStatus')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -417,48 +388,48 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                                             : ((ref.childWalletAddress || ref.walletAddress) ? `BW${String(ref.childWalletAddress || ref.walletAddress).substring(2, 8)}...` : '-')}
                                                     </td>
                                                     <td style={{ padding: '10px 5px', color: '#6B7280' }}>
-                                                        {new Date(ref.joinedAt).toLocaleString('ko-KR', {
+                                                        {new Date(ref.joinedAt).toLocaleString(currentLanguage === 'ko' ? 'ko-KR' : currentLanguage === 'ja' ? 'ja-JP' : currentLanguage === 'zh' ? 'zh-CN' : 'en-US', {
                                                             year: 'numeric', month: '2-digit', day: '2-digit',
                                                             hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
                                                         }).replace(/\//g, '.')}
                                                     </td>
                                                     <td style={{ padding: '10px 5px', fontWeight: 'bold', color: ref.is1BWMePaid ? '#2563EB' : '#DC2626' }}>
-                                                        {ref.is1BWMePaid ? '지급' : '미지급'}
+                                                        {ref.is1BWMePaid ? getTranslation('wallet.dashboard.referralTable.statusPaid') : getTranslation('wallet.dashboard.referralTable.statusUnpaid')}
                                                     </td>
                                                     <td style={{ padding: '10px 5px', fontWeight: 'bold', color: ref.is2PercentMePaid ? '#2563EB' : '#DC2626' }}>
-                                                        {ref.is2PercentMePaid ? '지급' : '미지급'}
+                                                        {ref.is2PercentMePaid ? getTranslation('wallet.dashboard.referralTable.statusPaid') : getTranslation('wallet.dashboard.referralTable.statusUnpaid')}
                                                     </td>
                                                     <td style={{ padding: '10px 5px', fontWeight: 'bold', color: ref.kycDetailStatus === '승인' ? '#2563EB' : '#DC2626' }}>
-                                                        {ref.kycDetailStatus || '미승인'}
+                                                        {ref.kycDetailStatus === '승인' ? getTranslation('wallet.dashboard.referralTable.statusApproved') : getTranslation('wallet.dashboard.referralTable.statusPending')}
                                                     </td>
                                                 </tr>
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan={5} style={{ padding: '40px', color: '#9CA3AF' }}>가입 내역이 없습니다.</td>
+                                                <td colSpan={5} style={{ padding: '40px', color: '#9CA3AF' }}>{getTranslation('wallet.dashboard.referralTable.noHistory')}</td>
                                             </tr>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
                             <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#F3F4F6', borderRadius: '5px', fontSize: '11px', color: '#4B5563' }}>
-                                💡 본인의 추천 코드로 가입자가 발생하면 내역에 즉시 등록됩니다.
+                                {getTranslation('wallet.dashboard.referralTable.guide')}
                             </div>
                         </div>
                     )}
                     {/* [최종복구] 채굴 보상 내역 탭 - Job 1 전용 수술 구역 */}
                     {activeTab === 'miningRewards' && (
                         <div className="referral-list-container" style={{ padding: '10px' }}>
-                            <h4 style={{ color: '#111827', marginBottom: '15px', fontSize: '16px', fontWeight: 'bold' }}>- 월별 채굴 정산 내역 -</h4>
+                            <h4 style={{ color: '#111827', marginBottom: '15px', fontSize: '16px', fontWeight: 'bold' }}>{getTranslation('wallet.dashboard.miningTable.title')}</h4>
                             <div className="referral-history-table-wrapper" style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '13px' }}>
                                     <thead style={{ backgroundColor: '#F0F9FF', borderBottom: '2px solid #BAE6FD' }}>
                                         <tr>
-                                            <th style={{ width: '35%', padding: '12px 10px', color: '#0369A1', textAlign: 'left' }}>채굴 시작 일</th>
-                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>채굴량</th>
-                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>보너스</th>
-                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>합계</th>
-                                            <th style={{ width: '11%', padding: '12px 10px', color: '#0369A1' }}>상태</th>
+                                            <th style={{ width: '35%', padding: '12px 10px', color: '#0369A1', textAlign: 'left' }}>{getTranslation('wallet.dashboard.miningTable.header.startDate')}</th>
+                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>{getTranslation('wallet.dashboard.miningTable.header.minedAmount')}</th>
+                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>{getTranslation('wallet.dashboard.miningTable.header.bonus')}</th>
+                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>{getTranslation('wallet.dashboard.miningTable.header.total')}</th>
+                                            <th style={{ width: '11%', padding: '12px 10px', color: '#0369A1' }}>{getTranslation('wallet.dashboard.miningTable.header.status')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -472,7 +443,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{parseFloat(item.bonusAmount).toFixed(4)} BW</td>
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: '#059669' }}>{(parseFloat(item.totalAmount) || 0).toFixed(4)} BW</td>
                                                     <td style={{ padding: '12px 10px' }}>
-                                                        <span style={{ fontSize: '11px', backgroundColor: '#F3F4F6', color: '#6B7280', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>채굴마감</span>
+                                                        <span style={{ fontSize: '11px', backgroundColor: '#F3F4F6', color: '#6B7280', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{getTranslation('wallet.dashboard.miningTable.statusCompleted')}</span>
                                                     </td>
                                                 </tr>
                                             ))
@@ -481,8 +452,8 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                         {/* [최종수복] 현재 채굴 실시간 행 (레이아웃 고정형 말풍선 8자리 구현) */}
                                         <tr style={{ backgroundColor: '#F0FDF4', color: '#111827', borderBottom: '2px solid #DCFCE7' }}>
                                             <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', fontSize: '11.5px', color: '#111827' }}>
-                                                {/* 서버의 miningStartTime을 년-월-일 시:분:초 포맷 전체 출력 */}
-                                                {new Date().toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\//g, '.')}
+                                                {/* [Step 1 Fix] 다국어 지원 가능 로케일 동적 주입 */}
+                                                {new Date().toLocaleString(currentLanguage === 'ko' ? 'ko-KR' : currentLanguage === 'ja' ? 'ja-JP' : currentLanguage === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\//g, '.')}
                                             </td>
                                             <td className="mining-amount-cell" style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: '#111827' }} title={`${walletData.balance.toFixed(8)} BW`}>
                                                 {/* 말풍선(title)으로 8자리 노출, 숫자는 4자리로 고정하여 테이블 뒤틀림 방지 */}
@@ -495,13 +466,13 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                                 <span>{(walletData.balance + walletData.referralBonus).toFixed(4)} BW</span>
                                             </td>
                                             <td style={{ padding: '12px 10px' }}>
-                                                <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', animation: 'pulse 2s infinite' }}>채굴중</span>
+                                                <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', animation: 'pulse 2s infinite' }}>{getTranslation('wallet.dashboard.miningTable.statusMining')}</span>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
-                            <p style={{ marginTop: '10px', fontSize: '11px', color: '#666' }}>💡 매월 1일 00:00:00에 전월 채굴량이 확정 목록에 추가됩니다.</p>
+                            <p style={{ marginTop: '10px', fontSize: '11px', color: '#666' }}>{getTranslation('wallet.dashboard.miningTable.guide')}</p>
                         </div>
                     )}
 
