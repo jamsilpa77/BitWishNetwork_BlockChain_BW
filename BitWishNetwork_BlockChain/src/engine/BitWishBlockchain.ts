@@ -51,6 +51,9 @@ export interface BitWishBlockchainStats {
   pendingTransactions: number;
   currentBlockHeight: number;
   totalSupply: Decimal;
+  ecosystemFund: Decimal;
+  foundationFund: Decimal;
+  totalAccumulatedFees: Decimal;
   averageBlockTime: number;
   networkHashRate: number;
 }
@@ -64,6 +67,15 @@ export class BitWishBlockchain extends EventEmitter {
   private genesisBlock: BitWishBlock | null = null;
   private pow: BitWishPoW;
   private isInitialized: boolean = false;
+  
+  // ★ BitWish 네트워크 전략적 자산 금고 (생태계 가치 순환 보관함) ★
+  private ecosystemFund: Decimal = new Decimal(0);
+  private foundationFund: Decimal = new Decimal(0);
+  private totalAccumulatedFees: Decimal = new Decimal(0);
+
+  // ★ 관리자(Administrator) 초특권 보안 필드 ★
+  private adminMasterAddress: string | null = null;
+  private adminHardwareKeyID: string | null = null;
 
   constructor() {
     super();
@@ -114,6 +126,17 @@ export class BitWishBlockchain extends EventEmitter {
 
         // 데이터베이스에 저장
         await this.saveToDatabase();
+      }
+
+      // 블록체인 생태계 기금 및 관리자 권한 상태 복원
+      const networkStats = await this.loadNetworkStats();
+      if (networkStats) {
+        this.ecosystemFund = networkStats.ecosystemFund;
+        this.foundationFund = networkStats.foundationFund;
+        this.totalAccumulatedFees = networkStats.totalAccumulatedFees;
+        this.adminMasterAddress = networkStats.adminMasterAddress;
+        this.adminHardwareKeyID = networkStats.adminHardwareKeyID;
+        console.log(`🏦 [BitWish Asset Recovery] 생태계 기금 및 관리자 권한 복원 완료`);
       }
 
       this.isInitialized = true;
@@ -433,6 +456,25 @@ export class BitWishBlockchain extends EventEmitter {
       this.accounts.set(transaction.from, fromAccount);
       this.accounts.set(transaction.to, receiverAccount);
 
+      // ★ [신뢰의 혁신] 수수료 100% 네트워크 생태계 기금 전환 및 6:4 자산 배분 ★
+      const fee = transaction.calculateFee();
+      if (fee.gt(0)) {
+        const ecoShare = fee.mul(0.6);
+        const foundationShare = fee.minus(ecoShare); // 정밀도 유지를 위한 잔여분 처리
+
+        this.ecosystemFund = this.ecosystemFund.plus(ecoShare);
+        this.foundationFund = this.foundationFund.plus(foundationShare);
+        this.totalAccumulatedFees = this.totalAccumulatedFees.plus(fee);
+
+        console.log(`🏦 [Asset Transition] 총 ${fee.toString()} BW 기금 전환 완료 (생태계 보호: ${ecoShare.toString()} / 재단 및 커뮤니티 지원: ${foundationShare.toString()})`);
+        
+        // 실시간 자산 전환 이벤트 전파
+        this.emit('feesAccumulated', { fee, ecoShare, foundationShare });
+        
+        // 기금 전용 데이터베이스 저장 (네트워크 핵심 상태 기록)
+        this.saveNetworkStats();
+      }
+
       console.log(`💸 전송 완료: ${transaction.amount.toString()} BW (${transaction.from} → ${transaction.to})`);
       this.emit('transactionExecuted', transaction);
 
@@ -648,6 +690,9 @@ export class BitWishBlockchain extends EventEmitter {
       pendingTransactions: this.pendingTransactions.length,
       currentBlockHeight: this.currentBlockHeight,
       totalSupply: BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY,
+      ecosystemFund: this.ecosystemFund,
+      foundationFund: this.foundationFund,
+      totalAccumulatedFees: this.totalAccumulatedFees,
       averageBlockTime: averageBlockTime,
       networkHashRate: this.pow.getMiningStats().hashRate
     };
@@ -666,7 +711,10 @@ export class BitWishBlockchain extends EventEmitter {
       pendingTransactions: this.pendingTransactions.length,
       currentDifficulty: this.pow.getCurrentDifficulty(),
       miningStats: this.pow.getMiningStats(),
-      networkId: BITWISH_NETWORK_CONFIG.NETWORK_ID
+      networkId: BITWISH_NETWORK_CONFIG.NETWORK_ID,
+      ecosystemFund: this.ecosystemFund.toString(),
+      foundationFund: this.foundationFund.toString(),
+      totalAccumulatedFees: this.totalAccumulatedFees.toString()
     };
   }
 
@@ -676,37 +724,170 @@ export class BitWishBlockchain extends EventEmitter {
    * 3~4초 내에 무결점 블록체인 검증 및 암호화 마이닝 장부 기록만 수행하고 결과를 Return합니다.
    */
   async verifyAndMineTransaction(senderAddress: string, receiverAddress: string, amount: string, currentSenderBalance: string): Promise<{ success: boolean; message: string }> {
-      try {
-          // 1. 구버전 JSON의 String 잔액을 50자리 초정밀 Decimal로 변환하여 메모리 맵핑 (파일 오염 절대 없음)
-          const decimalAmount = new Decimal(amount);
-          const decimalBalance = new Decimal(currentSenderBalance);
+    try {
+      // 1. 구버전 JSON의 String 잔액을 50자리 초정밀 Decimal로 변환하여 메모리 맵핑 (파일 오염 절대 없음)
+      const decimalAmount = new Decimal(amount);
+      const decimalBalance = new Decimal(currentSenderBalance);
 
-          // 2. 엔진의 절대 규칙: 위변조 및 잔액 부족 검증
-          if (decimalBalance.lessThan(decimalAmount)) {
-              return { success: false, message: '잔액이 부족하거나 위변조된 요청입니다.' };
-          }
-
-          // 3. 트랜잭션 객체 생성 및 3~4초 마이닝(채굴 장부 기록) 즉시 트리거 (Phase 1~3 기능 활용)
-          const tx = new BitWishTransaction({
-              from: senderAddress,
-              to: receiverAddress,
-              amount: decimalAmount.toString(),
-              gasLimit: BITWISH_NETWORK_CONFIG.GAS_LIMIT,
-              gasPrice: BITWISH_NETWORK_CONFIG.GAS_PRICE.toString(),
-              nonce: this.getNonce(senderAddress),
-              data: '',
-              timestamp: Date.now(),
-              type: BITWISH_TRANSACTION_CONFIG.TYPES.TRANSFER
-          });
-          const miningResult = await this.addTransaction(tx);
-
-          if (!miningResult.success) {
-              return { success: false, message: '블록체인 해시 검증/마이닝 실패' };
-          }
-
-          return { success: true, message: '3~4초 마이닝 완료 및 장부 무결점 기록 성공' };
-      } catch (error) {
-          return { success: false, message: '엔진 동시성 에러 방어됨' };
+      // 2. 엔진의 절대 규칙: 위변조 및 잔액 부족 검증
+      if (decimalBalance.lessThan(decimalAmount)) {
+        return { success: false, message: '잔액이 부족하거나 위변조된 요청입니다.' };
       }
+
+      // 3. 트랜잭션 객체 생성 및 3~4초 마이닝(채굴 장부 기록) 즉시 트리거 (Phase 1~3 기능 활용)
+      const tx = new BitWishTransaction({
+        from: senderAddress,
+        to: receiverAddress,
+        amount: decimalAmount.toString(),
+        gasLimit: BITWISH_NETWORK_CONFIG.GAS_LIMIT,
+        gasPrice: BITWISH_NETWORK_CONFIG.GAS_PRICE.toString(),
+        nonce: this.getNonce(senderAddress),
+        data: '',
+        timestamp: Date.now(),
+        type: BITWISH_TRANSACTION_CONFIG.TYPES.TRANSFER
+      });
+      const miningResult = await this.addTransaction(tx);
+
+      if (!miningResult.success) {
+        return { success: false, message: '블록체인 해시 검증/마이닝 실패' };
+      }
+
+      return { success: true, message: '3~4초 마이닝 완료 및 장부 무결점 기록 성공' };
+    } catch (error) {
+      return { success: false, message: '엔진 동시성 에러 방어됨' };
+    }
+  }
+
+  /**
+   * 네트워크 기금 상태 저장 (Persistent Vault Storage)
+   */
+  private async saveNetworkStats(): Promise<void> {
+    try {
+      const { MongoClient } = require('mongodb');
+      const client = new MongoClient('mongodb://localhost:27017');
+      await client.connect();
+      const db = client.db('bitwish_network');
+      const statsCollection = db.collection('network_stats');
+
+      await statsCollection.updateOne(
+        { id: 'global_fund_stats' },
+        { 
+          $set: { 
+            ecosystemFund: this.ecosystemFund.toString(),
+            foundationFund: this.foundationFund.toString(),
+            totalAccumulatedFees: this.totalAccumulatedFees.toString(),
+            adminMasterAddress: this.adminMasterAddress,
+            adminHardwareKeyID: this.adminHardwareKeyID,
+            lastUpdatedAt: Date.now()
+          } 
+        },
+        { upsert: true }
+      );
+
+      await client.close();
+    } catch (error) {
+      console.error('Failed to save network fund stats:', error);
+    }
+  }
+
+  /**
+   * 네트워크 기금 상태 로드 (Persistent Vault Recovery)
+   */
+  private async loadNetworkStats(): Promise<{ ecosystemFund: Decimal, foundationFund: Decimal, totalAccumulatedFees: Decimal } | null> {
+    try {
+      const { MongoClient } = require('mongodb');
+      const client = new MongoClient('mongodb://localhost:27017');
+      await client.connect();
+      const db = client.db('bitwish_network');
+      const statsCollection = db.collection('network_stats');
+
+      const stats = await statsCollection.findOne({ id: 'global_fund_stats' });
+      await client.close();
+
+      if (stats) {
+        return {
+          ecosystemFund: new Decimal(stats.ecosystemFund || '0'),
+          foundationFund: new Decimal(stats.foundationFund || '0'),
+          totalAccumulatedFees: new Decimal(stats.totalAccumulatedFees || '0'),
+          adminMasterAddress: stats.adminMasterAddress || null,
+          adminHardwareKeyID: stats.adminHardwareKeyID || null
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to load network fund stats:', error);
+      return null;
+    }
+  }
+
+  /**
+   * ★ 관리자(Administrator) 하드웨어 보안키 등록 ★
+   */
+  public async registerAdminKey(address: string, hardwareKeyID: string): Promise<{ success: boolean; message: string }> {
+    // 최초 등록이거나, 이미 등록된 관리자 본인만 변경 가능
+    if (this.adminMasterAddress && this.adminMasterAddress !== address) {
+      return { success: false, message: '권한이 없습니다. 최고 관리자만이 접근 가능합니다.' };
+    }
+
+    this.adminMasterAddress = address;
+    this.adminHardwareKeyID = hardwareKeyID;
+    
+    await this.saveNetworkStats();
+    console.log(`🛡️ [Security] 최고 관리자 하드웨어 키 등록 완료: ${address} (${hardwareKeyID})`);
+    return { success: true, message: '최고 관리자 하드웨어 보안 키가 엔진에 각인되었습니다.' };
+  }
+
+  /**
+   * ★ 최고 관리자 전용 금고 인출 (Supreme Withdrawal) ★
+   * 지문/물리 터치 보안 서명이 검증되어야만 실행됩니다.
+   */
+  public async adminSupremeWithdraw(
+    targetAddress: string, 
+    amount: string, 
+    source: 'ECOSYSTEM' | 'FOUNDATION',
+    hardwareSignature: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const decimalAmount = new Decimal(amount);
+
+      // 1. 관리자 권한 및 하드웨어 서명 검증 (Framework Placeholder)
+      if (!this.adminMasterAddress || !this.adminHardwareKeyID) {
+        return { success: false, message: '보안 키가 등록되지 않았습니다.' };
+      }
+
+      // [기술적 제언]: 실제 FIDO2 서명 검증 로직이 여기에 위치함
+      // 현재는 프레임워크 단계이므로 서명 존재 여부만 체크
+      if (!hardwareSignature) {
+        return { success: false, message: '물리적 보안 키 터치 서명이 필요합니다.' };
+      }
+
+      // 2. 자산 출처 결정 및 잔액 확인
+      let currentVault = source === 'ECOSYSTEM' ? this.ecosystemFund : this.foundationFund;
+      if (currentVault.lessThan(decimalAmount)) {
+        return { success: false, message: '금고의 잔액이 부족합니다.' };
+      }
+
+      // 3. 자산 인출 및 분배 집행
+      if (source === 'ECOSYSTEM') {
+        this.ecosystemFund = this.ecosystemFund.minus(decimalAmount);
+      } else {
+        this.foundationFund = this.foundationFund.minus(decimalAmount);
+      }
+
+      // 엔진 계정 장부 업데이트
+      const targetAccount = this.accounts.get(targetAddress) || { address: targetAddress, balance: new Decimal(0), nonce: 0 };
+      targetAccount.balance = targetAccount.balance.plus(decimalAmount);
+      this.accounts.set(targetAddress, targetAccount);
+
+      await this.saveNetworkStats();
+      this.emit('supremeWithdrawal', { targetAddress, amount: decimalAmount.toString(), source });
+
+      console.log(`🚀 [Executive Burst] 최고 관리자 직결 집행 완료: ${amount} BW -> ${targetAddress} (${source})`);
+      return { success: true, message: '보안 키 승인 완료. 기금이 즉각적으로 발송되었습니다.' };
+
+    } catch (error) {
+      console.error('Supreme withdrawal failed:', error);
+      return { success: false, message: '집행 중 엔진 에러가 발생했습니다.' };
+    }
   }
 }

@@ -29,6 +29,8 @@ const ExplorerPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [languageManager] = useState(() => new LanguageManager());
     const [currentLang, setCurrentLang] = useState(localStorage.getItem('bw_lang') || 'ko');
+    const [expandedTx, setExpandedTx] = useState<string | null>(null);
+    const [globalStats, setGlobalStats] = useState({ totalUsers: 0 });
 
     // 실시간 블록 데이터 가져오기
     const fetchBlocks = async () => {
@@ -37,8 +39,14 @@ const ExplorerPage: React.FC = () => {
             if (response.data.success && Array.isArray(response.data.data)) {
                 setBlocks(response.data.data);
             }
+            
+            // [실시간 동기화] 홈페이지 지갑 생성 수 데이터 연동
+            const statsResponse = await axios.get('/api/stats/realtime');
+            if (statsResponse.data.success) {
+                setGlobalStats(statsResponse.data.data);
+            }
         } catch (error) {
-            console.error('Failed to fetch blocks:', error);
+            console.error('Failed to fetch blockchain data:', error);
         } finally {
             setLoading(false);
         }
@@ -48,7 +56,7 @@ const ExplorerPage: React.FC = () => {
         // [최종 보강] Mount 시점 전역 설정 강제 동기화 (Key 정격화)
         const savedTheme = localStorage.getItem('bw-theme');
         const savedLang = localStorage.getItem('bw_lang') || 'ko';
-        
+
         // 테마 강제 주입
         if (savedTheme === 'dark') {
             document.body.classList.add('dark-mode');
@@ -104,6 +112,15 @@ const ExplorerPage: React.FC = () => {
         return `${hash.substring(0, 10)}...${hash.substring(hash.length - 8)}`;
     };
 
+    const formatAddress = (addr: string) => {
+        if (!addr || addr.length < 12) return addr || t('explorer.unknown');
+        return `${addr.substring(0, 6)}...${addr.substring(addr.length - 6)}`;
+    };
+
+    const toggleTxDetail = (hash: string) => {
+        setExpandedTx(expandedTx === hash ? null : hash);
+    };
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         const query = searchQuery.trim();
@@ -122,7 +139,7 @@ const ExplorerPage: React.FC = () => {
         if (isWalletAddress) {
             const foundIndex = blocks.findIndex(b => b.header?.miner === query);
             const foundBlock = foundIndex !== -1 ? blocks[foundIndex] : null;
-            
+
             if (foundBlock) {
                 alert(`${t('mining.myWallet')} ${query} ${t('explorer.searchResultFound')} (Height: #${foundBlock.header?.blockHeight || 0})`);
                 const element = document.getElementById(`block-${foundBlock.hash}`);
@@ -166,10 +183,10 @@ const ExplorerPage: React.FC = () => {
             <main className="explorer-main">
                 <section className="search-section">
                     <form onSubmit={handleSearch} className="search-form">
-                        <input 
-                            type="text" 
-                            className="search-input" 
-                            placeholder={t('explorer.searchPlaceholder')} 
+                        <input
+                            type="text"
+                            className="search-input"
+                            placeholder={t('explorer.searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -177,48 +194,159 @@ const ExplorerPage: React.FC = () => {
                     </form>
                 </section>
 
-                <section className="stats-overview">
-                    <div className="stat-card">
-                        <h3>{t('explorer.latestHeight')}</h3>
-                        <p className="stat-value">{blocks[0]?.header?.blockHeight || '-'}</p>
+                <section className="metrics-dashboard">
+                    <div className="metric-tile highlight-tile">
+                        <div className="metric-icon">🏦</div>
+                        <div className="metric-content">
+                            <h3>{t('explorer.ecosystemFundTitle')}</h3>
+                            <div className="fund-sub-dash">
+                                <div className="fund-item">
+                                    <span className="fund-label">{t('explorer.txFees')}</span>
+                                    <span className="fund-value highlight-blue">0.00000000 <small>BW</small></span>
+                                </div>
+                                <div className="fund-divider"></div>
+                                <div className="fund-item">
+                                    <span className="fund-label">{t('explorer.blockFees')}</span>
+                                    <span className="fund-value highlight-blue">0.00000000 <small>BW</small></span>
+                                </div>
+                                <div className="fund-divider"></div>
+                                <div className="fund-item total-item">
+                                    <span className="fund-label">{t('explorer.totalFees')}</span>
+                                    <span className="fund-value highlight-gold">0.00000000 <small>BW</small></span>
+                                </div>
+                            </div>
+                            <div className="fund-actions">
+                                <button className="transparency-btn">
+                                    🔍 {currentLang === 'ko' ? '기금 지갑 투명성 확인' : 'Check Fund Wallet Transparency'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div className="stat-card">
-                        <h3>{t('explorer.avgBlockTime')}</h3>
-                        <p className="stat-value">10s</p>
-                    </div>
-                    <div className="stat-card">
-                        <h3>{t('explorer.network')}</h3>
-                        <p className="stat-value">MAINNET</p>
+
+                    <div className="metrics-vertical-list">
+                        <div className="metric-row">
+                            <div className="row-label">
+                                <span className="row-icon">💰</span>
+                                <h3>{t('explorer.totalCirculating')}</h3>
+                            </div>
+                            <div className="row-value">21,000,000,000 <span className="currency">BW</span></div>
+                        </div>
+                        <div className="metric-row">
+                            <div className="row-label">
+                                <span className="row-icon">🏢</span>
+                                <h3>{t('explorer.foundationAllocation')}</h3>
+                            </div>
+                            <div className="row-value">4,200,000,000 <span className="currency">BW</span></div>
+                        </div>
+                        <div className="metric-row">
+                            <div className="row-label">
+                                <span className="row-icon">🌍</span>
+                                <h3>{t('explorer.ecosystemAllocation')}</h3>
+                            </div>
+                            <div className="row-value">16,800,000,000 <span className="currency">BW</span></div>
+                        </div>
+                        <div className="metric-row">
+                            <div className="row-label">
+                                <span className="row-icon">⛏️</span>
+                                <h3>{t('explorer.minerAllocation')}</h3>
+                            </div>
+                            <div className="row-value">13,650,000,000 <span className="currency">BW</span></div>
+                        </div>
+                        <div className="metric-row">
+                            <div className="row-label">
+                                <span className="row-icon">🤝</span>
+                                <h3>{t('explorer.partnerAllocation')}</h3>
+                            </div>
+                            <div className="row-value">3,150,000,000 <span className="currency">BW</span></div>
+                        </div>
+                        <div className="metric-row live-row">
+                            <div className="row-label">
+                                <span className="row-icon">👥</span>
+                                <h3>{t('explorer.createdWallets')}</h3>
+                            </div>
+                            <div className="row-value">{globalStats.totalUsers}</div>
+                        </div>
                     </div>
                 </section>
 
-                <section className="blocks-section">
-                    <h2>{t('explorer.latestBlocks')}</h2>
-                    <div className="blocks-table-container">
-                        <table className="blocks-table">
-                            <thead>
-                                <tr>
-                                    <th>{t('explorer.height')}</th>
-                                    <th>{t('explorer.hash')}</th>
-                                    <th>{t('explorer.miner')}</th>
-                                    <th>{t('explorer.timestamp')}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr><td colSpan={4} className="loading-cell">{t('explorer.loading')}</td></tr>
-                                ) : blocks.filter(b => b && b.header).map((block) => (
-                                    <tr key={block.hash} id={`block-${block.hash}`} className="block-row">
-                                        <td className="height-cell">#{block.header?.blockHeight || 0}</td>
-                                        <td className="hash-cell" title={block.hash}>
-                                            {shortenHash(block.hash)}
-                                        </td>
-                                        <td className="miner-cell">{block.header?.miner || t('explorer.unknown')}</td>
-                                        <td className="time-cell">{formatTimestamp(block.header?.timestamp || Date.now())}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                <section className="operations-section">
+                    <div className="section-header">
+                        <h2>{t('explorer.latestOperations')}</h2>
+                        <button className="view-all-btn">{t('explorer.viewAll')}</button>
+                    </div>
+                    <div className="operations-timeline">
+                        <div className="op-card">
+                            <div className="op-icon shield-bg">🛡️</div>
+                            <div className="op-details">
+                                <p className="op-message">{t('explorer.opAdminFundTx')}</p>
+                                <span className="op-time">Just now</span>
+                            </div>
+                        </div>
+                        <div className="op-card">
+                            <div className="op-icon bot-bg">👤</div>
+                            <div className="op-details">
+                                <p className="op-message">{t('explorer.opKycBotTx')}</p>
+                                <span className="op-time">5 mins ago</span>
+                            </div>
+                        </div>
+                        <div className="op-card">
+                            <div className="op-icon fire-bg">🔥</div>
+                            <div className="op-details">
+                                <p className="op-message">{t('explorer.opBurnEvent')}</p>
+                                <span className="op-time">1 hour ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="transactions-section">
+                    <div className="section-header">
+                        <h2>{t('explorer.latestTransactions')}</h2>
+                        <button className="view-all-btn">{t('explorer.viewAll')}</button>
+                    </div>
+                    <div className="transactions-list">
+                        {loading ? (
+                            <div className="loading-state">{t('explorer.loading')}</div>
+                        ) : blocks.filter(b => b && b.header).map((block) => (
+                            <div key={block.hash} id={`block-${block.hash}`} className={`tx-receipt-card ${expandedTx === block.hash ? 'expanded' : ''}`}>
+                                <div className="tx-receipt-main" onClick={() => toggleTxDetail(block.hash)}>
+                                    <div className="tx-flow">
+                                        <div className="tx-party sender">
+                                            <span className="party-label">{t('explorer.txFrom')}</span>
+                                            <span className="party-address">{t('explorer.txCoinbase')}</span>
+                                        </div>
+                                        <div className="tx-arrow-wrap">
+                                            <div className="tx-amount-badge">💸 50.00 BW</div>
+                                            <div className="tx-arrow">➡️</div>
+                                        </div>
+                                        <div className="tx-party receiver">
+                                            <span className="party-label">{t('explorer.txTo')}</span>
+                                            <span className="party-address">{formatAddress(block.header?.miner)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="tx-action-area">
+                                        <div className="tx-time-ago">{formatTimestamp(block.header?.timestamp || Date.now())}</div>
+                                        <button className="tx-expand-btn">
+                                            {expandedTx === block.hash ? t('explorer.txDetail') : t('explorer.txShowDetail')}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="tx-receipt-details">
+                                    <div className="tx-detail-row">
+                                        <span className="detail-label">{t('explorer.hash')}</span>
+                                        <span className="detail-value tx-hash-full">{block.hash}</span>
+                                    </div>
+                                    <div className="tx-detail-row">
+                                        <span className="detail-label">{t('explorer.height')}</span>
+                                        <span className="detail-value">#{block.header?.blockHeight || 0}</span>
+                                    </div>
+                                    <div className="tx-detail-row">
+                                        <span className="detail-label">{t('explorer.txFee')}</span>
+                                        <span className="detail-value">0.005 BW</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </section>
             </main>
