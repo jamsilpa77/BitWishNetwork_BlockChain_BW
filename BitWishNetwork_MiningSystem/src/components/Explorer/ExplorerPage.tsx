@@ -31,28 +31,39 @@ const ExplorerPage: React.FC = () => {
     const [currentLang, setCurrentLang] = useState(localStorage.getItem('bw_lang') || 'ko');
     const [expandedTx, setExpandedTx] = useState<string | null>(null);
     const [globalStats, setGlobalStats] = useState({ totalUsers: 0 });
+    const [isTestnet, setIsTestnet] = useState(false);
 
     // 실시간 블록 데이터 가져오기
     const fetchBlocks = async () => {
         try {
-            const response = await axios.get('/api/stats/blocks');
+            // [작업 계획 2단계: 데이터 소스 완전 격리]
+            const blocksUrl = isTestnet ? '/api/testnet/blocks' : '/api/stats/blocks';
+            const statsUrl = isTestnet ? '/api/testnet/realtime' : '/api/stats/realtime';
+
+            const response = await axios.get(blocksUrl);
             if (response.data.success && Array.isArray(response.data.data)) {
                 setBlocks(response.data.data);
+            } else {
+                setBlocks([]); // 데이터 소스 전환 시 이전 데이터 잔상 제거
             }
-            
+
             // [실시간 동기화] 홈페이지 지갑 생성 수 데이터 연동
-            const statsResponse = await axios.get('/api/stats/realtime');
+            const statsResponse = await axios.get(statsUrl);
             if (statsResponse.data.success) {
                 setGlobalStats(statsResponse.data.data);
             }
         } catch (error) {
             console.error('Failed to fetch blockchain data:', error);
+            setBlocks([]); // 에러 발생 시 데이터 은닉
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
+        // 모드 전환 시 로딩 상태 강제 발동 (데이터 초기화 보증)
+        setLoading(true);
+
         // [최종 보강] Mount 시점 전역 설정 강제 동기화 (Key 정격화)
         const savedTheme = localStorage.getItem('bw-theme');
         const savedLang = localStorage.getItem('bw_lang') || 'ko';
@@ -101,7 +112,7 @@ const ExplorerPage: React.FC = () => {
             observer.disconnect();
             window.removeEventListener('storage', handleStorageChange);
         };
-    }, [currentLang, languageManager]);
+    }, [currentLang, languageManager, isTestnet]);
 
     const formatTimestamp = (ts: number) => {
         return new Date(ts).toLocaleString();
@@ -175,6 +186,12 @@ const ExplorerPage: React.FC = () => {
                     </button>
                     <h1>{t('explorer.title')}</h1>
                     <div className="header-stats">
+                        <button
+                            className={`mode-toggle-btn ${isTestnet ? 'testnet' : 'mainnet'}`}
+                            onClick={() => setIsTestnet(!isTestnet)}
+                        >
+                            {isTestnet ? 'MAINNET' : 'TESTNET'}
+                        </button>
                         <span className="network-status">NETWORK ONLINE</span>
                     </div>
                 </div>
@@ -194,110 +211,168 @@ const ExplorerPage: React.FC = () => {
                     </form>
                 </section>
 
-                <section className="metrics-dashboard">
-                    <div className="metric-tile highlight-tile">
-                        <div className="metric-icon">🏦</div>
-                        <div className="metric-content">
-                            <h3>{t('explorer.ecosystemFundTitle')}</h3>
-                            <div className="fund-sub-dash">
-                                <div className="fund-item">
-                                    <span className="fund-label">{t('explorer.txFees')}</span>
-                                    <span className="fund-value highlight-blue">0.00000000 <small>BW</small></span>
-                                </div>
-                                <div className="fund-divider"></div>
-                                <div className="fund-item">
-                                    <span className="fund-label">{t('explorer.blockFees')}</span>
-                                    <span className="fund-value highlight-blue">0.00000000 <small>BW</small></span>
-                                </div>
-                                <div className="fund-divider"></div>
-                                <div className="fund-item total-item">
-                                    <span className="fund-label">{t('explorer.totalFees')}</span>
-                                    <span className="fund-value highlight-gold">0.00000000 <small>BW</small></span>
-                                </div>
+                {!isTestnet && (
+                    <section className="unified-economic-center premium-glass-panel">
+                        <div className="center-header">
+                            <div className="dashboard-title">
+                                <span className="neon-icon">💎</span>
+                                <h2>{currentLang === 'ko' ? '빗위시 통합 경제 센터' : 'BitWish Unified Economic Center'}</h2>
                             </div>
-                            <div className="fund-actions">
-                                <button className="transparency-btn">
-                                    🔍 {currentLang === 'ko' ? '기금 지갑 투명성 확인' : 'Check Fund Wallet Transparency'}
-                                </button>
+                            <div className="global-supply-capsule">
+                                <label>{t('explorer.totalCirculating')}</label>
+                                <span>21,000,000,000 <small>BW</small></span>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="metrics-vertical-list">
-                        <div className="metric-row">
-                            <div className="row-label">
-                                <span className="row-icon">💰</span>
-                                <h3>{t('explorer.totalCirculating')}</h3>
+                        <div className="economic-hybrid-grid">
+                            {/* 좌측: 고정 자산 배분 (Fixed Supply) */}
+                            <div className="supply-side-box">
+                                <div className="side-label">
+                                    <span className="dot blue"></span> {currentLang === 'ko' ? '자산 배분 규정 (100%)' : 'Asset Allocation Rules'}
+                                </div>
+                                <div className="supply-multi-grid">
+                                    <div className="s-card">
+                                        <div className="sc-label">⛏️ {t('explorer.minerAllocation')}</div>
+                                        <div className="sc-value">13,650,000,000 <small>BW</small></div>
+                                    </div>
+                                    <div className="s-card">
+                                        <div className="sc-label">🤝 {t('explorer.partnerAllocation')}</div>
+                                        <div className="sc-value">3,150,000,000 <small>BW</small></div>
+                                    </div>
+                                    <div className="s-card highlight">
+                                        <div className="sc-label">🏢 {t('explorer.foundationAllocation')}</div>
+                                        <div className="sc-value highlight-gold">4,200,000,000 <small>BW</small></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="row-value">21,000,000,000 <span className="currency">BW</span></div>
-                        </div>
-                        <div className="metric-row">
-                            <div className="row-label">
-                                <span className="row-icon">🏢</span>
-                                <h3>{t('explorer.foundationAllocation')}</h3>
-                            </div>
-                            <div className="row-value">4,200,000,000 <span className="currency">BW</span></div>
-                        </div>
-                        <div className="metric-row">
-                            <div className="row-label">
-                                <span className="row-icon">🌍</span>
-                                <h3>{t('explorer.ecosystemAllocation')}</h3>
-                            </div>
-                            <div className="row-value">16,800,000,000 <span className="currency">BW</span></div>
-                        </div>
-                        <div className="metric-row">
-                            <div className="row-label">
-                                <span className="row-icon">⛏️</span>
-                                <h3>{t('explorer.minerAllocation')}</h3>
-                            </div>
-                            <div className="row-value">13,650,000,000 <span className="currency">BW</span></div>
-                        </div>
-                        <div className="metric-row">
-                            <div className="row-label">
-                                <span className="row-icon">🤝</span>
-                                <h3>{t('explorer.partnerAllocation')}</h3>
-                            </div>
-                            <div className="row-value">3,150,000,000 <span className="currency">BW</span></div>
-                        </div>
-                        <div className="metric-row live-row">
-                            <div className="row-label">
-                                <span className="row-icon">👥</span>
-                                <h3>{t('explorer.createdWallets')}</h3>
-                            </div>
-                            <div className="row-value">{globalStats.totalUsers}</div>
-                        </div>
-                    </div>
-                </section>
 
-                <section className="operations-section">
-                    <div className="section-header">
-                        <h2>{t('explorer.latestOperations')}</h2>
-                        <button className="view-all-btn">{t('explorer.viewAll')}</button>
-                    </div>
-                    <div className="operations-timeline">
-                        <div className="op-card">
-                            <div className="op-icon shield-bg">🛡️</div>
-                            <div className="op-details">
-                                <p className="op-message">{t('explorer.opAdminFundTx')}</p>
-                                <span className="op-time">Just now</span>
+                            {/* 우측: 실시간 기금 적립 (Live Treasury) */}
+                            <div className="treasury-side-box">
+                                <div className="side-label">
+                                    <span className="dot gold pulse"></span> {t('explorer.ecosystemFundTitle')} (Live)
+                                </div>
+                                <div className="treasury-flow-card">
+                                    <div className="flow-item">
+                                        <div className="fi-header">
+                                            <label>{t('explorer.txFees')}</label>
+                                            <span>0.0000 <small>BW</small></span>
+                                        </div>
+                                        <div className="fi-gauge"><div className="gauge-fill eco" style={{width: '60%'}}></div></div>
+                                    </div>
+                                    <div className="flow-item">
+                                        <div className="fi-header">
+                                            <label>{t('explorer.blockFees')}</label>
+                                            <span>0.0000 <small>BW</small></span>
+                                        </div>
+                                        <div className="fi-gauge"><div className="gauge-fill foundation" style={{width: '40%'}}></div></div>
+                                    </div>
+                                    <div className="total-accumulated-box">
+                                        <label>{t('explorer.totalFees')}</label>
+                                        <span className="neon-gold">0.00000000 <small>BW</small></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div className="op-card">
-                            <div className="op-icon bot-bg">👤</div>
-                            <div className="op-details">
-                                <p className="op-message">{t('explorer.opKycBotTx')}</p>
-                                <span className="op-time">5 mins ago</span>
+
+                        <div className="center-footer">
+                            <div className="f-stats">
+                                <span>👥 {t('explorer.createdWallets')}: <strong>{globalStats.totalUsers}</strong></span>
+                            </div>
+                            <button className="transparency-audit-btn">
+                                🛡️ {currentLang === 'ko' ? '기금 지갑 투명성 감사' : 'Fund Transparency Audit'}
+                            </button>
+                        </div>
+                        <div className="dashboard-scan-line"></div>
+                    </section>
+                )}
+
+                {isTestnet && (
+                    <section className="testnet-dashboard">
+                        <div className="testnet-monitor-tile">
+                            <div className="monitor-header">
+                                <div className="live-pulse"></div>
+                                <h2>{currentLang === 'ko' ? '테스트넷 실시간 모니터링' : 'Testnet Live Monitoring'}</h2>
+                            </div>
+                            <div className="monitor-grid">
+                                <div className="monitor-item">
+                                    <div className="m-icon">🚀</div>
+                                    <div className="m-info">
+                                        <label>{currentLang === 'ko' ? '테스트 트랜잭션 수수료 합계' : 'Test Tx Fees Total'}</label>
+                                        <span className="m-value">0.00000000 <small>tBW</small></span>
+                                    </div>
+                                </div>
+                                <div className="monitor-divider"></div>
+                                <div className="monitor-item">
+                                    <div className="m-icon">📦</div>
+                                    <div className="m-info">
+                                        <label>{currentLang === 'ko' ? '테스트 블록 생성 수수료 합계' : 'Test Block Fees Total'}</label>
+                                        <span className="m-value">0.00000000 <small>tBW</small></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div className="op-card">
-                            <div className="op-icon fire-bg">🔥</div>
-                            <div className="op-details">
-                                <p className="op-message">{t('explorer.opBurnEvent')}</p>
-                                <span className="op-time">1 hour ago</span>
-                            </div>
+                    </section>
+                )}
+
+                {!isTestnet && (
+                    <section className="operations-section premium-migration-section animate-fade-in">
+                        <div className="section-header">
+                            <h2>{currentLang === 'ko' ? '새로운 KYC 승인된 유저의 마이그레이션(15일) 대기자' : 'New KYC Approved User Migration (15-day) Waiting List'}</h2>
+                            <button className="view-all-btn">{t('explorer.viewAll')}</button>
                         </div>
-                    </div>
-                </section>
+                        <div className="migration-table-container">
+                            <table className="migration-live-table">
+                                <thead>
+                                    <tr>
+                                        <th>{currentLang === 'ko' ? '지갑 주소' : 'Wallet Address'}</th>
+                                        <th>{currentLang === 'ko' ? 'KYC 승인 일자' : 'KYC Approval Date'}</th>
+                                        <th>{currentLang === 'ko' ? '전송 대기시간' : 'Transfer Waiting Time'}</th>
+                                        <th>{currentLang === 'ko' ? '마이그레이션 상태' : 'Migration Status'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr className="migration-row-item">
+                                        <td className="addr-cell">BW958ACBEA657953450332FFF0FD66ABB0FA994005</td>
+                                        <td className="date-cell">2027.02.22 am11:24:22</td>
+                                        <td className="time-cell">
+                                            <div className="waiting-progress-wrap">
+                                                <div className="progress-bg"><div className="progress-fill" style={{ width: '74%' }}></div></div>
+                                                <span className="countdown-raw">13일 21:45:32</span>
+                                            </div>
+                                        </td>
+                                        <td className="status-cell">
+                                            <span className="m-badge waiting-pulse">{currentLang === 'ko' ? '마이그레이션 대기 중' : 'Migration Waiting'}</span>
+                                        </td>
+                                    </tr>
+                                    <tr className="migration-row-item completed">
+                                        <td className="addr-cell">BW69527012159E5A3CF2EFB3E07D8DC7FCFA385EF6</td>
+                                        <td className="date-cell">2027.01.11 pm15:22:40</td>
+                                        <td className="time-cell">
+                                            <span className="transfer-done-text">{currentLang === 'ko' ? '전송 완료' : 'Transfer Done'}</span>
+                                        </td>
+                                        <td className="status-cell">
+                                            <span className="m-badge completed-glow">{currentLang === 'ko' ? '마이그레이션 완료' : 'Migration Completed'}</span>
+                                        </td>
+                                    </tr>
+                                    <tr className="migration-row-item">
+                                        <td className="addr-cell">BWD6CCB861E43DA7B213B9871CEC8C49E0F17577E5</td>
+                                        <td className="date-cell">2027.03.01 am09:12:05</td>
+                                        <td className="time-cell">
+                                            <div className="waiting-progress-wrap">
+                                                <div className="progress-bg"><div className="progress-fill" style={{ width: '21%' }}></div></div>
+                                                <span className="countdown-raw">14일 23:12:45</span>
+                                            </div>
+                                        </td>
+                                        <td className="status-cell">
+                                            <span className="m-badge waiting-pulse">{currentLang === 'ko' ? '마이그레이션 대기 중' : 'Migration Waiting'}</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div className="table-scan-line"></div>
+                        </div>
+                    </section>
+                )}
 
                 <section className="transactions-section">
                     <div className="section-header">
