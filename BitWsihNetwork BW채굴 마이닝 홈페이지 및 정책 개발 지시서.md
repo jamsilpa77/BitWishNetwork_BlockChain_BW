@@ -111,10 +111,10 @@
 
 - 1. 메뉴 중 "완전 참조용 자료 사이트" -
 1. "BW 메인넷": https://minepi.com/pi-blockchain/ (참고하여 BitWish만의 메뉴로 만들어야 한다.)
-2. "BW 블록 익스플로러": https://blockexplorer.minepi.com/mainnet/ 실시간 블록/트랜잭션 조회, 검색 바, 통계 대시보드. (참고하여 BitWish만의 메뉴로 만들어야 한다.)
-3. "BW 커뮤니티": https://coinness.com/community/lounge?category=10 카테고리별 게시판, 댓글/대댓글, 투표, 알림. (참고하여 BitWish만의 메뉴로 만들어야 한다.)
-4. "BW 노드": https://minepi.com/pi-blockchain/pi-node/
-
+2. 1번 호버 "BW 블록 익스플로러": https://blockexplorer.minepi.com/mainnet/ 실시간 블록/트랜잭션 조회, 검색 바, 통계 대시보드. (참고하여 BitWish만의 메뉴로 만들어야 한다.)
+3. 1번 호버 "BW 노드": https://minepi.com/pi-blockchain/pi-node/
+4. "BW 커뮤니티": https://coinness.com/community/lounge?category=10 카테고리별 게시판, 댓글/대댓글, 투표, 알림. (참고하여 BitWish만의 메뉴로 만들어야 한다.)
+5. "BW 대시보드": 
 
 **"BitWishNetwork" 홈페이지 상단 네비게이션 바와  중앙 정렬 메뉴들**
 - 2. 각 메뉴의 위치 - (메뉴는 호버형 버튼으로 구현한다)
@@ -122,7 +122,6 @@
 2. "BW 커뮤니티"
 3. "BW 대시보드"
 4. "BW 백서" 호버 → "BW 로드맵"
-5. "BW 노드"
 
 
 **"BitWishNetwork" 홈페이지 상단 네비게이션 오른쪽 끝 메뉴들** (지갑 만들기와 KYC 시스템은 추 후 개발 구현함)

@@ -452,6 +452,37 @@ export class WalletService {
   }
 
   /**
+   * [Phase 3] 송금 가능 금액 검증 (availableBalance 기반)
+   * 15일 대기 기간이 경과하여 마이그레이션된 자산만 사용 가능하도록 제한
+   */
+  public validateTransferAmount(amount: number, availableBalance: number): { success: boolean; messageKey: string } {
+    if (amount <= 0) {
+      return { success: false, messageKey: 'wallet.p2p.messages.invalidAmount' };
+    }
+
+    if (amount > availableBalance) {
+      return { success: false, messageKey: 'wallet.p2p.messages.insufficientBalance' };
+    }
+
+    return { success: true, messageKey: 'wallet.p2p.messages.transferReady' };
+  }
+
+  /**
+   * [Phase 3] 자산 정산 상태 안내 메시지 (4개 국어 지원)
+   * 15일 타임락 정산 정책에 대한 상세 설명 반환
+   */
+  public getSettlementGuide(language: string): string {
+    const guides: Record<string, string> = {
+      ko: '📌 안내: 채굴된 자산은 KYC 승인 후 15일간의 보안 대기 기간을 거쳐 "사용 가능 잔액"으로 정산됩니다.',
+      en: '📌 Notice: Mined assets will be settled into "Available Balance" after a 15-day security waiting period following KYC approval.',
+      ja: '📌 案内: マイニングされた資産は、KYC承認後15日間のセキュリティ待機期間を経て「使用可能残高」に精算されます。',
+      zh: '📌 提示：挖出的资产在 KYC 批准后，经过 15 天的安全性等待期后，将结算至“可用余额”。'
+    };
+    const guide = guides[language] || guides['en'] || '';
+    return guide;
+  }
+
+  /**
    * 지갑 주소 유효성 검증
    */
   public validateWalletAddress(address: string): boolean {

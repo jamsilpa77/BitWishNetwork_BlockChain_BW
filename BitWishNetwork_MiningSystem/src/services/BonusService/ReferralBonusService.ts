@@ -132,53 +132,13 @@ export class ReferralBonusService {
    */
   private async loadData(): Promise<void> {
     try {
-      let data: any = null;
-      // 1. 서버 전수 조사 (최우선 진실)
-      try {
-        const response = await fetch('/api/storage/load/referrals.json').catch(() => null);
-        if (response && response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            data = result.data;
-            console.log('[ReferralBonusService] 📡 서버 물리 DB에서 정답 데이터를 가져왔습니다.');
-          }
-        }
-      } catch (e) { }
-
-      // 서버 데이터가 있다면 로컬 스토리지를 즉시 무시하고 덮어씀
-      if (data) {
-        // 서버 파일 구조가 { "users": { ... } } 일 경우를 대비한 정밀 파싱
-        const userMap = data.users || data.status || {};
-        this.userReferralStatus = new Map(Object.entries(userMap));
-
-        if (data.records) this.referralRecords = new Map(Object.entries(data.records));
-        if (data.bonusStorage) this.referralBonusStorage = new Map(Object.entries(data.bonusStorage));
-        if (data.rewardStorage) this.referralRewardStorage = new Map(Object.entries(data.rewardStorage));
-      } else {
-        // 서버 데이터가 없을 때만 로컬 백업 사용
-        const saved = localStorage.getItem('bw-referral-data');
-        if (saved) {
-          const localData = JSON.parse(saved);
-          this.userReferralStatus = new Map(Object.entries(localData.status || {}));
-          this.referralRecords = new Map(Object.entries(localData.records || {}));
-          this.referralBonusStorage = new Map(Object.entries(localData.bonusStorage || {}));
-          this.referralRewardStorage = new Map(Object.entries(localData.rewardStorage || {}));
-          console.log('[ReferralBonusService] 💾 서버 통신 실패로 로컬 백업을 로드했습니다.');
-        }
-      }
-
-      // [핵심] 관리자 지갑 주소에 대해 추천 코드 강제 교정 (절대 불변 원칙)
-      const adminWallet = 'BW9F5FF090231236037F250A523B4FC320FB44BFA8';
-      const adminStatus = this.userReferralStatus.get(adminWallet);
-      if (adminStatus) {
-        adminStatus.referralCode = 'REF9F5FF0909DC5';
-        this.userReferralStatus.set(adminWallet, adminStatus);
-        console.log('[ReferralBonusService] 🛡️ 관리자 추천 코드 고정 완료: REF9F5FF0909DC5');
-      }
-
-      this.saveData(); // 정정된 데이터를 서버와 로컬에 즉시 재박제
+      // [Step 3 Fixed] 레거시 파일 DB 및 로컬 스토리지 백업 로직 완전 폐기
+      // 이제 모든 데이터 정합성은 서버의 MiningController(MongoDB)가 전담함
+      console.log('[ReferralBonusService] 📡 Modern Mode: 서버 API 정합성 체제로 완전 전환됨');
+      
+      this.saveData(); 
     } catch (error) {
-      console.error('[ReferralBonusService] 데이터 로드 중 치명적 오류:', error);
+      console.error('[ReferralBonusService] 데이터 로드 중 오류:', error);
     }
   }
 
@@ -187,30 +147,9 @@ export class ReferralBonusService {
    */
   private async saveData(): Promise<void> {
     try {
-      const dataToSave = {
-        records: Array.from(this.referralRecords.entries()),
-        status: Array.from(this.userReferralStatus.entries()),
-        bonusStorage: Array.from(this.referralBonusStorage.entries()),
-        rewardStorage: Array.from(this.referralRewardStorage.entries())
-      };
+      // [Step 3 Fixed] 위험한 로컬 덮어쓰기 및 파일 DB 저장 로직 제거
+      // 데이터 영구 보존은 서버 API가 담당하므로 클라이언트는 동기화 신호만 관리함
 
-      localStorage.setItem('bw-referral-data', JSON.stringify(dataToSave));
-
-      try {
-        const response = await fetch('/api/storage/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename: 'referrals.json', data: dataToSave })
-        });
-        const result = await response.json();
-        if (result.success) {
-          console.log('[ReferralBonusService] 💾 파일 DB 영구 보존 성공');
-        } else {
-          console.error('[ReferralBonusService] ❌ 파일 DB 저장 실패:', result.message);
-        }
-      } catch (apiError) {
-        console.error('[ReferralBonusService] ❌ 파일 DB 통신 오류:', apiError);
-      }
 
       this.syncWithWallet();
 

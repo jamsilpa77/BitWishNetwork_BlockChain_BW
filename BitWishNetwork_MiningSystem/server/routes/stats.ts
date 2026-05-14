@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import User from '../models/User';
 import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
+import MonthlySettlement from '../models/MonthlySettlement';
 import Decimal from 'decimal.js';
 import { bwChainCore } from '../index'; // 결합된 엔진 호출
 import fs from 'fs';
@@ -45,8 +46,42 @@ router.get('/realtime', async (req, res) => {
             }
         });
 
-        // 실시간 참값 = DB 저장값 + 현재 흐르고 있는 채굴량
-        totalMiningReward = totalMiningReward.plus(liveBoost);
+        // 2-1-1. [최종 수복] 메인 정산 장부(MonthlySettlement) 기반 전역 합산 (Section 4.2 정정 계획 반영)
+        // 지갑 앱의 '정산 내역'과 100% 동기화하기 위해 동일한 컬렉션을 전수 조사함.
+        const settlementAgg = await MonthlySettlement.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    locked: {
+                        $sum: {
+                            $cond: [
+                                { $in: ["$migrationStatus", ["LOCKED", "WAITING_KYC"]] }, 
+                                { $toDouble: "$totalAmount" }, 
+                                0
+                            ]
+                        }
+                    },
+                    released: {
+                        $sum: {
+                            $cond: [
+                                { $in: ["$migrationStatus", ["UNLOCKED", "MIGRATED"]] }, 
+                                { $toDouble: "$totalAmount" }, 
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        const totalLockedAmount = new Decimal(settlementAgg[0]?.locked || 0);
+        const totalReleasedAmount = new Decimal(settlementAgg[0]?.released || 0);
+
+        // [안전망 (Fail-Safe)] 총 발행량 로직 훼손 방지를 위한 원상복구 합산
+        const totalSettlementAmount = totalLockedAmount.plus(totalReleasedAmount);
+
+        // 실시간 참값 = DB 미정산 저장값 + 현재 흐르고 있는 채굴량 + 과거 정산 누적 합계
+        totalMiningReward = totalMiningReward.plus(liveBoost).plus(totalSettlementAmount);
 
         // 2-2. 가입/추천 보상 총합
         const bonusRewardAgg = await BonusRecord.aggregate([
@@ -95,6 +130,9 @@ router.get('/realtime', async (req, res) => {
                 currentIssued: currentSupply.toFixed(8),
                 remainingSupply: remainingSupply.toFixed(8),
                 issuanceRate: issuanceRate.toString(),
+                totalSettlementAmount: totalSettlementAmount.toFixed(8), // [프리미엄 UI 신설 데이터 - 호환성 보존]
+                totalLockedAmount: totalLockedAmount.toFixed(8), // [Phase 4: 분리된 잠금 자산]
+                totalReleasedAmount: totalReleasedAmount.toFixed(8), // [Phase 4: KYC 승인 후 해제 자산]
                 networkStatus
             }
         });
@@ -127,16 +165,16 @@ router.get('/blocks', async (req, res) => {
 
 router.post('/transfer', async (req, res) => {
     const { fromAddress, toAddress, amount } = req.body;
-    
+
     // 1. [구버전 마스터 권한] Vultr(백엔드)의 referrals.json을 읽어 현재 지갑 잔액 확보
     const jsonPath = path.resolve(__dirname, '../../database/referrals.json');
     const systemWallets = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-    
+
     const currentBalance = systemWallets[fromAddress]?.balance || '0';
 
     // 2. [신버전 엔진 위임] 숫자 깎기 전에 Phase 4 코어에게 3~4초 검증 및 장부 채굴 마이닝을 지시
     const engineResult = await bwChainCore.verifyAndMineTransaction(fromAddress, toAddress, amount, currentBalance);
-    
+
     if (!engineResult.success) {
         // 블록체인 엔진이 거부하면 송금 원천 차단 (위변조 100% 방어)
         return res.status(400).json({ error: engineResult.message });

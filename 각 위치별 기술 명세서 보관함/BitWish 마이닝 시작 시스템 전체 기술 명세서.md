@@ -38,9 +38,8 @@
 
 마이닝 모달(`MiningStatusModal`)이 열리는 순간, 시스템은 과거의 기록을 추적하여 연속성을 확보합니다.
 
-### 2.1 서버 데이터 직결 (State Restoration)
-- `apiService.getUserStatus`를 통해 서버(MongoDB)에 저장된 사용자 상태를 호출합니다.
-- **주요 항목:** `isMining`(채굴 중 여부), `miningStartTime`(채굴 시작 시점), `accumulatedReward`(기존 채굴량).
+- **주요 항목:** `isMining`(채굴 중 여부), `miningStartTime`(채굴 시작 시점), `trueLifeTimeMined`(과거 정산금과 실시간 보정치가 합산된 절대 누적치).
+- **진실의 원천(Source of Truth):** `trueLifeTimeMined`는 랭킹 엔진의 `LiveBoost` 공식이 적용된 값으로, 마이닝 모달의 모든 연산은 이 값을 '닻(Anchor)'으로 삼아 시작됩니다.
 
 ### 2.2 시간 연속성 보강 (Time Continuity)
 - **공식:** `현재시간 - miningStartTime = 총 채굴 시간(초)`
@@ -52,9 +51,10 @@
 
 `RealTimeSyncService` 클래스 내부에 탑재된 본 엔진은 마이닝의 심장입니다.
 
-### 3.1 초당 증분 연산 (Per-Second Ticker)
-- **메인 채굴:** `현재 채굴량 + (최종 채굴율 / 3600)`
-- **추천 보너스:** `보너스 저장소 + (기본 채굴율 * 추천 보너스율 / 3600)`
+- **메인 채굴:** `Baseline Anchor + 실시간 세션 증분`
+- **수학적 닻(Mathematical Anchor):** 
+    - **공식:** `Baseline = 서버 전체 합계(True Total) - 현재 티커 위치(Sync Value)`
+    - **효과:** 티커가 가동되는 순간 발생하는 찰나의 데이터 간극을 보정하여, 1초 뒤 수치가 하락하는 현상을 물리적으로 0% 차단합니다.
 - **정밀도:** 모든 연산은 `Decimal.js`를 사용하여 소수점 50자리 정밀도로 수행되며, 이진 부동 소수점 오차를 원칙적으로 차단합니다.
 
 ---
@@ -75,6 +75,7 @@
 
 - **30초 주기 박제 (Syncing):** 로컬에서 실시간 연산된 채굴량 데이터를 30초마다 서버 API(`syncMiningData`)로 전송하여 DB를 갱신합니다.
 - **네트워크 감지:** `networkStatus` 시스템이 서버와의 연결 상태를 1초마다 감시하며, 끊김 발생 시 UI 단에 즉시 경고 상태를 표시합니다.
+- **전역적 데이터 패리티(Global Parity):** 본 동기화 회로는 랭킹 페이지 및 관리자 대시보드와 동일한 `LiveBoost` 연산 결과를 공유하여, 시스템 전역에서 단 10^-50 (소수점 50자리)의 연산 오차도 허용하지 않는 절대적 일관성을 유지합니다.
 
 ---
 

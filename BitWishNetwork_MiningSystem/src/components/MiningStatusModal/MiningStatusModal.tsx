@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LanguageManager } from '@/utils/LanguageManager/LanguageManager';
 import { Decimal } from 'decimal.js';
 import { PrecisionCalculator } from '@/utils/PrecisionCalculator/PrecisionCalculator';
@@ -42,7 +42,10 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const [isMining, setIsMining] = useState<boolean>(false);
     const [miningTime, setMiningTime] = useState<number>(0);
+    // [최종 수복] 엔진 재가동 없이 최신 데이터를 주입하기 위한 레퍼런스 통로
+    const totalSettledAmountRef = useRef<Decimal>(new Decimal(0));
     const [accumulatedReward, setAccumulatedReward] = useState<Decimal>(new Decimal(0));
+    const [totalSettledAmount, setTotalSettledAmount] = useState<Decimal>(new Decimal(0));
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState<boolean>(false);
 
     const [userStats, setUserStats] = useState<UserMiningStats>({
@@ -105,6 +108,8 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
                         .plus(userData.miningState?.partnerStatus === 'REGISTERED' ? 0.25 : 0);
                     const finalDailyMaxRate = dailyMaxOrigin.mul(multiplier);
 
+                    // [수복] 추천 보너스 데이터 주소 교정 (miningState가 아닌 user 객체에서 추출)
+                    const userProfile = userData.user || {};
                     setUserStats({
                         baseRate: finalBaseRate,
                         dailyMaxRate: finalDailyMaxRate,
@@ -112,9 +117,9 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
                         referralBonusRate: referralBonusRateValue, // 2.0% (DB 값) 정상 표시
                         isAttendanceActive: isAttendanceActive,
                         attendanceBonusRate: attendanceBonusRateVal,
-                        referralBonusStorage: new Decimal(referralStats.bonusStorage || 0),
+                        referralBonusStorage: new Decimal(userProfile.referralBonusStorage || 0),
                         // [Phase 1 Fixed] 로컬 스토리지 데이터 파기, 나의 지갑 탭과 100% 동일하게 서버 최신 API 데이터 직결
-                        referralRewardStorage: new Decimal(userData.user?.referralRewardStorage || 0),
+                        referralRewardStorage: new Decimal(userProfile.referralRewardStorage || 0),
                         partnerStatus: userData.miningState?.partnerStatus || 'NOT_REGISTERED'
                     });
 
@@ -126,7 +131,15 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
                             const diffSeconds = Math.floor((Date.now() - startTime) / 1000);
                             setMiningTime(diffSeconds > 0 ? diffSeconds : 0);
                         }
-                        setAccumulatedReward(new Decimal(userData.miningState.accumulatedReward || 0));
+
+                        // [4차 최종 수복] 서버 전체 누계와 현재 티커 위치의 간극을 '기준점'으로 박제
+                        const trueTotal = new Decimal(userData.miningState.trueLifeTimeMined || 0);
+                        const currentTickerStatus = realTimeSyncService.getCurrentStatus();
+                        const baselineAnchor = trueTotal.minus(new Decimal(currentTickerStatus.currentIssued || 0));
+
+                        setTotalSettledAmount(new Decimal(userData.miningState.totalSettledAmount || 0)); // 화면 표시용
+                        totalSettledAmountRef.current = baselineAnchor; // [핵심] 보정치까지 포함된 완벽한 시작점 박제
+                        setAccumulatedReward(trueTotal); // 첫 프레임부터 진실된 수치 고정
                     }
                 }
             } catch (error) {
@@ -162,16 +175,17 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({ isOpen, onClose, 
         realTimeSyncService.startSync((status: RealTimeMiningStatus) => {
             setLastUpdate(new Date());
             setNetworkStatus(status.networkStatus);
-            // [중요] API 동기화 시에도 현재 메모리 값을 최우선으로 반영 (UI 튕김 방지)
+            // [수복] 엔진을 다시 켜지 않고도 통로(Ref)를 통해 최신 정산금을 더함
             if (status.currentIssued > 0) {
-                setAccumulatedReward(new Decimal(status.currentIssued));
+                setAccumulatedReward(new Decimal(status.currentIssued).plus(totalSettledAmountRef.current));
             }
         });
 
         // [핵심] 실시간 채굴량 방송 구독 (1초 단위)
         const unsubscribeMining = realTimeSyncService.subscribe((status) => {
             if (status.currentIssued >= 0) {
-                setAccumulatedReward(new Decimal(status.currentIssued));
+                // [수복] 엔진 재시작 없이 실시간으로 최신 기준점 합산
+                setAccumulatedReward(new Decimal(status.currentIssued).plus(totalSettledAmountRef.current));
             }
             if (status.referralBonusStorage >= 0) {
                 setUserStats(prev => ({

@@ -933,3 +933,248 @@
     margin: 1rem;
   }
 }
+
+/* =========================================================
+   [Phase 4] KYC 승인 연동 자산 유동화 증명 듀얼 프리미엄 UI
+   ========================================================= */
+.premium-settlement-ledger {
+    width: 100%;
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeInLedger 0.8s ease-out forwards;
+}
+
+.ledger-glass-container.dual-ledger {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 30px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    gap: 0;
+}
+
+.ledger-glass-container.dual-ledger::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    /* 좌측 골드, 우측 시안 느낌의 배경 혼합 */
+    background: linear-gradient(90deg, rgba(255,215,0,0.05) 0%, rgba(0,255,255,0.05) 100%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.ledger-glass-container.dual-ledger:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 50px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.ledger-side {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    flex: 1;
+    z-index: 1;
+}
+
+/* 좌측 (LOCKED) 골드 테마 */
+.locked-side {
+    justify-content: flex-start;
+}
+
+.locked-side .ledger-icon-wrapper {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.locked-side .ledger-title {
+    color: #FFD700;
+}
+
+/* 우측 (RELEASED) 에메랄드/시안 테마 */
+.released-side {
+    justify-content: flex-end;
+    text-align: right;
+}
+
+.released-side .ledger-content {
+    align-items: flex-end;
+}
+
+.released-side .ledger-icon-wrapper {
+    background: linear-gradient(135deg, #00F2FE, #4FACFE);
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+}
+
+.released-side .ledger-title {
+    color: #00F2FE;
+}
+
+/* 공통 아이콘/컨텐츠 래퍼 */
+.ledger-icon-wrapper {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ledger-icon {
+    font-size: 32px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.ledger-content {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 네온 세로 구분선 */
+.ledger-divider {
+    width: 2px;
+    height: 80px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.3), rgba(255,255,255,0));
+    margin: 0 40px;
+    z-index: 1;
+    box-shadow: 0 0 10px rgba(255,255,255,0.2);
+}
+
+/* 텍스트 스타일링 */
+.ledger-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.ledger-value-wrapper {
+    display: flex;
+    align-items: baseline;
+    font-family: 'Inter', 'Roboto', sans-serif;
+    margin-bottom: 5px;
+}
+
+.ledger-value-integer {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.ledger-value-decimal {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    margin-left: 4px;
+}
+
+.ledger-description {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+    font-weight: 400;
+}
+
+/* Light mode support */
+.home-page.light-mode .ledger-glass-container.dual-ledger {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+}
+
+.home-page.light-mode .ledger-glass-container.dual-ledger::before {
+    background: linear-gradient(90deg, rgba(255,215,0,0.1) 0%, rgba(0,255,255,0.1) 100%);
+}
+
+.home-page.light-mode .locked-side .ledger-title {
+    color: #B8860B; 
+}
+
+.home-page.light-mode .released-side .ledger-title {
+    color: #0088AA;
+}
+
+.home-page.light-mode .ledger-value-integer {
+    color: #1a1a1a;
+    text-shadow: none;
+}
+
+.home-page.light-mode .ledger-value-decimal {
+    color: #666;
+}
+
+.home-page.light-mode .ledger-description {
+    color: #555;
+}
+
+.home-page.light-mode .ledger-divider {
+    background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.1), rgba(0,0,0,0));
+    box-shadow: none;
+}
+
+@keyframes fadeInLedger {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 모바일 768px 반응형: 상하 2단 배열 */
+@media (max-width: 768px) {
+    .ledger-glass-container.dual-ledger {
+        flex-direction: column;
+        padding: 30px 20px;
+        gap: 30px;
+    }
+    
+    .ledger-side {
+        flex-direction: column;
+        text-align: center;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .locked-side {
+        align-items: center;
+    }
+
+    .released-side {
+        align-items: center;
+        text-align: center;
+    }
+    
+    .released-side .ledger-content {
+        align-items: center;
+    }
+
+    .ledger-divider {
+        width: 80%;
+        height: 2px;
+        margin: 0;
+        background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.3), rgba(255,255,255,0));
+    }
+
+    .home-page.light-mode .ledger-divider {
+        background: linear-gradient(to right, rgba(0,0,0,0), rgba(0,0,0,0.1), rgba(0,0,0,0));
+    }
+    
+    .ledger-value-wrapper {
+        justify-content: center;
+    }
+    
+    .ledger-value-integer {
+        font-size: 2rem;
+    }
+}

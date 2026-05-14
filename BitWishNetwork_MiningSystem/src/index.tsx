@@ -29,6 +29,7 @@ import { BrowserRouter, Switch, Route } from 'react-router-dom';
 import HomePage from './components/HomePage/HomePage';
 import AdminPage from './components/AdminPage/AdminPage';
 import ExplorerPage from './components/Explorer/ExplorerPage';
+import RankingPage from './components/RankingPage/RankingPage';
 import './styles/global.css';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -44,6 +45,7 @@ if (rootElement) {
         <Switch>
           <Route exact path="/" component={HomePage} />
           <Route path="/explorer" component={ExplorerPage} />
+          <Route path="/ranking" component={RankingPage} />
           <Route path="/bitwish/testadmin" component={AdminPage} />
         </Switch>
       </BrowserRouter>

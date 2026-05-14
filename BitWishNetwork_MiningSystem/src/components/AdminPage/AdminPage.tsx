@@ -12,6 +12,7 @@
 
 import React, { useState } from 'react';
 import './AdminPage.css';
+import KYCManager from './KYCManager';
 
 const AdminPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -179,7 +180,7 @@ const AdminPage: React.FC = () => {
             return;
         }
 
-        if (!window.confirm('정말로 이 지갑의 마이닝 데이터를 초기화하시겠습니까?\n\n초기화 후:\n- 누적 보상: 0 BW\n- 마이닝 상태: 중지\n- 추천 보너스 보관함: 0 BW\n- 추천 보상 보관함: 0 BW\n- 다시 마이닝 시작 시 0부터 새로 채굴')) {
+        if (!window.confirm('정말로 이 지갑의 마이닝 데이터를 초기화하시겠습니까?\n\n초기화 후:\n- 누적 보상: 0 BW\n- 마이닝 상태: 중지\n- 추천 보너스 보관함: 0 BW\n- 월별 정산내역: 0 BW\n- 다시 마이닝 시작 시 0부터 새로 채굴')) {
             return;
         }
 
@@ -210,7 +211,7 @@ const AdminPage: React.FC = () => {
                     timestamp: Date.now()
                 }));
 
-                alert('✅ 마이닝 데이터가 초기화되었습니다\n\n초기화된 데이터:\n- 누적 보상: 0 BW\n- 마이닝 상태: 중지\n- 추천 보너스 보관함: 0 BW\n- 추천 보상 보관함: 0 BW');
+                alert('✅ 마이닝 데이터가 초기화되었습니다\n\n초기화된 데이터:\n- 누적 보상: 0 BW\n- 마이닝 상태: 중지\n- 추천 보너스 보관함: 0 BW\n- 월별 정산내역: 0 BW');
 
                 // 초기화 후 자동으로 다시 검색하여 초기화된 데이터 표시
                 await handleSearchMining();
@@ -930,8 +931,8 @@ const AdminPage: React.FC = () => {
 
                 {activeTab === 'kyc' && (
                     <div className="admin-panel">
-                        <h2>🆔 KYC 신청 관리</h2>
-                        <p>KYC 신청 목록 및 승인/거부</p>
+                        <h2>🆔 KYC 거버넌스 제어</h2>
+                        <KYCManager />
                     </div>
                 )}
 

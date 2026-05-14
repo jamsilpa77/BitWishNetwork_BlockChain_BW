@@ -4,6 +4,8 @@ import { body, validationResult } from 'express-validator';
 import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
 import User from '../models/User'; // [추가] 가입 정보 조회를 위한 User 모델 추가
+import SystemConfig from '../models/SystemConfig';
+import MonthlySettlement from '../models/MonthlySettlement'; // [추가] 마이그레이션 상태 승격을 위한 모델 추가
 
 const router = express.Router();
 
@@ -92,6 +94,10 @@ router.post('/mining/reset', [
             { new: true }
         );
 
+        // 3. MonthlySettlement (과거 월별 정산 내역) 완벽 소각
+        const settlementDeleteResult = await MonthlySettlement.deleteMany({ walletAddress });
+        console.log(`[Admin] Deleted ${settlementDeleteResult.deletedCount} settlement records for ${walletAddress}`);
+
         if (!miningUpdate) {
             return res.status(404).json({
                 success: false,
@@ -106,7 +112,8 @@ router.post('/mining/reset', [
                 walletAddress,
                 resetTime: new Date().toISOString(),
                 miningState: miningUpdate,
-                bonusRecord: bonusUpdate
+                bonusRecord: bonusUpdate,
+                clearedSettlementsCount: settlementDeleteResult.deletedCount
             }
         });
 
@@ -217,6 +224,14 @@ router.get('/referral/all', async (req, res) => {
                 }
             },
             {
+                $lookup: {
+                    from: "monthlysettlements",
+                    localField: "walletAddress",
+                    foreignField: "walletAddress",
+                    as: "settlements"
+                }
+            },
+            {
                 $project: {
                     walletAddress: 1,
                     isMining: 1,
@@ -226,7 +241,16 @@ router.get('/referral/all', async (req, res) => {
                     updatedAt: 1,        // [추가] 예비용 시간 데이터
                     joinedDate: { $arrayElemAt: ["$userInfo.createdAt", 0] },
                     kycStatus: { $arrayElemAt: ["$userInfo.isKycVerified", 0] },
-                    referrerCode: { $arrayElemAt: ["$userInfo.referrerCode", 0] }
+                    referrerCode: { $arrayElemAt: ["$userInfo.referrerCode", 0] },
+                    settledAmount: {
+                        $sum: {
+                            $map: {
+                                input: "$settlements",
+                                as: "s",
+                                in: { $toDouble: { $ifNull: ["$$s.totalAmount", "0"] } }
+                            }
+                        }
+                    }
                 }
             },
             { $sort: { joinedDate: -1 } }
@@ -238,6 +262,7 @@ router.get('/referral/all', async (req, res) => {
         const recordsWithRealTime = results.map(record => {
             const dbAmount = parseFloat(record.accumulatedReward || '0');
             const rate = parseFloat(record.currentTotalRate || '0.25'); // 가맹점/출석 보너스 합산된 실제 채굴률
+            const settledAmount = parseFloat(record.settledAmount || '0');
             let realTimeAmount = dbAmount;
 
             // 마이닝 중인 경우 미기록된 실시간 증분량 합산
@@ -249,6 +274,8 @@ router.get('/referral/all', async (req, res) => {
                 const increment = diffSeconds * (rate / 3600);
                 realTimeAmount = dbAmount + increment;
             }
+
+            realTimeAmount = realTimeAmount + settledAmount;
 
             return {
                 ...record,
@@ -304,6 +331,14 @@ router.get('/referral/:walletAddress', async (req, res) => {
                 }
             },
             {
+                $lookup: {
+                    from: "monthlysettlements",
+                    localField: "referralList.childWalletAddress",
+                    foreignField: "walletAddress",
+                    as: "settlements"
+                }
+            },
+            {
                 $project: {
                     referrerAddress: "$walletAddress",
                     referredAddress: "$referralList.childWalletAddress",
@@ -314,7 +349,16 @@ router.get('/referral/:walletAddress', async (req, res) => {
                     updatedAt: { $arrayElemAt: ["$miningInfo.updatedAt", 0] }, // [추가]
                     currentTotalRate: { $arrayElemAt: ["$miningInfo.currentTotalRate", 0] }, // [추가]
                     accumulatedReward: { $arrayElemAt: ["$miningInfo.accumulatedReward", 0] },
-                    accumulatedBonus: "$referralList.accumulatedBonus"
+                    accumulatedBonus: "$referralList.accumulatedBonus",
+                    settledAmount: {
+                        $sum: {
+                            $map: {
+                                input: "$settlements",
+                                as: "s",
+                                in: { $toDouble: { $ifNull: ["$$s.totalAmount", "0"] } }
+                            }
+                        }
+                    }
                 }
             },
             {
@@ -334,6 +378,7 @@ router.get('/referral/:walletAddress', async (req, res) => {
         const recordsWithRealTime = results.map(record => {
             const dbAmount = parseFloat(record.accumulatedReward || '0');
             const rate = parseFloat(record.currentTotalRate || '0.25');
+            const settledAmount = parseFloat(record.settledAmount || '0');
             let realTimeAmount = dbAmount;
 
             if (record.isMining) {
@@ -343,6 +388,8 @@ router.get('/referral/:walletAddress', async (req, res) => {
                 const increment = diffSeconds * (rate / 3600);
                 realTimeAmount = dbAmount + increment;
             }
+
+            realTimeAmount = realTimeAmount + settledAmount;
 
             return {
                 ...record,
@@ -473,6 +520,165 @@ router.get('/rewards/detail/:walletAddress', async (req, res) => {
     } catch (error) {
         console.error('Admin reward detail search error:', error);
         return res.status(500).json({ success: false, message: '상세 조회 중 서버 오류 발생' });
+    }
+});
+
+/**
+ * [공정 2-3] KYC 거버넌스 설정 업데이트 (Admin)
+ * POST /api/admin/kyc/config
+ */
+router.post('/kyc/config', async (req, res) => {
+    try {
+        const { isActive } = req.body;
+
+        if (typeof isActive !== 'boolean') {
+            return res.status(400).json({ success: false, message: 'Invalid status value' });
+        }
+
+        const config = await SystemConfig.findOneAndUpdate(
+            { key: 'kyc_active_status' },
+            { value: isActive },
+            { upsert: true, new: true }
+        );
+
+        console.log(`[Governance] KYC Status updated to: ${isActive}`);
+
+        return res.json({
+            success: true,
+            isActive: config.value
+        });
+    } catch (error) {
+        console.error('Failed to update KYC config:', error);
+        return res.status(500).json({ success: false, message: '거버넌스 설정 업데이트 실패' });
+    }
+});
+
+/**
+ * [공정 3-2] KYC 심사 대기 리스트 조회
+ * GET /api/admin/kyc/pending
+ */
+router.get('/kyc/pending', async (req, res) => {
+    try {
+        const pendingUsers = await User.find({ 'kycApplication.status': 'PENDING' })
+            .select('walletAddress kycApplication createdAt')
+            .sort({ 'kycApplication.submittedAt': 1 });
+
+        return res.json({
+            success: true,
+            data: pendingUsers
+        });
+    } catch (error) {
+        console.error('Failed to get pending KYC list:', error);
+        return res.status(500).json({ success: false, message: '목록 조회 실패' });
+    }
+});
+
+/**
+ * [공정 3-3] KYC 심사 결과 반영 (승인/반려)
+ * POST /api/admin/kyc/status
+ */
+router.post('/kyc/status', async (req, res) => {
+    try {
+        const { walletAddress, status, rejectionReason } = req.body;
+
+        if (!['APPROVED', 'REJECTED'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Invalid status' });
+        }
+
+        const updateData: any = {
+            'kycApplication.status': status,
+            'kycApplication.rejectionReason': status === 'REJECTED' ? (rejectionReason || 'No reason provided') : ''
+        };
+
+        if (status === 'APPROVED') {
+            updateData.isKycVerified = true;
+            updateData.kycVerifiedDate = new Date();
+        } else {
+            updateData.isKycVerified = false;
+        }
+
+        const user = await User.findOneAndUpdate(
+            { walletAddress },
+            { $set: updateData },
+            { new: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // [Phase 1: 상태 승격 브릿지] KYC 승인 시 기존 WAITING_KYC 데이터를 LOCKED로 승격 (사용자 정책 반영)
+        if (status === 'APPROVED') {
+            const promotionResult = await MonthlySettlement.updateMany(
+                { 
+                    walletAddress: { $regex: new RegExp("^" + walletAddress + "$", "i") },
+                    migrationStatus: 'WAITING_KYC'
+                },
+                { $set: { migrationStatus: 'LOCKED' } }
+            );
+            console.log(`[Promotion] ${promotionResult.modifiedCount} records promoted to LOCKED for ${walletAddress}`);
+        }
+
+        console.log(`[Admin] KYC Status for ${walletAddress} updated to ${status}`);
+
+        return res.json({
+            success: true,
+            message: `KYC status updated to ${status}`,
+            data: {
+                walletAddress,
+                status,
+                isKycVerified: user.isKycVerified
+            }
+        });
+    } catch (error) {
+        console.error('Failed to update KYC status:', error);
+        return res.status(500).json({ success: false, message: '상태 업데이트 실패' });
+    }
+});
+
+/**
+ * [Phase 2] 글로벌 마이그레이션 마스터 스위치 제어 (Admin)
+ * POST /api/admin/migration/config
+ */
+router.post('/migration/config', async (req, res) => {
+    try {
+        const { isActive } = req.body;
+        if (typeof isActive !== 'boolean') {
+            return res.status(400).json({ success: false, message: 'Invalid status value' });
+        }
+
+        const config = await SystemConfig.findOneAndUpdate(
+            { key: 'global_migration_status' },
+            { value: isActive },
+            { upsert: true, new: true }
+        );
+
+        console.log(`[Governance] Global Migration Status updated to: ${isActive}`);
+
+        return res.json({
+            success: true,
+            isActive: config.value
+        });
+    } catch (error) {
+        console.error('Failed to update migration config:', error);
+        return res.status(500).json({ success: false, message: '마이그레이션 설정 업데이트 실패' });
+    }
+});
+
+/**
+ * [Phase 2] 글로벌 마이그레이션 마스터 스위치 조회 (Admin)
+ * GET /api/admin/migration/config
+ */
+router.get('/migration/config', async (req, res) => {
+    try {
+        const config = await SystemConfig.findOne({ key: 'global_migration_status' });
+        return res.json({
+            success: true,
+            isActive: config ? config.value : false // 기본값 비활성(LOCKED)
+        });
+    } catch (error) {
+        console.error('Failed to get migration config:', error);
+        return res.json({ success: true, isActive: false });
     }
 });
 

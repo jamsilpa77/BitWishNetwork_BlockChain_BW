@@ -644,6 +644,32 @@
     box-shadow: 0 10px 25px rgba(77, 171, 247, 0.3);
 }
 
+/* ★ 개인채굴자 할당량 이중 행 확장 스타일 ★ */
+.miner-card-enhanced {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.6rem;
+    padding: 1.6rem 2.2rem !important;
+}
+
+.allocation-row, .payout-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.allocation-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 0.4rem 0;
+}
+
+.payout-gold {
+    color: #fab005 !important;
+    text-shadow: 0 0 12px rgba(250, 176, 5, 0.4);
+}
+
 .dashboard-scan-line {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -1314,5 +1340,286 @@
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
+    }
+}
+
+/* [4단계] 마이그레이션 전수 조사 전용 스타일 */
+.premium-migration-section.full-view {
+    min-height: 800px;
+    animation: expandView 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.migration-search-wrap {
+    margin: 25px 0;
+    display: flex;
+    justify-content: center;
+    animation: fadeInDown 0.5s ease-out;
+}
+
+.m-search-form {
+    display: flex;
+    width: 100%;
+    max-width: 650px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 6px 20px;
+    backdrop-filter: blur(20px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.m-search-form:focus-within {
+    border-color: #f3ba2f;
+    background: rgba(243, 186, 47, 0.05);
+    box-shadow: 0 0 25px rgba(243, 186, 47, 0.15);
+    transform: translateY(-2px);
+}
+
+.m-search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    padding: 14px;
+    font-size: 16px;
+    outline: none;
+    font-weight: 500;
+}
+
+.m-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.m-search-btn {
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+}
+
+.m-search-btn:hover {
+    transform: scale(1.2) rotate(10deg);
+    filter: drop-shadow(0 0 8px #f3ba2f);
+}
+
+/* 검색 결과 하이라이트 (Gold Neon Effect) */
+.search-highlight {
+    background: linear-gradient(90deg, rgba(243, 186, 47, 0.15), transparent) !important;
+    border-left: 5px solid #f3ba2f !important;
+    position: relative;
+    z-index: 10;
+}
+
+.search-tag {
+    background: linear-gradient(45deg, #f3ba2f, #fab005);
+    color: #000;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 3px 8px;
+    border-radius: 5px;
+    margin-right: 12px;
+    vertical-align: middle;
+    box-shadow: 0 0 15px rgba(243, 186, 47, 0.4);
+}
+
+.highlight-text {
+    color: #f3ba2f;
+    font-weight: 800;
+    text-shadow: 0 0 12px rgba(243, 186, 47, 0.6);
+}
+
+.search-badge {
+    background: rgba(243, 186, 47, 0.25) !important;
+    color: #f3ba2f !important;
+    border: 1px solid rgba(243, 186, 47, 0.5) !important;
+    box-shadow: 0 0 10px rgba(243, 186, 47, 0.2);
+}
+
+/* 페이징 내비게이션 */
+.migration-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    margin: 40px 0;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
+}
+
+.page-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #a0aec0;
+    padding: 12px 28px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.page-btn:not(:disabled):hover {
+    background: #f3ba2f;
+    color: #000;
+    border-color: #f3ba2f;
+    box-shadow: 0 10px 20px rgba(243, 186, 47, 0.3);
+    transform: translateY(-3px);
+}
+
+.page-btn:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+.page-indicator {
+    color: #f3ba2f;
+    font-weight: 800;
+    font-size: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    text-shadow: 0 0 10px rgba(243, 186, 47, 0.3);
+}
+
+.back-btn {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #ef4444 !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+}
+
+.back-btn:hover {
+    background: #ef4444 !important;
+    color: #fff !important;
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4) !important;
+}
+
+@keyframes expandView {
+    from { max-height: 500px; opacity: 0; }
+    to { max-height: 2000px; opacity: 1; }
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .m-search-form {
+        max-width: 100%;
+    }
+    .migration-pagination {
+        gap: 15px;
+    }
+    .page-btn {
+        padding: 10px 15px;
+        font-size: 13px;
+    }
+}
+
+/* [4단계] 전용 전수 조사 풀스크린 뷰 전용 스타일 */
+.dedicated-investigation-view {
+    padding: 40px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: 85vh;
+}
+
+.investigation-header {
+    margin-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.back-to-main-btn {
+    align-self: flex-start;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f3ba2f;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+.back-to-main-btn:hover {
+    background: #f3ba2f;
+    color: #000;
+    box-shadow: 0 0 20px rgba(243, 186, 47, 0.3);
+    transform: translateX(-5px);
+}
+
+.investigation-title-area h1 {
+    font-size: 32px;
+    color: #fff;
+    margin-bottom: 8px;
+    background: linear-gradient(90deg, #fff, #f3ba2f);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.investigation-title-area p {
+    color: #9ca3af;
+    font-size: 16px;
+}
+
+.investigation-search-bar {
+    margin-bottom: 30px;
+}
+
+.m-search-form.large {
+    max-width: 100%;
+    padding: 10px 25px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.m-search-form.large .m-search-input {
+    font-size: 18px;
+}
+
+.investigation-content {
+    border-radius: 24px;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.investigation-table {
+    margin: 0;
+    border-collapse: collapse;
+}
+
+.investigation-table thead th {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 20px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.investigation-table tbody td {
+    padding: 18px 20px;
+    font-size: 15px;
+}
+
+.investigation-table .addr-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .dedicated-investigation-view {
+        padding: 20px 10px;
+    }
+    .investigation-title-area h1 {
+        font-size: 24px;
     }
 }

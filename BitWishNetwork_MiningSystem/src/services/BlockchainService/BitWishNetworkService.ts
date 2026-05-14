@@ -193,8 +193,36 @@ export class BitWishNetworkService {
         nonce: '0',
         difficulty: 1,
         miner: 'BitWishNetwork-Genesis',
-        transactions: [],
-        transactionCount: 0,
+        transactions: [
+          {
+            id: 'genesis-tx-001',
+            from: '0000000000000000000000000000000000000000',
+            to: 'BitWish-Miner-Pool',
+            amount: '13650000000.00000000',
+            timestamp: new Date('2024-01-01T00:00:00Z'),
+            type: 'GENESIS_MINT',
+            status: 'CONFIRMED'
+          },
+          {
+            id: 'genesis-tx-002',
+            from: '0000000000000000000000000000000000000000',
+            to: 'BitWish-Partner-Pool',
+            amount: '3150000000.00000000',
+            timestamp: new Date('2024-01-01T00:00:00Z'),
+            type: 'GENESIS_MINT',
+            status: 'CONFIRMED'
+          },
+          {
+            id: 'genesis-tx-003',
+            from: '0000000000000000000000000000000000000000',
+            to: 'BitWish-Foundation',
+            amount: '4200000000.00000000',
+            timestamp: new Date('2024-01-01T00:00:00Z'),
+            type: 'GENESIS_MINT',
+            status: 'CONFIRMED'
+          }
+        ] as any,
+        transactionCount: 3,
         gasUsed: 0,
         gasLimit: 1000000,
         createdAt: new Date()

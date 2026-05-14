@@ -67,6 +67,9 @@ const HomePage: React.FC = () => {
         currentIssued: Decimal;
         remainingSupply: Decimal;
         issuanceRate: string;
+        totalSettlementAmount?: string; // [Phase 3 추가]
+        totalLockedAmount?: string;     // [Phase 4 추가]
+        totalReleasedAmount?: string;   // [Phase 4 추가]
     }
 
     // [Task B] 전역 통계 데이터 (Decimal 정밀도 유지 및 실시간 이동용)
@@ -75,7 +78,10 @@ const HomePage: React.FC = () => {
         totalBlocks: 0,
         currentIssued: new Decimal(0),
         remainingSupply: new Decimal(21000000000),
-        issuanceRate: '0.00'
+        issuanceRate: '0.00',
+        totalSettlementAmount: '0.00000000', // [Phase 3 추가]
+        totalLockedAmount: '0.00000000',     // [Phase 4 추가]
+        totalReleasedAmount: '0.00000000'    // [Phase 4 추가]
     });
 
     // Modals State
@@ -442,6 +448,50 @@ const HomePage: React.FC = () => {
     // 애니메이션 값 적용 (Decimal 객체를 숫자로 변환하여 전달)
     const animatedIssued = useCountUp(globalStats.currentIssued.toNumber());
     const animatedRemaining = useCountUp(globalStats.remainingSupply.toNumber());
+    const animatedLocked = useCountUp(globalStats.totalLockedAmount || '0'); // [Phase 4 분리]
+    const animatedReleased = useCountUp(globalStats.totalReleasedAmount || '0'); // [Phase 4 분리]
+
+    // [Phase 3] 다국어 직접 지원 (외부 파일 간섭 방지)
+    const getSettlementTitle = () => {
+        switch (currentLanguage) {
+            case 'en': return 'Global Settlement Ledger';
+            case 'ja': return 'グローバル決済元帳';
+            case 'zh': return '全球结算总账';
+            case 'ko':
+            default: return '월별 확정 정산 잠금 수량';
+        }
+    };
+    
+    const getSettlementDesc = () => {
+        switch (currentLanguage) {
+            case 'en': return 'Total verified and safely locked settlement amount';
+            case 'ja': return '検証済みで安全にロックされた総決済額';
+            case 'zh': return '经验证并安全锁定的总结算金额';
+            case 'ko':
+            default: return '검증 완료 및 안전하게 잠금 보관된 총 정산액';
+        }
+    };
+
+    // [Phase 4] 해제된 자산 타이틀 및 설명 다국어 직접 지원
+    const getReleasedTitle = () => {
+        switch (currentLanguage) {
+            case 'en': return 'KYC Verified & Released';
+            case 'ja': return 'KYC 承認および支給完了';
+            case 'zh': return 'KYC 认证并已发放';
+            case 'ko':
+            default: return 'KYC 승인 및 지급 완료 자산';
+        }
+    };
+
+    const getReleasedDesc = () => {
+        switch (currentLanguage) {
+            case 'en': return 'Actual BW coins fully released and distributed to wallets';
+            case 'ja': return '実際のBWコインが完全に解放され、ウォレットに配布されました';
+            case 'zh': return '实际 BW 代币已完全释放并分配到钱包';
+            case 'ko':
+            default: return '실제 지갑으로 지급이 완료된 사용 가능 BW 코인입니다';
+        }
+    };
 
     return (
         <div className={`home-page ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
@@ -468,8 +518,8 @@ const HomePage: React.FC = () => {
                         <button className="nav-button hover-button" onClick={() => window.location.href = '/community'}>
                             {getTranslation('navigation.community')}
                         </button>
-                        <button className="nav-button hover-button" onClick={() => window.location.href = '/dashboard'}>
-                            {getTranslation('navigation.dashboard')}
+                        <button className="nav-button hover-button" onClick={() => window.location.href = '/ranking'}>
+                            {getTranslation('navigation.rankingBoard')}
                         </button>
                         <div className="nav-item dropdown">
                             <button className="nav-button hover-button">
@@ -479,9 +529,6 @@ const HomePage: React.FC = () => {
                                 <button onClick={() => window.location.href = '/roadmap'}>{getTranslation('navigation.roadmap')}</button>
                             </div>
                         </div>
-                        <button className="nav-button hover-button" onClick={() => window.location.href = '/node'}>
-                            {getTranslation('navigation.node')}
-                        </button>
                     </nav>
 
                     {/* 오른쪽 컨트롤 버튼들 */}
@@ -535,6 +582,54 @@ const HomePage: React.FC = () => {
                                 hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
                             })}
                         </p>
+                    </div>
+
+                    {/* [Phase 4] KYC 승인 연동 자산 유동화 증명 듀얼 UI */}
+                    <div className="premium-settlement-ledger">
+                        <div className="ledger-glass-container dual-ledger">
+                            {/* 좌측: 보존된 자산 (LOCKED) */}
+                            <div className="ledger-side locked-side">
+                                <div className="ledger-icon-wrapper">
+                                    <span className="ledger-icon">🔒</span>
+                                </div>
+                                <div className="ledger-content">
+                                    <h2 className="ledger-title">{getSettlementTitle()}</h2>
+                                    {(() => {
+                                        const { integerPart, decimalPart } = splitNumber(animatedLocked);
+                                        return (
+                                            <div className="ledger-value-wrapper">
+                                                <span className="ledger-value-integer">{integerPart}</span>
+                                                <span className="ledger-value-decimal">{decimalPart} BW</span>
+                                            </div>
+                                        );
+                                    })()}
+                                    <p className="ledger-description">{getSettlementDesc()}</p>
+                                </div>
+                            </div>
+                            
+                            {/* 중앙: 네온 세로 구분선 */}
+                            <div className="ledger-divider"></div>
+
+                            {/* 우측: 지급 완료된 자산 (RELEASED) */}
+                            <div className="ledger-side released-side">
+                                <div className="ledger-icon-wrapper released-icon">
+                                    <span className="ledger-icon">🔓</span>
+                                </div>
+                                <div className="ledger-content">
+                                    <h2 className="ledger-title">{getReleasedTitle()}</h2>
+                                    {(() => {
+                                        const { integerPart, decimalPart } = splitNumber(animatedReleased);
+                                        return (
+                                            <div className="ledger-value-wrapper">
+                                                <span className="ledger-value-integer">{integerPart}</span>
+                                                <span className="ledger-value-decimal">{decimalPart} BW</span>
+                                            </div>
+                                        );
+                                    })()}
+                                    <p className="ledger-description">{getReleasedDesc()}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="status-cards-grid">

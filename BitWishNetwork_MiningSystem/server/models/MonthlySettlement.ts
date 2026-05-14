@@ -45,8 +45,8 @@ const MonthlySettlementSchema: Schema = new Schema({
 
     migrationStatus: {
         type: String,
-        enum: ['LOCKED', 'UNLOCKED', 'MIGRATED'],
-        default: 'LOCKED'
+        enum: ['LOCKED', 'UNLOCKED', 'MIGRATED', 'WAITING_KYC'],
+        default: 'WAITING_KYC'
     },
     migrationDate: { type: Date, default: null }
 }, {

@@ -52,13 +52,54 @@ export class LanguageManager {
         mainnet: 'BW 메인넷',
         explorer: 'BW 블록 익스플로러',
         community: 'BW 커뮤니티',
-        dashboard: 'BW 대시보드',
+        dashboard: 'BW 랭킹 게시판',
+        rankingBoard: 'BW 랭킹 게시판',
         whitepaper: 'BW 백서',
         roadmap: 'BW 로드맵',
         node: 'BW 노드',
         wallet: '지갑',
         language: '언어',
         theme: '테마'
+      },
+      // KYC 관련
+      kyc: {
+        verification_title: '본인 인증 (KYC)',
+        upload_instruction: '신분증 정면 사진을 업로드하세요',
+        full_name_label: '성명',
+        full_name_placeholder: '실명을 입력하세요',
+        country_label: '국가',
+        country_placeholder: '국가를 입력하세요',
+        phone_label: '연락처',
+        phone_placeholder: 'ex) 010-1234-5678',
+        address_label: '거주지 주소',
+        city_placeholder: '도시',
+        road_address_placeholder: '도로명 주소',
+        detail_address_placeholder: '상세 주소',
+        id_upload_label: '신분증 이미지 업로드',
+        terms_verify: '블록체인 마이그레이션을 위한 정보 제공에 동의합니다.',
+        cancel_btn: '취소',
+        submit_btn: '승인 신청하기',
+        submission_success: 'KYC 신청이 완료되었습니다. 관리자 심사 후 승인됩니다.',
+        submission_failed: '신청 중 오류가 발생했습니다. 다시 시도해 주세요.',
+        submitting: '처리 중...',
+        required_fields_error: '모든 필드를 채우고 약관에 동의해 주세요.',
+        lockdown_title: 'KYC 신청 기간이 아닙니다',
+        lockdown_message: '현재 KYC신청 기간이 아닙니다. KYC신청 진행은 공지로 알려 드립니다.',
+        lockdown_close_btn: '확인',
+        review_list_title: 'KYC 심사 대기 리스트',
+        approve_action: '승인 (APPROVE)',
+        reject_action: '반려 (REJECT)',
+        rejection_reason_title: '반려 사유 입력',
+        rejection_placeholder: '유저에게 전달될 반려 사유를 입력하세요 (예: 사진 불분명, 정보 불일치 등)',
+        process_success: '심사 처리가 완료되었습니다.',
+        input_rejection_reason: '반려 사유를 입력해 주세요.',
+        notice_title: '🛡️ KYC 공식 공지 및 접수 안내',
+        notice_content: '빗위시 네트워크 메인넷 통합 구축을 위한 KYC 서류 접수가 공식적으로 시작되었습니다. 아래 양식에 맞춰 실명과 신분증 정보를 정확히 입력해 주시기 바랍니다. (접수 기간: 2026.04.27 ~ 상시)',
+        birth_date_label: '생년월일',
+        birth_date_placeholder: 'YYYY-MM-DD (예: 1990-01-01)',
+        migration_master_title: 'BW 마이그레이션 글로벌 개시',
+        migration_master_desc_active: '현재 전 서버 마이그레이션 및 익스플로러 노출이 활성화된 상태입니다.',
+        migration_master_desc_inactive: '현재 마이그레이션이 비활성화되었습니다. 모든 카운트다운과 노출이 차단됩니다.'
       },
       // 익스플로러 관련
       explorer: {
@@ -204,13 +245,28 @@ export class LanguageManager {
           actions: {
             receive: '송금받기',
             send: '송금하기',
-            otp: 'OTP 설정',
-            kyc: 'KYC 신청',
+            kycApplyNow: '🛡️ KYC 인증 및 마운틴 뱅킹 신청',
+            otpGuide: 'OTP 설정을 마치면 송금받기 송금하기 가 활성화 됩니다. 단 KYC인증 통과되지 않으면 거래가 불가능합니다. KYC통과 후 OTP설정 하시기 바랍니다.',
+            messages: {
+                otpRequired: 'OTP 설정을 먼저 완료해주세요.',
+                kycNotPeriod: 'KYC신청 기간이 아닙니다.',
+                kycApprovedCongrats: 'KYC승인을 축하 드립니다. OTP설정으로 이동합니다.'
+            },
+            otpSetup: {
+                title: 'OTP 설정',
+                scanDesc: 'Google Authenticator 앱에서 QR 코드를 스캔하세요.',
+                inputLabel: 'OTP 6자리 코드',
+                confirm: '확인',
+                cancel: '취소'
+            },
+            kycSuccess: 'KYC통과를 축하드립니다. 이제 구글 OTP설정이 가능합니다.',
             startMining: '마이닝 시작',
             resetPassword: '2차 비번 초기화'
           },
           messages: {
-            miningNotConnected: '마이닝 기능이 연결되지 않았습니다.'
+            miningNotConnected: '마이닝 기능이 연결되지 않았습니다.',
+            otpSuccess: 'OTP가 설정되었습니다.',
+            otpFailed: 'OTP 설정에 실패했습니다.'
           },
           footer: {
             close: '닫기'
@@ -241,8 +297,38 @@ export class LanguageManager {
               status: '상태'
             },
             statusMining: '채굴중',
+            statusLocked: '잠금',
+            statusUnlocked: '잠금 해제',
+            statusWaitingKyc: 'KYC 대기',
             statusCompleted: '채굴마감',
-            guide: '💡 매월 1일 00:00:00에 전월 채굴량이 확정 목록에 추가됩니다.'
+          }
+        },
+        p2p: {
+          receive: {
+            title: '송금 받기',
+            addressLabel: '나의 지갑 주소 (BW)',
+            copyBtn: '주소 복사'
+          },
+          send: {
+            title: '송금 하기',
+            addressLabel: '받는 사람 주소',
+            addressPlaceholder: '상대방의 BW 주소를 입력하세요',
+            amountLabel: '송금 금액',
+            amountPlaceholder: '0.00',
+            otpLabel: 'Google OTP 6자리',
+            otpPlaceholder: 'OTP 입력 하세요',
+            feeLabel: '네트워크 수수료 (0.01%)',
+            cautionTitle: '주의사항',
+            cautionText: '• 송금된 코인은 취소가 불가능합니다.\n• 주소를 반드시 다시 한번 확인해주세요.',
+            confirmBtn: '송금하기',
+            cancelBtn: '취소',
+            messages: {
+              invalidAmount: '유효하지 않은 금액입니다.',
+              insufficientBalance: '사용 가능 잔액이 부족합니다. (대기 중인 자산 제외)',
+              transferReady: '송금 가능 금액 확인 완료',
+              transferSuccess: '송금이 완료되었습니다.',
+              transferFailed: '송금에 실패했습니다.'
+            }
           }
         }
       },
@@ -452,6 +538,24 @@ export class LanguageManager {
         cannotCancel: '가맹점 등록을 취소할 수 없습니다.',
         cancelled: '가맹점 등록이 취소되었습니다.',
         cancelError: '가맹점 등록 취소 중 오류가 발생했습니다.'
+      },
+      // 랭킹 관련
+      ranking: {
+        title: 'BW 실시간 랭킹 게시판',
+        subtitle: '비트위시 네트워크 전역 유저 실시간 채굴 순위',
+        rank: '순위',
+        address: '지갑 주소',
+        amount: '총 채굴량',
+        searchPlaceholder: '지갑 주소를 입력하여 순위를 검색하세요',
+        myRankTitle: '나의 랭킹 정보',
+        notRanked: '순위 권외',
+        loading: '랭킹 데이터를 동기화 중입니다...',
+        noData: '데이터가 없습니다.',
+        top10Title: 'TOP 10 프리미엄 랭커',
+        globalSearch: '전역 유저 등수 검색',
+        kycApproved: 'KYC 승인',
+        kycWaiting: 'KYC 대기',
+        kycNotApplied: '미인증'
       }
     });
 
@@ -462,13 +566,54 @@ export class LanguageManager {
         mainnet: 'BW Mainnet',
         explorer: 'BW Block Explorer',
         community: 'BW Community',
-        dashboard: 'BW Dashboard',
+        dashboard: 'BW Ranking Board',
+        rankingBoard: 'BW Ranking Board',
         whitepaper: 'BW Whitepaper',
         roadmap: 'BW Roadmap',
         node: 'BW Node',
         wallet: 'Wallet',
         language: 'Language',
         theme: 'Theme'
+      },
+      // KYC Related
+      kyc: {
+        verification_title: 'Identity Verification (KYC)',
+        upload_instruction: 'Please upload a photo of the front of your ID',
+        full_name_label: 'Full Name',
+        full_name_placeholder: 'Enter your legal name',
+        country_label: 'Country',
+        country_placeholder: 'Enter your country',
+        phone_label: 'Phone Number',
+        phone_placeholder: 'ex) +82 10-1234-5678',
+        address_label: 'Residential Address',
+        city_placeholder: 'City',
+        road_address_placeholder: 'Road Address',
+        detail_address_placeholder: 'Detail Address',
+        id_upload_label: 'ID Card Image Upload',
+        terms_verify: 'I agree to provide information for blockchain migration.',
+        cancel_btn: 'Cancel',
+        submit_btn: 'Apply for Approval',
+        submission_success: 'KYC application complete. It will be approved after review.',
+        submission_failed: 'An error occurred during application. Please try again.',
+        submitting: 'Processing...',
+        required_fields_error: 'Please fill in all fields and agree to the terms.',
+        lockdown_title: 'It is not a KYC application period',
+        lockdown_message: 'Currently, it is not a KYC application period. KYC application progress will be notified through announcements.',
+        lockdown_close_btn: 'Confirm',
+        review_list_title: 'KYC Review Waiting List',
+        approve_action: 'APPROVE',
+        reject_action: 'REJECT',
+        rejection_reason_title: 'Enter Rejection Reason',
+        rejection_placeholder: 'Enter the reason for rejection to be sent to the user (e.g., photo unclear, info mismatch, etc.)',
+        process_success: 'Review processing has been completed.',
+        input_rejection_reason: 'Please enter the reason for rejection.',
+        notice_title: '🛡️ Official KYC Notice & Submission Guide',
+        notice_content: 'KYC document submission for BitWish Network Mainnet integration has officially started. Please enter your real name and ID information accurately in the form below. (Submission Period: 2026.04.27 ~ Ongoing)',
+        birth_date_label: 'Date of Birth',
+        birth_date_placeholder: 'YYYY-MM-DD (e.g., 1990-01-01)',
+        migration_master_title: 'Global BW Migration Launch',
+        migration_master_desc_active: 'Migration and explorer exposure are currently active across all servers.',
+        migration_master_desc_inactive: 'Migration is currently deactivated. All countdowns and exposures are blocked.'
       },
       // Explorer 관련
       explorer: {
@@ -705,11 +850,24 @@ export class LanguageManager {
             note: '📌 Migrated to Available Balance 15 days after the referred user passes KYC.',
             myCode: 'Referral Code:'
           },
-          actions: {
+            actions: {
             receive: 'Receive',
             send: 'Send',
-            otp: 'OTP Settings',
-            kyc: 'KYC Application',
+            kycApplyNow: '🛡️ KYC & Mountain Banking',
+            otpGuide: 'After setting up OTP, Deposit and Withdraw will be activated. However, transactions are not possible without KYC approval. Please set up OTP after passing KYC.',
+            messages: {
+                otpRequired: 'Please complete OTP setup first.',
+                kycNotPeriod: 'It is not a KYC application period.',
+                kycApprovedCongrats: 'Congratulations on KYC approval. Moving to OTP setup.'
+            },
+            otpSetup: {
+                title: 'OTP Setup',
+                scanDesc: 'Scan the QR code in your Google Authenticator app.',
+                inputLabel: '6-digit OTP Code',
+                confirm: 'Confirm',
+                cancel: 'Cancel'
+            },
+            kycSuccess: 'Congratulations on passing KYC. You can now set up Google OTP.',
             kycDisabled: 'KYC Application (Disabled)',
             startMining: 'Start Mining',
             resetPassword: 'Reset 2nd Password'
@@ -747,48 +905,42 @@ export class LanguageManager {
               status: 'Status'
             },
             statusMining: 'Mining',
-            statusCompleted: 'Completed',
+            statusLocked: 'LOCKED',
+            statusUnlocked: 'Unlocked',
+            statusWaitingKyc: 'WAITING KYC',
+            statusCompleted: 'Mining Ended',
             guide: '💡 On the 1st of every month at 00:00:00, the previous month\'s mining amount is added to the finalized list.'
+          }
+        },
+        p2p: {
+          receive: {
+            title: 'Receive Tokens',
+            addressLabel: 'My Wallet Address (BW)',
+            copyBtn: 'Copy Address'
           },
-          walletAuth: {
-            title: 'My Wallet Access',
-            subtitle: 'Enter seed phrase for security',
-            desc: 'Please enter the 24-word seed phrase you backed up.',
-            placeholder: 'Enter seed phrase here...',
-            verify: 'Open Wallet',
-            error: 'Invalid seed phrase.'
-          },
-          miningAuth: {
-            title: 'BitWish Wallet Authentication',
-            subtitle: 'Authenticate to access Mining Page',
-            inputTitle: 'Enter BitWish Wallet Info',
-            inputDesc: 'Enter your BitWish wallet address and password',
-            addressLabel: 'BitWish Wallet Address',
-            addressPlaceholder: 'Enter BW + 40-digit hex address (Total 42 chars)',
-            passwordLabel: 'Password',
-            passwordPlaceholder: 'Enter wallet password',
-            setSecondPassword: 'Set 2nd Password',
-            loginBtn: 'BitWish Wallet Auth',
-            loginSuccess: 'Authenticated successfully.',
-            loginFail: 'Wallet address or password does not match.'
-          },
-          secondPassword: {
-            title: 'Set BitWish 2nd Password',
-            desc: 'Enhance security by setting a BitWish wallet address and a strong password.',
-            newPasswordPlaceholder: 'Enter new password',
-            confirmPasswordLabel: 'Confirm Password',
-            confirmPasswordPlaceholder: 'Re-enter password',
-            securityNote: 'Security Note:\n• Password encrypted with PBKDF2 + Salting\n• Enhanced security with 100,000 iterations\n• Password is not stored on server',
-            cancel: 'Cancel',
-            confirm: 'Confirm',
-            success: '2nd password has been set.',
-            mismatch: 'Passwords do not match.',
-            invalidAddress: 'Invalid wallet address.',
-            addressNotFound: 'Wallet info not found. Please create a wallet first.'
+          send: {
+            title: 'Send Tokens',
+            addressLabel: 'Recipient Address',
+            addressPlaceholder: 'Enter recipient\'s BW address',
+            amountLabel: 'Transfer Amount',
+            amountPlaceholder: '0.00',
+            otpLabel: 'Google OTP 6-digits',
+            otpPlaceholder: 'Enter OTP',
+            feeLabel: 'Network Fee (0.01%)',
+            cautionTitle: 'Caution',
+            cautionText: '• Transferred coins cannot be cancelled.\n• Please double-check the address.',
+            confirmBtn: 'Send',
+            cancelBtn: 'Cancel',
+            messages: {
+              invalidAmount: 'Invalid amount.',
+              insufficientBalance: 'Insufficient available balance. (Locked assets excluded)',
+              transferReady: 'Amount validated.',
+              transferSuccess: 'Transfer completed successfully.',
+              transferFailed: 'Transfer failed.'
+            }
           }
         }
       },
-      // 출석 보너스 관련
       attendance: {
         title: 'Attendance Bonus',
         subtitle: 'Set Consecutive Attendance Days',
@@ -921,6 +1073,24 @@ export class LanguageManager {
         reset: 'Referral bonus has been reset.',
         resetError: 'Error occurred while resetting referral bonus.'
       },
+      // Ranking Related
+      ranking: {
+        title: 'BW Real-time Ranking Board',
+        subtitle: 'Real-time mining rankings of users across the BitWish Network',
+        rank: 'Rank',
+        address: 'Wallet Address',
+        amount: 'Total Amount',
+        searchPlaceholder: 'Enter wallet address to search rank',
+        myRankTitle: 'My Ranking Info',
+        notRanked: 'Out of Rank',
+        loading: 'Syncing ranking data...',
+        noData: 'No data found.',
+        top10Title: 'TOP 10 Premium Rankers',
+        globalSearch: 'Global User Rank Search',
+        kycApproved: 'KYC Approved',
+        kycWaiting: 'WAITING KYC',
+        kycNotApplied: 'Not Applied'
+      },
       // 가맹점 보너스 관련
       partner: {
         alreadyRegistered: 'Already registered as partner.',
@@ -950,13 +1120,48 @@ export class LanguageManager {
         mainnet: 'BWメインネット',
         explorer: 'BWブロックエクスプローラー',
         community: 'BWコミュニティ',
-        dashboard: 'BWダッシュボード',
+        rankingBoard: 'BWランキング掲示板',
         whitepaper: 'BWホワイトペーパー',
         roadmap: 'BWロードマップ',
         node: 'BWノード',
         wallet: 'ウォレット',
         language: '言語',
         theme: 'テーマ'
+      },
+      // KYC関連
+      kyc: {
+        verification_title: '本人認証 (KYC)',
+        upload_instruction: '身分証明書の正面写真をアップロードしてください',
+        full_name_label: '氏名',
+        full_name_placeholder: '実名を入力してください',
+        country_label: '国',
+        country_placeholder: '国を入力してください',
+        phone_label: '連絡先',
+        phone_placeholder: '例) 010-1234-5678',
+        address_label: '居住地住所',
+        city_placeholder: '都市',
+        road_address_placeholder: '道路名住所',
+        detail_address_placeholder: '詳細住所',
+        id_upload_label: '身分증イメージアップロード',
+        terms_verify: 'ブロックチェーン移行のための情報提供に同意します。',
+        cancel_btn: 'キャンセル',
+        submit_btn: '承認申請する',
+        submission_success: 'KYC申請が完了しました。管理者審査後に承認されます。',
+        submission_failed: '申請中にエラーが発生しました。もう一度お試しください。',
+        submitting: '処理中...',
+        required_fields_error: 'すべてのフィールドを入力し、規約に同意してください。',
+        lockdown_title: 'KYC申請期間ではありません',
+        lockdown_message: '現在、KYC申請期間ではありません。KYC申請の進捗は通知でお知らせします。',
+        lockdown_close_btn: '確認',
+        review_list_title: 'KYC審査待機リスト',
+        approve_action: '承認 (APPROVE)',
+        reject_action: '却下 (REJECT)',
+        rejection_reason_title: '却下理由入力',
+        rejection_placeholder: 'ユーザーに伝達される却下理由を入力してください',
+        process_success: '審査処理が完了しました。',
+        input_rejection_reason: '却下理由を入力してください。',
+        notice_title: '🛡️ KYC公式告知および申請案内',
+        notice_content: 'BitWish Networkメインネット統合構築のためのKYC書類受付が公式に開始されました。以下のフォームに従って実名と身分証明書情報を正確に入力してください。（受付期間：2026.04.27〜常時）'
       },
       // エクスプローラー関連
       explorer: {
@@ -980,7 +1185,7 @@ export class LanguageManager {
         totalCirculating: 'BWコイン総発行量',
         foundationAllocation: '財団/運営チーム割当量',
         ecosystemAllocation: 'エコシステム割当量 (80%)',
-        minerAllocation: '個人マイ너割当量 (65%)',
+        minerAllocation: '個人マイナー割当量 (65%)',
         partnerAllocation: 'パートナー/加盟店/事業者割当量 (15%)',
         createdWallets: 'ウォレット作成数',
         ecosystemFundTitle: 'ネットワークエコシステム累積基金',
@@ -1177,8 +1382,20 @@ export class LanguageManager {
           actions: {
             receive: '受け取る',
             send: '送る',
-            otp: 'OTP設定',
-            kyc: 'KYC申請',
+            kycApplyNow: '🛡️ KYC認証とマウンテンバンキング申請',
+            otpGuide: 'OTP設定を完了すると、送金受け取りと送金が有効になります。ただし、KYC認証が完了していないと取引はできません。KYC通過後にOTP設定を行ってください。',
+            messages: {
+                otpRequired: 'まずOTP設定を完了してください。',
+                kycNotPeriod: 'KYC申請期間ではありません。',
+                kycApprovedCongrats: 'KYC承認おめでとうございます。OTP設定に移動します。'
+            },
+            otpSetup: {
+                title: 'OTP 設定',
+                scanDesc: 'Google AuthenticatorアプリでQRコードをスキャンしてください。',
+                inputLabel: 'OTP 6桁のコード',
+                confirm: '確認',
+                cancel: 'キャンセル'
+            },
             kycDisabled: 'KYC申請 (無効)',
             startMining: 'マイニング開始',
             resetPassword: '2次パスワード初期化'
@@ -1196,7 +1413,7 @@ export class LanguageManager {
               bonus2Percent: '支給ボーナス(2%)',
               kycStatus: 'KYC状況'
             },
-            noHistory: '加入履歴가ありません。',
+            noHistory: '加入履歴がありません。',
             guide: '💡 ご自身の紹介コードで加入者が発生すると、即座に履歴に登録されます。',
             statusPaid: '支給',
             statusUnpaid: '未支給',
@@ -1213,8 +1430,39 @@ export class LanguageManager {
               status: '状態'
             },
             statusMining: 'マイニング中',
+            statusLocked: 'ロック',
+            statusUnlocked: 'ロック解除',
+            statusWaitingKyc: 'KYC待機',
             statusCompleted: 'マイニング終了',
             guide: '💡 毎月1日00:00:00に、前月のマイニング量が確定リストに追加されます。'
+          }
+        },
+        p2p: {
+          receive: {
+            title: '送金受け取り',
+            addressLabel: '私のウォレットアドレス (BW)',
+            copyBtn: 'アドレスをコピー'
+          },
+          send: {
+            title: '送金する',
+            addressLabel: '受取人アドレス',
+            addressPlaceholder: '相手のBWアドレスを入力してください',
+            amountLabel: '送金金額',
+            amountPlaceholder: '0.00',
+            otpLabel: 'Google OTP 6桁',
+            otpPlaceholder: 'OTPを入力してください',
+            feeLabel: 'ネットワーク手数料 (0.01%)',
+            cautionTitle: '注意事項',
+            cautionText: '• 送金されたコインはキャンセルできません。\n• アドレスを必ずもう一度確認してください。',
+            confirmBtn: '送金する',
+            cancelBtn: 'キャンセル',
+            messages: {
+              invalidAmount: '無効な金額です',
+              insufficientBalance: '使用可能残高が不足しています。（待機中の資産を除く）',
+              transferReady: '送金可能金額の確認完了',
+              transferSuccess: '送金が完了しました。',
+              transferFailed: '送金に失敗しました。'
+            }
           }
         }
       },
@@ -1351,6 +1599,24 @@ export class LanguageManager {
         reset: '紹介ボーナスがリセットされました。',
         resetError: '紹介ボーナスリセット中にエラーが発生しました。'
       },
+      // 랭킹 관련 (일본어)
+      ranking: {
+        title: 'BWリアルタイムランキング掲示板',
+        subtitle: 'BitWish Network全ユーザーのリアルタイム採掘ランキング',
+        rank: '順位',
+        address: 'ウォレットアドレス',
+        amount: '総採掘量',
+        searchPlaceholder: 'ウォレットアドレスを入力して順位を検索',
+        myRankTitle: 'マイランキング情報',
+        notRanked: '圏外',
+        loading: 'ランキングデータを同期中...',
+        noData: '데이터가 없습니다.',
+        top10Title: 'TOP 10 プレミアムランカー',
+        globalSearch: '全ユーザー順位検索',
+        kycApproved: 'KYC 承認',
+        kycWaiting: 'KYC 待機',
+        kycNotApplied: '未認証'
+      },
       // 가맹점 보너스 관련
       partner: {
         alreadyRegistered: '既にパートナーとして登録されています。',
@@ -1386,8 +1652,7 @@ export class LanguageManager {
         addressError: '無効なウォレットアドレスです。',
         backToAddress: 'アドレス再入力',
         cacheGuide: '⚠️ キャッシュ削除または機体変更後の初回アクセスですか？「マイウォレット」メニューで一度だけ認証を行ってください。自動的にセキュリティ設定が復旧され、以降は単語入力だけで即時入場が可能になります。'
-      },
-
+      }
     });
 
     // 중국어 데이터
@@ -1397,13 +1662,51 @@ export class LanguageManager {
         mainnet: 'BW主网',
         explorer: 'BW区块浏览器',
         community: 'BW社区',
-        dashboard: 'BW仪表板',
+        dashboard: 'BW 排名榜',
+        rankingBoard: 'BW 排名榜',
         whitepaper: 'BW白皮书',
         roadmap: 'BW路线图',
         node: 'BW节点',
         wallet: '钱包',
         language: '语言',
         theme: '主题'
+      },
+      // KYC相关
+      kyc: {
+        verification_title: '身份认证 (KYC)',
+        upload_instruction: '请上传身份证正面照片',
+        full_name_label: '姓名',
+        full_name_placeholder: '请输入您的真实姓名',
+        country_label: '国家',
+        country_placeholder: '请输入您的国家',
+        phone_label: '联系方式',
+        phone_placeholder: '例) 010-1234-5678',
+        address_label: '居住地址',
+        city_placeholder: '城市',
+        road_address_placeholder: '路名地址',
+        detail_address_placeholder: '详细地址',
+        id_upload_label: '身份证图片上传',
+        terms_verify: '我同意为区块链迁移提供相关信息。',
+        cancel_btn: '取消',
+        submit_btn: '申请批准',
+        submission_success: 'KYC申请已完成。管理员审核后将予以批准。',
+        submission_failed: '申请过程中发生错误。请重试。',
+        submitting: '处理中...',
+        required_fields_error: '请填写所有字段并同意条款。',
+        lockdown_title: '不是 KYC 申请期',
+        lockdown_message: '目前不是 KYC 申请期。KYC 申请进展将通过公告通知。',
+        lockdown_close_btn: '确认',
+        review_list_title: 'KYC审查待办列表',
+        approve_action: '批准 (APPROVE)',
+        reject_action: '驳回 (REJECT)',
+        rejection_reason_title: '输入驳回原因',
+        rejection_placeholder: '请输入发送给用户的驳回原因',
+        process_success: '审查处理已完成。',
+        input_rejection_reason: '请输入驳回原因。',
+        notice_title: '🛡️ KYC官方公告及提交指南',
+        notice_content: 'BitWish Network主网整合建设的KYC文件提交已正式开始。请按照以下表格准确输入您的真实姓名和身份证信息。（提交期：2026.04.27〜常态）',
+        birth_date_label: '出生日期',
+        birth_date_placeholder: 'YYYY-MM-DD (例如: 1990-01-01)'
       },
       // 浏览器相关
       explorer: {
@@ -1622,8 +1925,21 @@ export class LanguageManager {
           actions: {
             receive: '接收',
             send: '发送',
-            otp: 'OTP设置',
-            kyc: 'KYC申请',
+            kycApplyNow: '🛡️ KYC认证及山地银行申请',
+            otpGuide: '完成OTP设置后，充值和提现功能将被激活。但是，如果KYC认证未通过，则无法进行交易。请在KYC通过后设置OTP。',
+            messages: {
+                otpRequired: '请先完成OTP设置。',
+                kycNotPeriod: '当前不是KYC申请期。',
+                kycApprovedCongrats: '恭喜通过KYC认证。正在前往OTP设置。'
+            },
+            otpSetup: {
+                title: 'OTP 设置',
+                scanDesc: '请使用 Google Authenticator 应用扫描二维码。',
+                inputLabel: 'OTP 6位验证码',
+                confirm: '确认',
+                cancel: '取消'
+            },
+            kycSuccess: '恭喜通过KYC。现在可以进行谷歌OTP设置。',
             kycDisabled: 'KYC申请 (禁用)',
             startMining: '开始挖矿',
             resetPassword: '重置二级密码'
@@ -1661,8 +1977,39 @@ export class LanguageManager {
               status: '状态'
             },
             statusMining: '挖矿中',
-            statusCompleted: '采掘截止',
+            statusLocked: '锁定',
+            statusUnlocked: '解锁',
+            statusWaitingKyc: 'KYC等待',
+            statusCompleted: '挖矿结束',
             guide: '💡 每月1日00:00:00，上个月的挖矿量将添加到最终列表中。'
+          }
+        },
+        p2p: {
+          receive: {
+            title: '接收代币',
+            addressLabel: '我的钱包地址 (BW)',
+            copyBtn: '复制地址'
+          },
+          send: {
+            title: '发送代币',
+            addressLabel: '收款人地址',
+            addressPlaceholder: '请输入接收方的 BW 地址',
+            amountLabel: '转账金额',
+            amountPlaceholder: '0.00',
+            otpLabel: '谷歌 OTP 6位验证码',
+            otpPlaceholder: '请输入 OTP',
+            feeLabel: '网络手续费 (0.01%)',
+            cautionTitle: '注意事项',
+            cautionText: '• 已转出的代币无法撤回。\n• 请务必再次确认地址。',
+            confirmBtn: '发送',
+            cancelBtn: '取消',
+            messages: {
+              invalidAmount: '无效金额。',
+              insufficientBalance: '可用余额不足。（不包括锁定资产）',
+              transferReady: '金额验证通过',
+              transferSuccess: '转账已完成。',
+              transferFailed: '转账失败。'
+            }
           }
         }
       },
@@ -1754,6 +2101,24 @@ export class LanguageManager {
         cannotCancel: '无法取消合作伙伴注册。',
         cancelled: '合作伙伴注册已取消。',
         cancelError: '合作伙伴注册取消过程中发生错误。'
+      },
+      // 排名相关 (中文)
+      ranking: {
+        title: 'BW 实时排名榜',
+        subtitle: 'BitWish Network 全网用户实时挖矿排名',
+        rank: '排名',
+        address: '钱包地址',
+        amount: '总挖矿量',
+        searchPlaceholder: '输入钱包地址查询排名',
+        myRankTitle: '我的排名信息',
+        notRanked: '排名外',
+        loading: '正在同步排名数据...',
+        noData: '没有数据。',
+        top10Title: 'TOP 10 精英矿工',
+        globalSearch: '全网用户排名查询',
+        kycApproved: 'KYC 已批准',
+        kycWaiting: 'KYC 等待',
+        kycNotApplied: '未认证'
       },
       mnemonicAuth: {
         title: '助记词片段安全验证',

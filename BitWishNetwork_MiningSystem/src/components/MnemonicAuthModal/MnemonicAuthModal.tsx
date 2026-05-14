@@ -14,7 +14,7 @@ interface MnemonicAuthModalProps {
 const MnemonicAuthModal: React.FC<MnemonicAuthModalProps> = ({ isOpen, onClose, onSuccess, walletAddress, currentLanguage }) => {
     // LanguageManager 인스턴스 최적화 (useMemo 사용으로 불필요한 재생성 방지)
     const languageManager = React.useMemo(() => new LanguageManager(), []);
-    
+
     const [isAddressVerified, setIsAddressVerified] = useState(false);
     const [addressInput, setAddressInput] = useState('');
     const [indices, setIndices] = useState<number[]>([]);
@@ -121,7 +121,7 @@ const MnemonicAuthModal: React.FC<MnemonicAuthModalProps> = ({ isOpen, onClose, 
                                 <span className="check-icon">✓</span> {t('mnemonicAuth.addressSuccess')}
                             </p>
                             <p className="description">{t('mnemonicAuth.desc')}</p>
-                            
+
                             <div className="mnemonic-inputs-grid">
                                 {indices.map((idx, i) => (
                                     <div key={idx} className="mnemonic-input-group">
@@ -138,14 +138,14 @@ const MnemonicAuthModal: React.FC<MnemonicAuthModalProps> = ({ isOpen, onClose, 
                             </div>
                         </div>
                     )}
-                    
+
                     {error && <div className="error-message">{error}</div>}
                 </div>
 
                 <div className="mnemonic-auth-footer">
                     {isAddressVerified && (
-                        <button 
-                            className="verify-btn" 
+                        <button
+                            className="verify-btn"
                             onClick={handleVerify}
                             disabled={isLoading}
                         >

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { walletService } from '../../services/BlockchainService/WalletService';
 import { apiService } from '../../services/ApiService';
 import { LanguageManager } from '@/utils/LanguageManager/LanguageManager';
+import KYCFormModal from './KYCFormModal';
+import TransferModal from './TransferModal';
 import './MyWalletModal.css';
 
 /**
@@ -35,6 +37,8 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
         availableBalance: number;
         referralReward: number;
         referralBonus: number;
+        isOTPEnabled: boolean;
+        isKycVerified: boolean; // KYC 상태 추가
         myReferralCode?: string;
         referralList?: any[];
     }>({
@@ -42,10 +46,28 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
         availableBalance: 0,
         referralReward: 0,
         referralBonus: 0,
+        isOTPEnabled: false,
+        isKycVerified: false, // 초기값 추가
         myReferralCode: '',
         referralList: []
-    }); // [Step 4 Fix] null 상태 제거하여 실시간 동기화 즉시 활성화
+    });
+    const [viewMode, setViewMode] = useState<'dashboard' | 'otpSetup'>('dashboard'); // 화면 전환 상태
+    const [messageModal, setMessageModal] = useState<{
+        isOpen: boolean;
+        type: 'kycNotPeriod' | 'kycCongrats' | '';
+    }>({ isOpen: false, type: '' }); // 고급 메시지 창 상태
     const [isRotating, setIsRotating] = useState(false);
+    const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
+    const [transferModal, setTransferModal] = useState({ isOpen: false, type: 'send' as 'send' | 'receive' });
+    const [currentTime, setCurrentTime] = useState(new Date()); // [3단계] 실시간 타이머용 기준 시간
+
+    // [3단계] 1초 단위 리얼타임 타이머 엔진 가동
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     const fetchWalletData = async () => {
         // [Step 2-2 Fix] 로컬 스토리지 대신 서버 API 호출로 변경 (데이터 동기화 보장)
@@ -79,6 +101,8 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                     // [Priority 3] 데이터 매핑 세이프 가드: 서버에서 넘어온 규격이 UI와 일치하도록 최종 조율
                     referralReward: parseFloat(r?.referralRewardStorage || u?.referralRewardStorage || '0'),
                     referralBonus: parseFloat(r?.referralBonusStorage || u?.referralBonusStorage || '0'),
+                    isOTPEnabled: u?.isOTPEnabled || false,
+                    isKycVerified: u?.isKycVerified || false, // KYC 승인 상태 서버 연동
                     myReferralCode: r?.referralCode || u?.myReferralCode || '',
                     referralList: (r?.referralList || u?.referralList || []).map((item: any) => ({
                         ...item,
@@ -175,6 +199,8 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                         availableBalance: 0,
                                         referralReward: 0,
                                         referralBonus: 0,
+                                        isOTPEnabled: false,
+                                        isKycVerified: false,
                                         myReferralCode: ''
                                     });
 
@@ -331,24 +357,38 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                 </div>
                             </div>
 
-                            <div className="action-buttons-grid">
-                                <button className="action-btn receive-btn">
+                            <div className="action-buttons-grid-2x2">
+                                <button
+                                    className="action-btn receive-btn"
+                                    onClick={() => setTransferModal({ isOpen: true, type: 'receive' })}
+                                >
                                     ↓ {getTranslation('wallet.dashboard.actions.receive')} ↓
                                 </button>
-                                <button className="action-btn send-btn">
+                                <button
+                                    className="action-btn send-btn"
+                                    onClick={() => setTransferModal({ isOpen: true, type: 'send' })}
+                                >
                                     ↑ {getTranslation('wallet.dashboard.actions.send')} ↑
                                 </button>
-                                <button className="action-btn otp-btn">
-                                    🗝️ {getTranslation('wallet.dashboard.actions.otp')}
+                                <button
+                                    className="action-btn otp-btn purple-btn"
+                                    onClick={() => {
+                                        if (!walletData.isKycVerified) {
+                                            setMessageModal({ isOpen: true, type: 'kycNotPeriod' });
+                                        } else {
+                                            setMessageModal({ isOpen: true, type: 'kycCongrats' });
+                                        }
+                                    }}
+                                >
+                                    🔑 {getTranslation('wallet.dashboard.actions.otpSetup.title')}
                                 </button>
-                                <button className="action-btn kyc-btn">
-                                    🛡️ {getTranslation('wallet.dashboard.actions.kyc')}
+                                <button
+                                    className="action-btn kyc-btn orange-btn"
+                                    onClick={() => setIsKYCModalOpen(true)}
+                                >
+                                    🛡️ {getTranslation('wallet.dashboard.actions.kycApplyNow')}
                                 </button>
                             </div>
-
-                            <button className="kyc-disabled-btn">
-                                🆔 {getTranslation('wallet.dashboard.actions.kycDisabled')}
-                            </button>
 
                             <div className="address-footer-section">
                                 <div className="address-header">
@@ -437,13 +477,51 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                                             (walletData as any).miningHistory.map((item: any, idx: number) => (
                                                 <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
                                                     <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: '500', color: '#111827' }}>
-                                                        {item.year}.{item.month.toString().padStart(2, '0')}.30 23:59:59
+                                                        {new Date(item.settledAt).toLocaleString(currentLanguage === 'ko' ? 'ko-KR' : currentLanguage === 'ja' ? 'ja-JP' : currentLanguage === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\//g, '.')}
                                                     </td>
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{parseFloat(item.minedAmount).toFixed(4)} BW</td>
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{parseFloat(item.bonusAmount).toFixed(4)} BW</td>
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: '#059669' }}>{(parseFloat(item.totalAmount) || 0).toFixed(4)} BW</td>
                                                     <td style={{ padding: '12px 10px' }}>
-                                                        <span style={{ fontSize: '11px', backgroundColor: '#F3F4F6', color: '#6B7280', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{getTranslation('wallet.dashboard.miningTable.statusCompleted')}</span>
+                                                        {(() => {
+                                                            const settledDate = new Date(item.settledAt);
+                                                            const unlockDate = new Date(settledDate.getTime() + (15 * 24 * 60 * 60 * 1000));
+                                                            const now = currentTime; // [3단계] 실시간 기준 시간 바인딩
+                                                            const diff = unlockDate.getTime() - now.getTime();
+
+                                                            if (diff <= 0 || item.migrationStatus === 'UNLOCKED' || item.migrationStatus === 'MIGRATED') {
+                                                                return (
+                                                                    <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                                                        {getTranslation('wallet.dashboard.miningTable.statusUnlocked') || '잠금 해제'}
+                                                                    </span>
+                                                                );
+                                                            }
+
+                                                            // [거버넌스 수복] KYC 미승인자는 카운팅을 숨기고 대기 상태 노출
+                                                            if (item.migrationStatus === 'WAITING_KYC') {
+                                                                return (
+                                                                    <span style={{ fontSize: '11px', backgroundColor: '#FEF3C7', color: '#92400E', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                                                        {getTranslation('wallet.dashboard.miningTable.statusWaitingKyc') || 'KYC 대기'}
+                                                                    </span>
+                                                                );
+                                                            }
+
+                                                            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                                            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                                            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                                                            const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+                                                            return (
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                                    <span style={{ fontSize: '10px', color: '#EF4444', fontWeight: 'bold' }}>
+                                                                        D-{days} {hours.toString().padStart(2, '0')}:{mins.toString().padStart(2, '0')}:{secs.toString().padStart(2, '0')}
+                                                                    </span>
+                                                                    <span style={{ fontSize: '9px', backgroundColor: '#FEF2F2', color: '#B91C1C', padding: '1px 4px', borderRadius: '3px' }}>
+                                                                        {getTranslation('wallet.dashboard.miningTable.statusLocked') || 'LOCKED'}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </td>
                                                 </tr>
                                             ))
@@ -476,12 +554,55 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                         </div>
                     )}
 
-                    {/* [오류방어] 정의되지 않은 탭 처리 */}
-                    {(activeTab !== 'overview' && activeTab !== 'referralRewards' && activeTab !== 'miningRewards') && (
-                        <div className="overview-container">
-                            <p style={{ textAlign: 'center', color: '#999', marginTop: '50px' }}>
-                                {getTranslation('wallet.dashboard.tabs.' + activeTab)} - Coming Soon
-                            </p>
+                    {/* [Phase 1] OTP 설정 뷰 인터페이스 (Internal View) */}
+                    {viewMode === 'otpSetup' && (
+                        <div className="otp-setup-container" style={{ padding: '20px', color: 'white', backgroundColor: '#111827', borderRadius: '15px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+                            <h3 style={{ fontSize: '20px', fontWeight: 'bold' }}>{getTranslation('wallet.dashboard.actions.otpSetup.title')}</h3>
+                            <p style={{ fontSize: '14px', color: '#9CA3AF', textAlign: 'center' }}>{getTranslation('wallet.dashboard.actions.otpSetup.scanDesc')}</p>
+                            
+                            <div className="qr-code-wrapper" style={{ padding: '15px', backgroundColor: 'white', borderRadius: '12px' }}>
+                                <img src="/brain/0edac81a-cde6-4317-8111-6f0001cf744d/google_otp_qr_sample_1778309970513.png" alt="OTP QR" style={{ width: '180px', height: '180px' }} />
+                            </div>
+
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label style={{ fontSize: '12px', color: '#9CA3AF' }}>{getTranslation('wallet.dashboard.actions.otpSetup.inputLabel')}</label>
+                                <input 
+                                    type="text" 
+                                    maxLength={6}
+                                    placeholder="000000"
+                                    style={{ 
+                                        width: '100%', 
+                                        padding: '12px', 
+                                        backgroundColor: '#1F2937', 
+                                        border: '1px solid #374151', 
+                                        borderRadius: '8px', 
+                                        color: 'white', 
+                                        fontSize: '18px', 
+                                        textAlign: 'center', 
+                                        letterSpacing: '5px' 
+                                    }} 
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                                <button 
+                                    className="otp-confirm-btn" 
+                                    style={{ flex: 1, padding: '12px', backgroundColor: '#7C3AED', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                    onClick={() => {
+                                        alert(getTranslation('wallet.dashboard.messages.otpSuccess'));
+                                        setViewMode('dashboard');
+                                    }}
+                                >
+                                    {getTranslation('wallet.dashboard.actions.otpSetup.confirm')}
+                                </button>
+                                <button 
+                                    className="otp-cancel-btn" 
+                                    style={{ flex: 1, padding: '12px', backgroundColor: '#374151', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                    onClick={() => setViewMode('dashboard')}
+                                >
+                                    {getTranslation('wallet.dashboard.actions.otpSetup.cancel')}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -489,7 +610,9 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                 {/* Footer */}
                 <div className="wallet-footer">
                     <button className="close-modal-btn" onClick={() => {
-                        if (activeTab === 'overview') {
+                        if (viewMode === 'otpSetup') {
+                            setViewMode('dashboard');
+                        } else if (activeTab === 'overview') {
                             onClose();
                         } else {
                             setActiveTab('overview');
@@ -499,11 +622,53 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({ isOpen, onClose, currentL
                     </button>
                 </div>
             </div>
+
+            {/* [Phase 1] 작고 고급스러운 메시지 창 (Small Premium Message) */}
+            {messageModal.isOpen && (
+                <div className="premium-message-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+                    <div className="premium-message-box" style={{ width: '320px', backgroundColor: 'white', borderRadius: '16px', padding: '24px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+                        <div style={{ fontSize: '40px', marginBottom: '15px' }}>
+                            {messageModal.type === 'kycNotPeriod' ? '⚠️' : '🎉'}
+                        </div>
+                        <p style={{ fontSize: '15px', color: '#1F2937', fontWeight: '600', lineHeight: '1.5', marginBottom: '20px' }}>
+                            {messageModal.type === 'kycNotPeriod' 
+                                ? getTranslation('wallet.dashboard.actions.messages.kycNotPeriod') 
+                                : getTranslation('wallet.dashboard.actions.messages.kycApprovedCongrats')}
+                        </p>
+                        <button 
+                            style={{ width: '100%', padding: '12px', backgroundColor: '#111827', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                            onClick={() => {
+                                if (messageModal.type === 'kycCongrats') {
+                                    setViewMode('otpSetup');
+                                }
+                                setMessageModal({ isOpen: false, type: '' });
+                            }}
+                        >
+                            {getTranslation('wallet.dashboard.actions.otpSetup.confirm')}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* KYC 신청 엔진 (Step 2 독립 모듈) */}
+            <KYCFormModal
+                isOpen={isKYCModalOpen}
+                onClose={() => setIsKYCModalOpen(false)}
+                currentLanguage={currentLanguage}
+                walletAddress={walletAddress}
+            />
+
+            {/* [Phase 2] P2P 송금/받기 통합 모달 */}
+            <TransferModal
+                isOpen={transferModal.isOpen}
+                onClose={() => setTransferModal({ ...transferModal, isOpen: false })}
+                type={transferModal.type}
+                walletAddress={walletAddress}
+                availableBalance={walletData.availableBalance}
+                currentLanguage={currentLanguage}
+            />
         </div>
     );
 };
-
-// 로그아웃 핸들러는 컴포넌트 내부로 이동
-
 
 export default MyWalletModal;

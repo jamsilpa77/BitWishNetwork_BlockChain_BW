@@ -67,7 +67,7 @@ router.get('/list/:walletAddress', async (req, res) => {
             for (const item of bonusRecord.referralList) {
                 const cAddr = item.childWalletAddress.toLowerCase();
                 const childUser = actualChildrenMap.get(cAddr);
-                
+
                 // [Purge] 이 자식이 더 이상 나를 부모로 인정하지 않는 경우 (계층 이동 발생)
                 if (!childUser) {
                     isListDirty = true;
@@ -76,7 +76,7 @@ router.get('/list/:walletAddress', async (req, res) => {
 
                 // 부모 식별용 키 (15/18자리 호환성 고려)
                 const parentKey = (user.myReferralCode || '').substring(0, 11);
-                const isStillMyChild = 
+                const isStillMyChild =
                     (childUser.referrerCode || '').trim().toLowerCase() === (user.myReferralCode || '').trim().toLowerCase() ||
                     (childUser.referrerCode || '').trim().toLowerCase() === (user.walletAddress || '').trim().toLowerCase() ||
                     (childUser.referrerCode || '').startsWith(parentKey);
@@ -116,11 +116,11 @@ router.get('/list/:walletAddress', async (req, res) => {
             bonusRecord.referralList = Array.from(uniqueMap.values());
             await bonusRecord.save();
 
-            // [Sync] 추천인 수 및 보너스율도 실시간으로 다시 계산하여 정규화
+            // [Sync] 추천인 수 및 보너스율도 실시간으로 다시 계산하여 정규화 (대소문자 무시 검색 적용)
             await MiningState.findOneAndUpdate(
-                { walletAddress: addr },
-                { 
-                    $set: { 
+                { walletAddress: new RegExp('^' + addr + '$', 'i') },
+                {
+                    $set: {
                         referralCount: bonusRecord.referralList.length,
                         referralBonusRate: (bonusRecord.referralList.length * 0.02).toString()
                     }
@@ -145,7 +145,7 @@ router.get('/list/:walletAddress', async (req, res) => {
                 const children = await User.find(searchQuery);
 
                 for (const child of children) {
-                    const alreadyRecorded = bonusRecord.referralList.some(r => r.childWalletAddress === child.walletAddress);
+                    const alreadyRecorded = bonusRecord.referralList.some(r => r.childWalletAddress.toLowerCase() === child.walletAddress.toLowerCase());
                     if (!alreadyRecorded) {
                         bonusRecord.referralList.push({
                             childWalletAddress: child.walletAddress,
@@ -268,7 +268,7 @@ router.get('/stats/:walletAddress', async (req, res) => {
             for (const item of bonusRecord.referralList) {
                 const cAddr = item.childWalletAddress.toLowerCase();
                 const childUser = actualStatChildrenMap.get(cAddr);
-                
+
                 // [Purge] 계층 이동이 확인된 자녀는 통계에서도 즉시 제거
                 if (!childUser) {
                     isStatsDirty = true;
@@ -276,7 +276,7 @@ router.get('/stats/:walletAddress', async (req, res) => {
                 }
 
                 const parentKey = (user.myReferralCode || '').substring(0, 11);
-                const isStillMyChild = 
+                const isStillMyChild =
                     (childUser.referrerCode || '').trim().toLowerCase() === (user.myReferralCode || '').trim().toLowerCase() ||
                     (childUser.referrerCode || '').trim().toLowerCase() === (user.walletAddress || '').trim().toLowerCase() ||
                     (childUser.referrerCode || '').startsWith(parentKey);
@@ -307,11 +307,11 @@ router.get('/stats/:walletAddress', async (req, res) => {
             bonusRecord.referralList = Array.from(uniqueStatsMap.values());
             await bonusRecord.save();
 
-            // [Sync] 통계 장부 세척 시 마이닝 상태(카운트/율)도 동기화
+            // [Sync] 통계 장부 세척 시 마이닝 상태(카운트/율)도 동기화 (대소문자 무시 검색 적용)
             await MiningState.findOneAndUpdate(
-                { walletAddress: addr },
-                { 
-                    $set: { 
+                { walletAddress: new RegExp('^' + addr + '$', 'i') },
+                {
+                    $set: {
                         referralCount: bonusRecord.referralList.length,
                         referralBonusRate: (bonusRecord.referralList.length * 0.02).toString()
                     }
@@ -334,7 +334,7 @@ router.get('/stats/:walletAddress', async (req, res) => {
             const children = await User.find(searchQuery);
 
             for (const child of children) {
-                const alreadyRecorded = bonusRecord.referralList.some(r => r.childWalletAddress === child.walletAddress);
+                const alreadyRecorded = bonusRecord.referralList.some(r => r.childWalletAddress.toLowerCase() === child.walletAddress.toLowerCase());
                 if (!alreadyRecorded) {
                     bonusRecord.referralList.push({
                         childWalletAddress: child.walletAddress,
@@ -429,9 +429,9 @@ router.post('/register-reward', async (req, res) => {
         }
 
         // 2. 추천인 보상 처리 (1BW 가산 + 추천 리스트 추가)
-        // upsert: true를 사용하여 BonusRecord가 없는 경우 자동으로 "그릇" 생성
+        // upsert: true를 사용하여 BonusRecord가 없는 경우 자동으로 "그릇" 생성 (대소문자 무시 검색 적용)
         let referrerBonus = await BonusRecord.findOneAndUpdate(
-            { walletAddress: referrer.walletAddress },
+            { walletAddress: new RegExp('^' + referrer.walletAddress + '$', 'i') },
             {
                 $push: {
                     referralList: {
@@ -444,38 +444,12 @@ router.post('/register-reward', async (req, res) => {
             { upsert: true, new: true }
         );
 
-        // 정밀 연산 (Decimal.js 사용) - 추천인
-        const currentRefReward = new Decimal(referrerBonus.referralRewardStorage || '0');
-        referrerBonus.referralRewardStorage = currentRefReward.plus('1').toFixed(8);
-        await referrerBonus.save();
+        // [6단계 수술] 부모 중복 보상 지급 코드 제거
 
-        // 3. 가입자 본인 보상 처리 (1BW 가산)
-        let referredBonus = await BonusRecord.findOneAndUpdate(
-            { walletAddress: referredWallet },
-            {}, // 가입자 본인의 리스트는 건드리지 않음
-            { upsert: true, new: true }
-        );
+        // [6단계 수술] 자식 중복 보상 지급 코드 제거
 
-        // 정밀 연산 (Decimal.js 사용) - 가입자
-        // [Phase 2-1 최종완성] 가입자 본인(referredUser)에게 1BW를 중복 지급하던 독버섯 로직 영구 삭제
-        // 가입자는 이미 UserController.ts의 register 단계에서 1.0 BW를 받고 내려왔으므로 여기서의 추가 지급은 데이터 파괴임.
-        if (new Decimal(referredBonus.referralRewardStorage || '0').isZero()) {
-            referredBonus.referralRewardStorage = new Decimal(1).toString();
-        }
-        await referredBonus.save();
-
-        // 4. 추천인의 MiningState 업데이트 (추천인 수 및 보너스율 2%p 증가)
-        const updatedMiningState = await MiningState.findOneAndUpdate(
-            { walletAddress: referrer.walletAddress },
-            {
-                $inc: { referralCount: 1 },
-                $set: {
-                    // 추천인 수 * 0.02 (2%)를 보너스율로 설정
-                    referralBonusRate: (referrerBonus.referralList.length * 0.02).toString()
-                }
-            },
-            { new: true, upsert: true }
-        );
+        // [6단계 수술] 추천인 수 및 보너스율 중복 업데이트 제거
+        // MiningState 업데이트는 이제 UserController.ts에서 단일화되어 처리됨.
 
         console.log(`[Referral] Successfully issued rewards: Referrer(${referrer.walletAddress}), Referred(${referredWallet})`);
 

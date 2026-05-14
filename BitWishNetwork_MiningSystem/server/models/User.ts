@@ -22,6 +22,23 @@ export interface IUser extends Document {
 
     isKycVerified: boolean;      // KYC 인증 여부
     kycVerifiedDate?: Date;      // KYC 인증 날짜
+    isOTPEnabled: boolean;       // OTP 설정 여부 (송금 보안용)
+
+    kycApplication?: {
+        fullName: string;
+        birthDate: string;       // 생년월일 추가
+        country: string;
+        phone: string;
+        address: {
+            city: string;
+            roadAddress: string;
+            detailAddress: string;
+        };
+        idImageBase64: string;   // 신분증 이미지 (Base64)
+        status: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
+        rejectionReason?: string;
+        submittedAt?: Date;
+    };
 
     ipAddress: string;           // 생성 시 IP 주소 (중복 방지용)
     createdAt: Date;             // 계정 생성일
@@ -56,6 +73,27 @@ const UserSchema: Schema = new Schema({
 
     isKycVerified: { type: Boolean, default: false },
     kycVerifiedDate: { type: Date },
+    isOTPEnabled: { type: Boolean, default: false }, // OTP 보안 기본값 false
+
+    kycApplication: {
+        fullName: { type: String, default: '' },
+        birthDate: { type: String, default: '' }, // 생년월일 추가
+        country: { type: String, default: '' },
+        phone: { type: String, default: '' },
+        address: {
+            city: { type: String, default: '' },
+            roadAddress: { type: String, default: '' },
+            detailAddress: { type: String, default: '' }
+        },
+        idImageBase64: { type: String, default: '' },
+        status: {
+            type: String,
+            enum: ['NONE', 'PENDING', 'APPROVED', 'REJECTED'],
+            default: 'NONE'
+        },
+        rejectionReason: { type: String, default: '' },
+        submittedAt: { type: Date }
+    },
 
     ipAddress: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },

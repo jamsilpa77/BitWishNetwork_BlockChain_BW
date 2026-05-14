@@ -1,0 +1,675 @@
+/**
+ * BitWishNetwork Ranking Page Styles
+ * Explorer-level High-res Design
+ */
+
+.ranking-page {
+    min-height: 100vh;
+    background: var(--bg-color, #0a0a0a);
+    color: var(--text-color, #ffffff);
+    padding: 100px 20px 60px;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.ranking-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative; /* 버튼 배치를 위한 기준점 */
+}
+
+/* ★ Phase 10: Scoped Back Button (Explorer Interference Blocked) ★ */
+.ranking-page .back-button {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: rgba(100, 181, 246, 0.1);
+    color: #64b5f6;
+    border: 1px solid #64b5f6;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.ranking-page .back-button:hover {
+    background: #64b5f6;
+    color: #fff;
+    transform: translateX(-5px);
+    box-shadow: 0 0 15px rgba(100, 181, 246, 0.4);
+}
+
+/* Header Section */
+.ranking-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.ranking-title {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #f3ba2f 0%, #ffdf91 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 15px rgba(243, 186, 47, 0.4));
+}
+
+.ranking-subtitle {
+    font-size: 1.1rem;
+    color: #888;
+    letter-spacing: 1px;
+}
+
+/* Search Section */
+.ranking-search-section {
+    margin-bottom: 50px;
+    display: flex;
+    justify-content: center;
+}
+
+.search-box {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 18px 25px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(243, 186, 47, 0.2);
+    border-radius: 15px;
+    color: #fff;
+    font-size: 1rem;
+    backdrop-filter: blur(20px);
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #f3ba2f;
+    box-shadow: 0 0 25px rgba(243, 186, 47, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.search-icon {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #f3ba2f;
+    cursor: pointer;
+}
+
+/* My Rank Card (Search Result) */
+.my-rank-card {
+    background: linear-gradient(135deg, rgba(243, 186, 47, 0.15), rgba(243, 186, 47, 0.05));
+    border: 1px solid rgba(243, 186, 47, 0.3);
+    border-radius: 16px;
+    padding: 25px 35px;
+    margin: 0 auto 40px auto;
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(15px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    animation: fade-in-down 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.my-rank-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    animation: shine-sweep 3s infinite;
+}
+
+@keyframes fade-in-down {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shine-sweep {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.my-rank-label {
+    color: #888;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.my-rank-value {
+    color: #f3ba2f;
+    font-size: 2.2rem;
+    font-weight: 800;
+    font-family: 'Outfit', sans-serif;
+    text-shadow: 0 0 15px rgba(243, 186, 47, 0.4);
+}
+
+/* Top 10 Premium Cards - High-Density Jewelry Style (75% Scale) */
+.top-rankers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+    /* 기존 45px에서 축소 */
+}
+
+.premium-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 18px;
+    padding: 25px 15px;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 1~5위 프리미엄 카드: 왕관 없이도 품격 있는 높이 유지 (과도하지 않은 280px) */
+.premium-card.rank-1,
+.premium-card.rank-2,
+.premium-card.rank-3,
+.premium-card.rank-4,
+.premium-card.rank-5 {
+    min-height: 280px;
+}
+
+.premium-card:hover {
+    transform: translateY(-8px);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.rank-badge {
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+/* Rank-specific Styles */
+.premium-card.rank-1 {
+    border: none;
+    background: rgba(10, 10, 10, 0.8);
+    box-shadow: 0 0 30px rgba(243, 186, 47, 0.15);
+    z-index: 1;
+}
+
+.premium-card.rank-1 .aura-bg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 150%;
+    height: 150%;
+    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_gold_aura_1777870473826.png') no-repeat center;
+    background-size: contain;
+    opacity: 0.5;
+    z-index: -1;
+    animation: aura-pulse 4s infinite ease-in-out;
+}
+
+.premium-card.rank-1::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: conic-gradient(from 0deg, transparent, #f3ba2f, transparent 30%, #f3ba2f, transparent);
+    border-radius: 18px;
+    z-index: -2;
+    animation: rotate-conic 3s linear infinite;
+}
+
+.premium-card.rank-1 .rank-badge {
+    color: #f3ba2f;
+    text-shadow: 0 0 15px rgba(243, 186, 47, 0.8);
+    /* 폰트 높이를 2, 3등과 동일하게 맞춤 (기본 1.8rem 상속) */
+}
+
+.premium-card.rank-2,
+.premium-card.rank-3 {
+    border: none;
+    background: rgba(10, 10, 10, 0.8);
+    z-index: 1;
+    overflow: hidden;
+    /* Shine 효과를 위해 필수 */
+}
+
+.premium-card.rank-2::before,
+.premium-card.rank-3::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: skewX(-20deg);
+    animation: metallic-shine 4s infinite;
+    z-index: 0;
+}
+
+.premium-card.rank-2::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: conic-gradient(from 0deg, transparent, #c0c0c0, transparent 30%, #c0c0c0, transparent);
+    border-radius: 18px;
+    z-index: -2;
+    animation: rotate-conic 3s linear infinite;
+}
+
+.premium-card.rank-2 .aura-bg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140%;
+    height: 140%;
+    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_silver_aura_1777870863047.png') no-repeat center;
+    background-size: contain;
+    opacity: 0.4;
+    z-index: -1;
+    animation: aura-pulse 4.5s infinite ease-in-out;
+}
+
+.premium-card.rank-3::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: conic-gradient(from 0deg, transparent, #cd7f32, transparent 30%, #cd7f32, transparent);
+    border-radius: 18px;
+    z-index: -2;
+    animation: rotate-conic 3s linear infinite;
+}
+
+.premium-card.rank-3 .aura-bg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140%;
+    height: 140%;
+    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_bronze_aura_1777870899082.png') no-repeat center;
+    background-size: contain;
+    opacity: 0.4;
+    z-index: -1;
+    animation: aura-pulse 5s infinite ease-in-out;
+}
+
+/* 4위 자수정 (Amethyst Elite Semi-Premium) */
+.premium-card.rank-4 {
+    border-color: rgba(155, 89, 182, 0.4);
+    background: linear-gradient(145deg, rgba(155, 89, 182, 0.1) 0%, rgba(10, 10, 10, 0.9) 100%);
+    box-shadow: 0 0 20px rgba(155, 89, 182, 0.1);
+    animation: breathing-border-amethyst 4s infinite ease-in-out;
+    z-index: 1;
+}
+
+.premium-card.rank-4 .aura-bg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140%;
+    height: 140%;
+    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_amethyst_aura_1777879040935.png') no-repeat center;
+    background-size: contain;
+    opacity: 0.35;
+    z-index: -1;
+    animation: point-glow-pulse 6s infinite ease-in-out;
+}
+
+/* 5위 에메랄드 (Emerald Elite Semi-Premium) */
+.premium-card.rank-5 {
+    border-color: rgba(46, 204, 113, 0.4);
+    background: linear-gradient(145deg, rgba(46, 204, 113, 0.1) 0%, rgba(10, 10, 10, 0.9) 100%);
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.1);
+    animation: breathing-border-emerald 4s infinite ease-in-out;
+    z-index: 1;
+}
+
+.premium-card.rank-5 .aura-bg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140%;
+    height: 140%;
+    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_emerald_aura_1777879084739.png') no-repeat center;
+    background-size: contain;
+    opacity: 0.35;
+    z-index: -1;
+    animation: point-glow-pulse 6.5s infinite ease-in-out;
+}
+
+/* 6~10위 사이버 블루 네온 펄스 */
+.premium-card.rank-6,
+.premium-card.rank-7,
+.premium-card.rank-8,
+.premium-card.rank-9,
+.premium-card.rank-10 {
+    border-color: rgba(0, 163, 255, 0.3);
+    background: rgba(0, 163, 255, 0.02);
+    animation: neon-pulse 3s infinite ease-in-out;
+}
+
+.wallet-address-short {
+    font-size: 0.75rem;
+    color: #bbb;
+    margin-bottom: 12px;
+    font-family: 'Roboto Mono', monospace;
+}
+
+.mining-amount-display {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.amount-unit {
+    font-size: 0.75rem;
+    color: #888;
+    margin-left: 4px;
+}
+
+/* Animations */
+@keyframes rotate-conic {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes aura-pulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+}
+
+@keyframes metallic-shine {
+    0% {
+        left: -150%;
+    }
+
+    20%,
+    100% {
+        left: 150%;
+    }
+}
+
+@keyframes neon-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(0, 163, 255, 0.2);
+        border-color: rgba(0, 163, 255, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(0, 163, 255, 0.4);
+        border-color: rgba(0, 163, 255, 0.5);
+    }
+}
+
+@keyframes breathing-border-amethyst {
+
+    0%,
+    100% {
+        box-shadow: 0 0 15px rgba(155, 89, 182, 0.1);
+        border-color: rgba(155, 89, 182, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(155, 89, 182, 0.25);
+        border-color: rgba(155, 89, 182, 0.6);
+    }
+}
+
+@keyframes breathing-border-emerald {
+
+    0%,
+    100% {
+        box-shadow: 0 0 15px rgba(46, 204, 113, 0.1);
+        border-color: rgba(46, 204, 113, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(46, 204, 113, 0.25);
+        border-color: rgba(46, 204, 113, 0.6);
+    }
+}
+
+@keyframes point-glow-pulse {
+
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.05);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.amount-unit {
+    font-size: 0.8rem;
+    color: #888;
+    margin-left: 5px;
+}
+
+/* 11-50 Standard List */
+.ranking-list-container {
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 5px;
+    backdrop-filter: blur(10px);
+}
+
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ranking-table th {
+    text-align: left;
+    padding: 12px 15px;
+    /* 패딩 축소: 20px -> 12px */
+    color: #666;
+    font-weight: 500;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ranking-table td {
+    padding: 12px 15px;
+    /* 패딩 축소: 18px -> 12px */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.standard-rank {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #888;
+}
+
+.standard-address {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.standard-amount {
+    font-weight: 600;
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+/* Visibility Fix for TOP 3 Text (No Background) */
+.premium-card.rank-1 .text-visibility-wrapper,
+.premium-card.rank-2 .text-visibility-wrapper,
+.premium-card.rank-3 .text-visibility-wrapper {
+    position: relative;
+    z-index: 5;
+    /* Removed all backgrounds, padding, and blur to ensure clean visibility */
+}
+
+.premium-card.rank-1 .wallet-address-short,
+.premium-card.rank-2 .wallet-address-short,
+.premium-card.rank-3 .wallet-address-short,
+.premium-card.rank-1 .mining-amount-display,
+.premium-card.rank-2 .mining-amount-display,
+.premium-card.rank-3 .mining-amount-display,
+.premium-card.rank-1 .kyc-badge,
+.premium-card.rank-2 .kyc-badge,
+.premium-card.rank-3 .kyc-badge {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 1), 0 0 15px rgba(0, 0, 0, 0.8);
+    color: #ffffff;
+    font-weight: 700;
+}
+
+/* 잘못된 코드로 생성했던 PREMIUM 날개 애니메이션 CSS 완전 철거 완료 */
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ranking-title {
+        font-size: 2rem;
+    }
+
+    .status-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .my-rank-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+}
+
+/* =========================================================
+   2-1단계: TOP 3 프리미엄 가독성 및 서열 기반 애니메이션 계급화
+   ========================================================= */
+
+/* 1위 (Gold) - 골드 프리미엄 윙 엠블럼 스타일 */
+.premium-emblem-gold {
+    margin-top: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    filter: drop-shadow(0 0 15px rgba(243, 186, 47, 0.4));
+    animation: emblem-float 4s ease-in-out infinite;
+    position: relative;
+    z-index: 10;
+}
+
+@keyframes emblem-float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* 3위 (Bronze) - 브론즈 프리미엄 윙 엠블럼 스타일 */
+.premium-emblem-bronze {
+    margin-top: 15px;
+    /* 1위 20px보다 약간 상단 배치하여 정교함 강조 */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    filter: drop-shadow(0 0 10px rgba(205, 127, 50, 0.3));
+    /* 1위보다 절제된 광채 */
+    animation: emblem-float-bronze 5s ease-in-out infinite;
+    /* 1위(4s)보다 느리고 부드러운 유영 */
+    position: relative;
+    z-index: 10;
+}
+
+@keyframes emblem-float-bronze {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-6px);
+        /* 1위(-10px)보다 절제된 움직임 */
+    }
+}

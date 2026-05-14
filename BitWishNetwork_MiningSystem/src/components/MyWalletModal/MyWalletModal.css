@@ -370,21 +370,22 @@
 }
 
 /* Action Buttons */
-.action-buttons-grid {
+.action-buttons-grid-2x2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 12px;
+    margin-bottom: 25px;
 }
 
 .action-btn {
-    padding: 18px;
+    padding: 16px;
     border: none;
     border-radius: 12px;
     color: white;
     font-weight: 700;
     font-size: 1.1rem;
     cursor: pointer;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -392,13 +393,20 @@
     gap: 8px;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(.disabled) {
     transform: translateY(-2px);
-    filter: brightness(1.05);
+    filter: brightness(1.1);
+}
+
+.action-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(0.8);
+    box-shadow: none;
 }
 
 .receive-btn {
-    background: #3B82F6;
+    background: #2563EB;
 }
 
 .send-btn {
@@ -407,10 +415,12 @@
 
 .otp-btn {
     background: #8B5CF6;
+    /* Purple */
 }
 
 .kyc-btn {
     background: #F59E0B;
+    /* Orange */
 }
 
 .kyc-disabled-btn {

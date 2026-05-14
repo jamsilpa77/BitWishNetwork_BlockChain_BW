@@ -179,6 +179,132 @@ class ApiService {
             throw error;
         }
     }
+
+    /**
+     * KYC 신청 데이터 제출 (Step 2 작업)
+     * @param kycData KYC 신청 데이터 (이미지 Base64 포함)
+     */
+    public async submitKYC(kycData: any): Promise<any> {
+        try {
+            const response = await this.client.post('/kyc/submit', kycData);
+            return response.data;
+        } catch (error) {
+            console.error('Failed to submit KYC:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * KYC 거버넌스 설정 조회
+     */
+    public async getKYCConfig(): Promise<any> {
+        try {
+            const response = await this.client.get('/kyc/config');
+            return response.data;
+        } catch (error) {
+            console.error('Failed to get KYC config:', error);
+            return { success: true, isActive: true }; // 실패 시 기본값 활성
+        }
+    }
+
+    /**
+     * KYC 거버넌스 설정 업데이트 (Admin 전용)
+     * @param isActive 활성화 여부
+     */
+    public async updateKYCConfig(isActive: boolean): Promise<any> {
+        try {
+            const response = await this.client.post('/admin/kyc/config', { isActive });
+            return response.data;
+        } catch (error) {
+            console.error('Failed to update KYC config:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * KYC 대기 리스트 조회 (Admin 전용 - [공정 3])
+     */
+    public async getKYCPendingList(): Promise<any> {
+        try {
+            const response = await this.client.get('/admin/kyc/pending');
+            return response.data;
+        } catch (error) {
+            console.error('Failed to get KYC pending list:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * KYC 심사 결과 반영 (Admin 전용 - [공정 3])
+     * @param walletAddress 대상 지갑 주소
+     * @param status 변경될 상태 (APPROVED, REJECTED)
+     * @param rejectionReason 반려 사유 (REJECTED 시 필수)
+     */
+    public async updateKYCStatus(walletAddress: string, status: string, rejectionReason?: string): Promise<any> {
+        try {
+            const response = await this.client.post('/admin/kyc/status', {
+                walletAddress,
+                status,
+                rejectionReason
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Failed to update KYC status:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * [Phase 2] 글로벌 마이그레이션 설정 조회
+     */
+    public async getMigrationConfig(): Promise<any> {
+        try {
+            const response = await this.client.get('/admin/migration/config');
+            return response.data;
+        } catch (error) {
+            console.error('Failed to get migration config:', error);
+            return { success: true, isActive: false };
+        }
+    }
+
+    /**
+     * [Phase 2] 글로벌 마이그레이션 설정 업데이트
+     * @param isActive 활성화 여부
+     */
+    public async updateMigrationConfig(isActive: boolean): Promise<any> {
+        try {
+            const response = await this.client.post('/admin/migration/config', { isActive });
+            return response.data;
+        } catch (error) {
+            console.error('Failed to update migration config:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * [Phase 4] P2P 송금 내역 기록 및 익스플로러 동기화
+     */
+    public async recordTransaction(txData: { senderAddress: string, recipientAddress: string, amount: number, fee: number }): Promise<any> {
+        try {
+            const response = await this.client.post('/transactions/record', txData);
+            return response.data;
+        } catch (error) {
+            console.error('Failed to record transaction:', error);
+            throw error;
+        }
+    }
+    /**
+     * [Phase 5] 익스플로러용 최신 거래 내역 조회
+     */
+    public async getLatestTransactions(): Promise<any> {
+        try {
+            const response = await this.client.get('/transactions/latest');
+            return response.data;
+        } catch (error) {
+            console.error('Failed to fetch latest transactions:', error);
+            return { success: false, data: [] };
+        }
+    }
 }
 
 export const apiService = new ApiService();

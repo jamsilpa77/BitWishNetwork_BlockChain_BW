@@ -67,7 +67,7 @@ export class BitWishBlockchain extends EventEmitter {
   private genesisBlock: BitWishBlock | null = null;
   private pow: BitWishPoW;
   private isInitialized: boolean = false;
-  
+
   // ★ BitWish 네트워크 전략적 자산 금고 (생태계 가치 순환 보관함) ★
   private ecosystemFund: Decimal = new Decimal(0);
   private foundationFund: Decimal = new Decimal(0);
@@ -121,8 +121,20 @@ export class BitWishBlockchain extends EventEmitter {
         this.blocks.set(0, this.genesisBlock);
         this.currentBlockHeight = 0;
 
-        // 제네시스 계정 생성
-        this.createAccount('BitWish-Foundation', BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.toString());
+        // ★ BitWish 제네시스 자산 3대 금고 정밀 분할 주입 (65:15:20) ★
+        const minerPoolBalance = BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.mul(0.65);
+        const partnerPoolBalance = BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.mul(0.15);
+        const foundationBalance = BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.mul(0.20);
+
+        // 정합성 검증: 65+15+20 = 100% 인지 확인
+        const totalAllocated = minerPoolBalance.plus(partnerPoolBalance).plus(foundationBalance);
+        if (!totalAllocated.equals(BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY)) {
+          throw new Error('제네시스 자산 분할 합계가 총 발행량과 일치하지 않습니다.');
+        }
+
+        this.createAccount('BitWish-Miner-Pool', minerPoolBalance.toString());
+        this.createAccount('BitWish-Partner-Pool', partnerPoolBalance.toString());
+        this.createAccount('BitWish-Foundation', foundationBalance.toString());
 
         // 데이터베이스에 저장
         await this.saveToDatabase();
@@ -145,7 +157,9 @@ export class BitWishBlockchain extends EventEmitter {
       console.log(`🔗 제네시스 블록: ${this.blocks.size}개 생성 (블록 높이: ${this.currentBlockHeight})`);
       console.log(`📦 총 블록 개수: ${this.blocks.size}개`);
       console.log(`📊 총 발행량: ${BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.toString()} BW`);
-      console.log(`💰 BitWish-Foundation 계정 잔액: ${BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.toString()} BW`);
+      console.log(`⛏️ Miner-Pool 잔액: ${BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.mul(0.65).toString()} BW (65%)`);
+      console.log(`🤝 Partner-Pool 잔액: ${BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.mul(0.15).toString()} BW (15%)`);
+      console.log(`🏛️ Foundation 잔액: ${BITWISH_NETWORK_CONFIG.TOTAL_SUPPLY.mul(0.20).toString()} BW (20%)`);
 
       this.emit('blockchainInitialized', this.genesisBlock);
       return { success: true, message: '블록체인이 성공적으로 초기화되었습니다' };
@@ -467,10 +481,10 @@ export class BitWishBlockchain extends EventEmitter {
         this.totalAccumulatedFees = this.totalAccumulatedFees.plus(fee);
 
         console.log(`🏦 [Asset Transition] 총 ${fee.toString()} BW 기금 전환 완료 (생태계 보호: ${ecoShare.toString()} / 재단 및 커뮤니티 지원: ${foundationShare.toString()})`);
-        
+
         // 실시간 자산 전환 이벤트 전파
         this.emit('feesAccumulated', { fee, ecoShare, foundationShare });
-        
+
         // 기금 전용 데이터베이스 저장 (네트워크 핵심 상태 기록)
         this.saveNetworkStats();
       }
@@ -771,15 +785,15 @@ export class BitWishBlockchain extends EventEmitter {
 
       await statsCollection.updateOne(
         { id: 'global_fund_stats' },
-        { 
-          $set: { 
+        {
+          $set: {
             ecosystemFund: this.ecosystemFund.toString(),
             foundationFund: this.foundationFund.toString(),
             totalAccumulatedFees: this.totalAccumulatedFees.toString(),
             adminMasterAddress: this.adminMasterAddress,
             adminHardwareKeyID: this.adminHardwareKeyID,
             lastUpdatedAt: Date.now()
-          } 
+          }
         },
         { upsert: true }
       );
@@ -831,7 +845,7 @@ export class BitWishBlockchain extends EventEmitter {
 
     this.adminMasterAddress = address;
     this.adminHardwareKeyID = hardwareKeyID;
-    
+
     await this.saveNetworkStats();
     console.log(`🛡️ [Security] 최고 관리자 하드웨어 키 등록 완료: ${address} (${hardwareKeyID})`);
     return { success: true, message: '최고 관리자 하드웨어 보안 키가 엔진에 각인되었습니다.' };
@@ -842,8 +856,8 @@ export class BitWishBlockchain extends EventEmitter {
    * 지문/물리 터치 보안 서명이 검증되어야만 실행됩니다.
    */
   public async adminSupremeWithdraw(
-    targetAddress: string, 
-    amount: string, 
+    targetAddress: string,
+    amount: string,
     source: 'ECOSYSTEM' | 'FOUNDATION',
     hardwareSignature: string
   ): Promise<{ success: boolean; message: string }> {

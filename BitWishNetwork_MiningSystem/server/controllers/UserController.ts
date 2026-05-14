@@ -33,8 +33,8 @@ export class UserController {
 
             console.log(`[REGISTER] New user registration: ${walletAddress}`);
 
-            // 1. 중복 검사
-            const existingUser = await User.findOne({ walletAddress });
+            // 1. 중복 검사 (대소문자 무시 검색 적용)
+            const existingUser = await User.findOne({ walletAddress: new RegExp('^' + walletAddress + '$', 'i') });
             if (existingUser) {
                 res.status(400).json({ success: false, message: 'Wallet address already exists' });
                 return;
@@ -64,11 +64,11 @@ export class UserController {
             await miningState.save();
             console.log(`[REGISTER] MiningState created`);
 
-            // 4. 보너스 레코드 초기화 (Step 1 수정: 기본값 0.0으로 정정)
+            // 4. 보너스 레코드 초기화 (1BW 가입 보상 정책 반영)
             const bonusRecord = new BonusRecord({
                 walletAddress,
                 referralBonusStorage: '0.00000000000000000000000000000000000000000000000000',
-                referralRewardStorage: '0.00000000000000000000000000000000000000000000000000', // ️[Phase 2-1 수술] 1.0에서 0.0으로 원복하여 중복 지급 차단
+                referralRewardStorage: referrerCode ? '1.00000000000000000000000000000000000000000000000000' : '0.00000000000000000000000000000000000000000000000000', // 추천인 코드 있을 시 1BW 즉시 지급
                 referralList: [],
                 attendanceHistory: []
             });
@@ -102,7 +102,7 @@ export class UserController {
         try {
             const { walletAddress, secondPasswordHash } = req.body;
 
-            const user = await User.findOne({ walletAddress });
+            const user = await User.findOne({ walletAddress: new RegExp('^' + walletAddress + '$', 'i') });
             if (!user) {
                 res.status(404).json({ success: false, message: 'User not found' });
                 return;
@@ -165,10 +165,9 @@ export class UserController {
 
             console.log(`[REFERRAL] Referrer validated: ${referrer.walletAddress}`);
 
-            // [Phase 2 최종완성] 1. 추천인 보너스 장부 '원자적 결합(upsert: true)' 으로 전면 교체
-            // 비동기 지연으로 장부가 없어도 즉시 무조건 생성하여 추천인 명단을 절대 유실하지 않게 강제 보장함
+            // [Phase 2 최종완성] 1. 추천인 보너스 장부 '원자적 결합(upsert: true)' 으로 전면 교체 (대소문자 무시 검색 적용)
             const referrerBonusRecord = await BonusRecord.findOneAndUpdate(
-                { walletAddress: referrer.walletAddress },
+                { walletAddress: new RegExp('^' + referrer.walletAddress + '$', 'i') },
                 {
                     $push: {
                         referralList: {
@@ -196,7 +195,7 @@ export class UserController {
             const realReferralCount = referrerBonusRecord.referralList.length;
 
             const updatedMiningState = await MiningState.findOneAndUpdate(
-                { walletAddress: referrer.walletAddress },
+                { walletAddress: new RegExp('^' + referrer.walletAddress + '$', 'i') },
                 { $set: { referralCount: realReferralCount } },
                 { new: true, upsert: true }
             );
@@ -226,8 +225,8 @@ export class UserController {
             // 신규 가입자(newUser)는 이미 위의 'register' 함수 실행 순간 무조건 1.0 BW를 받고 내려오기 때문에, 여기서 한 번 더 주면 생태계가 붕괴됨.
             // 기존에 불필요하게 newUserBonusRecord를 찾아서 currentReward.plus(1)을 중복 집행하던 논리적 오류 블록 전체를 완전 삭제함.
 
-            // [3월 3일 Step 2 복구] 가입자 본인의 마이닝 2% 보항 보너스 엔진 장착
-            let newUserMiningState = await MiningState.findOne({ walletAddress: newWalletAddress });
+            // [3월 3일 Step 2 복구] 가입자 본인의 마이닝 2% 보항 보너스 엔진 장착 (대소문자 무시 검색 적용)
+            let newUserMiningState = await MiningState.findOne({ walletAddress: new RegExp('^' + newWalletAddress + '$', 'i') });
             if (!newUserMiningState) {
                 newUserMiningState = new MiningState({
                     walletAddress: newWalletAddress,
