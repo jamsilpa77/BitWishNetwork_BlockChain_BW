@@ -12,6 +12,7 @@ import { Buffer } from 'buffer';
 import crypto from 'crypto';
 import { apiService } from '@/services/ApiService';
 import { ReferralBonusService } from '../BonusService/ReferralBonusService';
+import { Decimal } from 'decimal.js';
 
 // 브라우저 환경 Buffer 설정
 if (typeof window !== 'undefined') {
@@ -23,10 +24,10 @@ export interface WalletData {
   publicKey: string;
   encryptedMnemonic: string;
   createdAt: number;
-  balance: number;
-  availableBalance: number;
-  referralReward: number;
-  referralBonus: number;
+  balance: Decimal | number | string;
+  availableBalance: Decimal | number | string;
+  referralReward: Decimal | number | string;
+  referralBonus: Decimal | number | string;
   myReferralCode: string;
   usedReferralCode?: string;
   secondPasswordHash?: string;
@@ -455,12 +456,15 @@ export class WalletService {
    * [Phase 3] 송금 가능 금액 검증 (availableBalance 기반)
    * 15일 대기 기간이 경과하여 마이그레이션된 자산만 사용 가능하도록 제한
    */
-  public validateTransferAmount(amount: number, availableBalance: number): { success: boolean; messageKey: string } {
-    if (amount <= 0) {
+  public validateTransferAmount(amount: Decimal | number, availableBalance: Decimal | number): { success: boolean; messageKey: string } {
+    const decAmount = new Decimal(amount);
+    const decAvailable = new Decimal(availableBalance);
+
+    if (decAmount.lte(0)) {
       return { success: false, messageKey: 'wallet.p2p.messages.invalidAmount' };
     }
 
-    if (amount > availableBalance) {
+    if (decAmount.gt(decAvailable)) {
       return { success: false, messageKey: 'wallet.p2p.messages.insufficientBalance' };
     }
 

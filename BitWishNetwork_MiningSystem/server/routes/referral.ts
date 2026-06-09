@@ -116,13 +116,18 @@ router.get('/list/:walletAddress', async (req, res) => {
             bonusRecord.referralList = Array.from(uniqueMap.values());
             await bonusRecord.save();
 
+            // referral.ts 내 stats 및 list 수식 개조 (공정 2)
+            const hasParent = user && user.referrerCode && user.referrerCode.trim() !== '';
+            const initialBonus = hasParent ? new Decimal(0.02) : new Decimal(0);
+            const correctedRate = initialBonus.plus(new Decimal(bonusRecord.referralList.length).mul(0.02));
+
             // [Sync] 추천인 수 및 보너스율도 실시간으로 다시 계산하여 정규화 (대소문자 무시 검색 적용)
             await MiningState.findOneAndUpdate(
                 { walletAddress: new RegExp('^' + addr + '$', 'i') },
                 {
                     $set: {
                         referralCount: bonusRecord.referralList.length,
-                        referralBonusRate: (bonusRecord.referralList.length * 0.02).toString()
+                        referralBonusRate: correctedRate.toString() // 0.02 혹은 자식 가산율 완벽 유지
                     }
                 }
             );
@@ -164,7 +169,7 @@ router.get('/list/:walletAddress', async (req, res) => {
         const formattedList = bonusRecord.referralList.map(item => ({
             walletAddress: item.childWalletAddress,
             joinedAt: item.joinedAt,
-            accumulatedBonus: new Decimal(item.accumulatedBonus || '0').toFixed(8),
+            accumulatedBonus: item.accumulatedBonus || '0',
             accumulatedBonusFull: item.accumulatedBonus, // 50자리 전체
             isKycVerified: item.isKycVerified,
             kycDetailStatus: item.isKycVerified ? '승인' : '미승인',
@@ -203,9 +208,9 @@ router.get('/list/:walletAddress', async (req, res) => {
             success: true,
             data: {
                 referralList: formattedList,
-                totalBonus: new Decimal(bonusRecord.referralBonusStorage || '0').toFixed(8),
+                totalBonus: bonusRecord.referralBonusStorage || '0',
                 totalBonusFull: bonusRecord.referralBonusStorage,
-                totalReward: new Decimal(bonusRecord.referralRewardStorage || '0').toFixed(8),
+                totalReward: bonusRecord.referralRewardStorage || '0',
                 totalRewardFull: bonusRecord.referralRewardStorage,
                 referralCount: miningState?.referralCount || 0
             }
@@ -307,13 +312,18 @@ router.get('/stats/:walletAddress', async (req, res) => {
             bonusRecord.referralList = Array.from(uniqueStatsMap.values());
             await bonusRecord.save();
 
+            // referral.ts 내 stats 및 list 수식 개조 (공정 2)
+            const hasParent = user && user.referrerCode && user.referrerCode.trim() !== '';
+            const initialBonus = hasParent ? new Decimal(0.02) : new Decimal(0);
+            const correctedRate = initialBonus.plus(new Decimal(bonusRecord.referralList.length).mul(0.02));
+
             // [Sync] 통계 장부 세척 시 마이닝 상태(카운트/율)도 동기화 (대소문자 무시 검색 적용)
             await MiningState.findOneAndUpdate(
                 { walletAddress: new RegExp('^' + addr + '$', 'i') },
                 {
                     $set: {
                         referralCount: bonusRecord.referralList.length,
-                        referralBonusRate: (bonusRecord.referralList.length * 0.02).toString()
+                        referralBonusRate: correctedRate.toString() // 0.02 혹은 자식 가산율 완벽 유지
                     }
                 }
             );
@@ -361,7 +371,7 @@ router.get('/stats/:walletAddress', async (req, res) => {
         const mappedList = bonusRecord.referralList.map(item => ({
             childWalletAddress: item.childWalletAddress,
             joinedAt: item.joinedAt,
-            accumulatedBonus: new Decimal(item.accumulatedBonus || '0').toFixed(8),
+            accumulatedBonus: item.accumulatedBonus || '0',
             isKycVerified: item.isKycVerified,
             kycDetailStatus: item.isKycVerified ? '승인' : '미승인',
             rewardStatus: item.rewardStatus,
@@ -389,8 +399,8 @@ router.get('/stats/:walletAddress', async (req, res) => {
                 referralCode: user.myReferralCode,
                 referralCount: miningState.referralCount,
                 referralBonusRate: parseFloat(miningState.referralBonusRate || '0'),
-                referralBonusStorage: new Decimal(bonusRecord.referralBonusStorage || '0').toFixed(8),
-                referralRewardStorage: new Decimal(bonusRecord.referralRewardStorage || '0').toFixed(8),
+                referralBonusStorage: bonusRecord.referralBonusStorage || '0',
+                referralRewardStorage: bonusRecord.referralRewardStorage || '0',
                 referralList: mappedList
             }
         });

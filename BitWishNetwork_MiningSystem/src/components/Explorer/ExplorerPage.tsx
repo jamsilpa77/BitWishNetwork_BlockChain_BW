@@ -55,6 +55,11 @@ const ExplorerPage: React.FC = () => {
         remainingPool: '13650000000',
         recentMigrations: [] as any[]
     });
+    const [fundStats, setFundStats] = useState({
+        blockCreationFee: '0',
+        ecosystemFund: '0',
+        foundationFund: '0'
+    });
 
     // [3단계] 1초 단위 리얼타임 타이머 엔진 가동
     useEffect(() => {
@@ -97,6 +102,13 @@ const ExplorerPage: React.FC = () => {
             const statsResponse = await axios.get(statsUrl);
             if (statsResponse.data.success) {
                 setGlobalStats(statsResponse.data.data);
+                if (statsResponse.data.data.blockCreationFee) {
+                    setFundStats({
+                        blockCreationFee: statsResponse.data.data.blockCreationFee,
+                        ecosystemFund: statsResponse.data.data.ecosystemFund,
+                        foundationFund: statsResponse.data.data.foundationFund
+                    });
+                }
             }
 
             // [4단계] 마이너 풀 차감 및 페이징 통계 연동
@@ -250,12 +262,12 @@ const ExplorerPage: React.FC = () => {
     return (
         <div className={`explorer-container ${darkMode ? 'dark-mode' : ''}`}>
             <header className="explorer-header">
-                <div className="header-inner">
-                    <button className="back-button" onClick={() => window.location.href = '/'}>
-                        ← {t('navigation.home')}
-                    </button>
-                    <h1>{t('explorer.title')}</h1>
-                    <div className="header-stats">
+                <div className="header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="header-left" style={{ flex: 1 }}>
+                        {/* 레이아웃 균형을 위한 빈 공간 */}
+                    </div>
+                    <h1 style={{ flex: 0, whiteSpace: 'nowrap', textAlign: 'center' }}>{t('explorer.title')}</h1>
+                    <div className="header-stats" style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem' }}>
                         <button
                             className={`mode-toggle-btn ${isTestnet ? 'testnet' : 'mainnet'}`}
                             onClick={() => setIsTestnet(!isTestnet)}
@@ -300,7 +312,7 @@ const ExplorerPage: React.FC = () => {
                                 <div className="economic-hybrid-grid">
                                     <div className="supply-side-box">
                                         <div className="side-label">
-                                            <span className="dot blue"></span> {currentLang === 'ko' ? '자산 배분 규정 (100%)' : 'Asset Allocation Rules'}
+                                            <span className="dot blue"></span> {t('explorer.assetAllocation')}
                                         </div>
                                         <div className="supply-multi-grid">
                                             <div className="s-card miner-card-enhanced">
@@ -310,7 +322,7 @@ const ExplorerPage: React.FC = () => {
                                                 </div>
                                                 <div className="allocation-divider"></div>
                                                 <div className="payout-row">
-                                                    <div className="sc-label">💰 {currentLang === 'ko' ? '개인채굴자 BW 지급 현황' : (currentLang === 'en' ? 'Miner BW Payout Status' : (currentLang === 'ja' ? '個人マイ너BW支給現況' : '个人矿工BW发放现状'))} ({((parseFloat(migrationStats.totalPaid) / 13650000000) * 100).toFixed(4)}%)</div>
+                                                    <div className="sc-label">💰 {t('explorer.minerPayoutStatus')} ({((parseFloat(migrationStats.totalPaid) / 13650000000) * 100).toFixed(4)}%)</div>
                                                     <div className="sc-value payout-gold">{parseFloat(migrationStats.totalPaid).toLocaleString()} <small>BW</small></div>
                                                 </div>
                                             </div>
@@ -335,18 +347,30 @@ const ExplorerPage: React.FC = () => {
                                                     <label>{t('explorer.txFees')}</label>
                                                     <span>0.0000 <small>BW</small></span>
                                                 </div>
-                                                <div className="fi-gauge"><div className="gauge-fill eco" style={{ width: '60%' }}></div></div>
+                                                <div className="fi-gauge"><div className="gauge-fill eco" style={{ width: '0%' }}></div></div>
                                             </div>
                                             <div className="flow-item">
                                                 <div className="fi-header">
                                                     <label>{t('explorer.blockFees')}</label>
-                                                    <span>0.0000 <small>BW</small></span>
+                                                    <span>{parseFloat(fundStats.blockCreationFee).toFixed(8)} <small>BW</small></span>
                                                 </div>
-                                                <div className="fi-gauge"><div className="gauge-fill foundation" style={{ width: '40%' }}></div></div>
+                                                <div className="fi-gauge">
+                                                    <div className="gauge-fill foundation" style={{ width: parseFloat(fundStats.blockCreationFee) > 0 ? '100%' : '0%' }}></div>
+                                                </div>
+                                                <div className="fee-split-row">
+                                                    <div className="fee-split-item">
+                                                        <span className="split-label">{currentLang === 'ko' ? '생태계 기금 (60%)' : 'Ecosystem Fund (60%)'}</span>
+                                                        <span className="split-value">{parseFloat(fundStats.ecosystemFund).toFixed(8)} <small>BW</small></span>
+                                                    </div>
+                                                    <div className="fee-split-item">
+                                                        <span className="split-label">{currentLang === 'ko' ? '재단 운영비 (40%)' : 'Foundation (40%)'}</span>
+                                                        <span className="split-value">{parseFloat(fundStats.foundationFund).toFixed(8)} <small>BW</small></span>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div className="total-accumulated-box">
                                                 <label>{t('explorer.totalFees')}</label>
-                                                <span className="neon-gold">0.00000000 <small>BW</small></span>
+                                                <span className="neon-gold">{parseFloat(fundStats.blockCreationFee).toFixed(8)} <small>BW</small></span>
                                             </div>
                                         </div>
                                     </div>
@@ -357,7 +381,7 @@ const ExplorerPage: React.FC = () => {
                                         <span>👥 {t('explorer.createdWallets')}: <strong>{globalStats.totalUsers}</strong></span>
                                     </div>
                                     <button className="transparency-audit-btn">
-                                        🛡️ {currentLang === 'ko' ? '기금 지갑 투명성 감사' : 'Fund Transparency Audit'}
+                                        🛡️ {t('explorer.fundTransparencyAudit') || (currentLang === 'ko' ? '기금 지갑 투명성 감사' : 'Fund Transparency Audit')}
                                     </button>
                                 </div>
                                 <div className="dashboard-scan-line"></div>
@@ -367,7 +391,7 @@ const ExplorerPage: React.FC = () => {
                         {!isTestnet && (
                             <section className="operations-section premium-migration-section animate-fade-in">
                                 <div className="section-header">
-                                    <h2>{currentLang === 'ko' ? '최근 마이그레이션 대기자 목록' : 'Recent Migration Waiting List'}</h2>
+                                    <h2>{t('explorer.migrationWaitingList')}</h2>
                                     <button className="view-all-btn" onClick={() => { setViewMode('all'); setCurrentPage(1); fetchBlocks(1, ''); }}>
                                         {t('explorer.viewAll')}
                                     </button>
@@ -376,10 +400,10 @@ const ExplorerPage: React.FC = () => {
                                     <table className="migration-live-table">
                                         <thead>
                                             <tr>
-                                                <th>{currentLang === 'ko' ? '지갑 주소' : 'Wallet Address'}</th>
-                                                <th>{currentLang === 'ko' ? '정산 확정 일자' : 'Approval Date'}</th>
-                                                <th>{currentLang === 'ko' ? '전송 대기시간' : 'Waiting Time'}</th>
-                                                <th>{currentLang === 'ko' ? '마이그레이션 상태' : 'Status'}</th>
+                                                <th>{t('explorer.address')}</th>
+                                                <th>{t('explorer.approvalDate')}</th>
+                                                <th>{t('explorer.waitingTime')}</th>
+                                                <th>{t('explorer.migrationStatus')}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -402,14 +426,14 @@ const ExplorerPage: React.FC = () => {
                                                         <td className="date-cell">{new Date(item.settledAt).toLocaleString()}</td>
                                                         <td className="time-cell">
                                                             {isUnlocked ? (
-                                                                <span className="transfer-done-text">{currentLang === 'ko' ? '전송 완료' : 'Transfer Done'}</span>
+                                                                <span className="transfer-done-text">{t('explorer.transferDone')}</span>
                                                             ) : (
-                                                                <span className="countdown-raw">{days}일 {hours.toString().padStart(2, '0')}:{mins.toString().padStart(2, '0')}:{secs.toString().padStart(2, '0')}</span>
+                                                                <span className="countdown-raw">{days}{t('attendance.unitDays')} {hours.toString().padStart(2, '0')}:{mins.toString().padStart(2, '0')}:{secs.toString().padStart(2, '0')}</span>
                                                             )}
                                                         </td>
                                                         <td className="status-cell">
                                                             <span className={`m-badge ${isUnlocked ? 'completed-glow' : 'waiting-pulse'}`}>
-                                                                {isUnlocked ? (currentLang === 'ko' ? '완료' : 'Done') : (currentLang === 'ko' ? '대기' : 'Waiting')}
+                                                                {isUnlocked ? t('explorer.done') : t('explorer.waiting')}
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -424,7 +448,7 @@ const ExplorerPage: React.FC = () => {
                         <section className="transactions-section">
                             <div className="section-header">
                                 <div className="title-with-badge">
-                                    <h2>{currentLang === 'ko' ? '실시간 뱅킹 이체 내역' : 'Real-time Banking Transactions'}</h2>
+                                    <h2>{t('explorer.bankingHistory')}</h2>
                                     <span className="live-badge">LIVE</span>
                                 </div>
                                 <button className="view-all-btn">{t('explorer.viewAll')}</button>
@@ -463,7 +487,7 @@ const ExplorerPage: React.FC = () => {
                                                     <span className="detail-value tx-hash-full">{tx.txHash}</span>
                                                 </div>
                                                 <div className="tx-detail-row">
-                                                    <span className="detail-label">{currentLang === 'ko' ? '거래 유형' : 'TX Type'}</span>
+                                                    <span className="detail-label">{t('explorer.txType')}</span>
                                                     <span className="detail-value">P2P TRANSFER</span>
                                                 </div>
                                                 <div className="tx-detail-row">
@@ -478,7 +502,7 @@ const ExplorerPage: React.FC = () => {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="no-data-state">{currentLang === 'ko' ? '최근 뱅킹 거래 내역이 없습니다.' : 'No recent banking transactions.'}</div>
+                                    <div className="no-data-state">{t('explorer.noBankingHistory')}</div>
                                 )}
                             </div>
                         </section>
@@ -539,11 +563,11 @@ const ExplorerPage: React.FC = () => {
                     <section className="dedicated-investigation-view animate-fade-in">
                         <div className="investigation-header">
                             <button className="back-to-main-btn" onClick={() => setViewMode('main')}>
-                                ⬅️ {currentLang === 'ko' ? '메인 익스플로러로 돌아가기' : 'Back to Main Explorer'}
+                                ⬅️ {t('explorer.backToMain')}
                             </button>
                             <div className="investigation-title-area">
-                                <h1>{currentLang === 'ko' ? '마이그레이션 15일 대기자 전수 조사 시스템' : 'Migration 15-day Waiting List Investigation System'}</h1>
-                                <p>{currentLang === 'ko' ? '실시간 30줄 페이징 및 지갑 주소 전수 검색 엔진 가동 중' : 'Live 30-row paging and wallet address search engine active'}</p>
+                                <h1>{t('explorer.investigationSystem')}</h1>
+                                <p>{t('explorer.investigationSubtitle')}</p>
                             </div>
                         </div>
 
@@ -551,7 +575,7 @@ const ExplorerPage: React.FC = () => {
                             <form onSubmit={handleSearch} className="m-search-form large">
                                 <input 
                                     type="text" 
-                                    placeholder={currentLang === 'ko' ? '검색할 지갑 주소를 입력하세요 (BW...)' : 'Enter wallet address to search (BW...)'} 
+                                    placeholder={t('explorer.searchWalletPlaceholder')} 
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="m-search-input"
@@ -564,10 +588,10 @@ const ExplorerPage: React.FC = () => {
                             <table className="migration-live-table investigation-table">
                                 <thead>
                                     <tr>
-                                        <th>{currentLang === 'ko' ? '지갑 주소' : 'Wallet Address'}</th>
-                                        <th>{currentLang === 'ko' ? '정산 확정 일자' : 'Approval Date'}</th>
-                                        <th>{currentLang === 'ko' ? '전송 대기시간' : 'Waiting Time'}</th>
-                                        <th>{currentLang === 'ko' ? '마이그레이션 상태' : 'Status'}</th>
+                                        <th>{t('explorer.address')}</th>
+                                        <th>{t('explorer.approvalDate')}</th>
+                                        <th>{t('explorer.waitingTime')}</th>
+                                        <th>{t('explorer.migrationStatus')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>

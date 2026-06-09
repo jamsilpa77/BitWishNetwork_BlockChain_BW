@@ -3,13 +3,15 @@ import { QRCodeSVG } from 'qrcode.react';
 import { LanguageManager } from '../../utils/LanguageManager/LanguageManager';
 import { walletService } from '../../services/BlockchainService/WalletService';
 import { apiService } from '../../services/ApiService';
+import { Decimal } from 'decimal.js';
+import { PrecisionCalculator } from '../../utils/PrecisionCalculator/PrecisionCalculator';
 
 interface TransferModalProps {
     isOpen: boolean;
     onClose: () => void;
     type: 'send' | 'receive';
     walletAddress: string;
-    availableBalance: number;
+    availableBalance: Decimal;
     currentLanguage: string;
 }
 
@@ -22,7 +24,25 @@ const TransferModal: React.FC<TransferModalProps> = ({
     currentLanguage
 }) => {
     const [langManager] = useState(() => new LanguageManager());
-    
+    const [precisionCalculator] = useState(() => new PrecisionCalculator());
+
+    // 드래그 및 위치 상태 정의
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+    // 웹 브라우저 경고창(alert)을 대신할 고급 안내창의 상태값
+    const [alertModal, setAlertModal] = useState({ isOpen: false, message: '' });
+
+    // 입력 필드 상태값
+    const [recipientAddress, setRecipientAddress] = useState('');
+    const [amount, setAmount] = useState('');
+    const [otpCode, setOtpCode] = useState('');
+    const [fee, setFee] = useState<Decimal>(new Decimal(0));
+
+    // [중요 수복] 누락되었던 송금 진행 상태 스위치(isProcessing) 추가 정의
+    const [isProcessing, setIsProcessing] = useState(false);
+
     const getTranslation = (key: string) => {
         return langManager.getTranslation(key, currentLanguage);
     };
@@ -49,18 +69,68 @@ const TransferModal: React.FC<TransferModalProps> = ({
         }
     };
 
-    const [recipientAddress, setRecipientAddress] = useState('');
-    const [amount, setAmount] = useState('');
-    const [otpCode, setOtpCode] = useState('');
-    const [fee, setFee] = useState(0);
-    const [isProcessing, setIsProcessing] = useState(false);
+    // "나의 지갑" 모달의 상하좌우를 감지해 정중앙으로 완벽 정렬시키는 공식
+    useEffect(() => {
+        if (isOpen) {
+            const walletEl = document.querySelector('.my-wallet-modal');
+            if (walletEl) {
+                const rect = walletEl.getBoundingClientRect();
+                const modalWidth = 450;
+                const modalHeight = type === 'receive' ? 480 : 620;
+
+                const x = rect.left + (rect.width - Math.min(window.innerWidth * 0.9, modalWidth)) / 2;
+                const y = rect.top + (rect.height - modalHeight) / 2;
+                setPosition({ x, y });
+            } else {
+                const width = 450;
+                const x = (window.innerWidth - Math.min(window.innerWidth * 0.9, width)) / 2;
+                const y = 140;
+                setPosition({ x, y });
+            }
+        }
+    }, [isOpen, type]);
+
+    // 마우스 드래그 기능 수식
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (isDragging) {
+                const newX = e.clientX - dragOffset.x;
+                const newY = e.clientY - dragOffset.y;
+                setPosition({ x: newX, y: newY });
+            }
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+
+        if (isDragging) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging, dragOffset]);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if ((e.target as HTMLElement).closest('.transfer-header-handle')) {
+            setIsDragging(true);
+            setDragOffset({
+                x: e.clientX - position.x,
+                y: e.clientY - position.y
+            });
+        }
+    };
 
     useEffect(() => {
-        if (amount) {
-            const calculatedFee = parseFloat(amount) * 0.0001;
-            setFee(isNaN(calculatedFee) ? 0 : calculatedFee);
+        if (amount && !isNaN(parseFloat(amount))) {
+            const calculatedFee = new Decimal(amount).mul(0.0001);
+            setFee(calculatedFee);
         } else {
-            setFee(0);
+            setFee(new Decimal(0));
         }
     }, [amount]);
 
@@ -71,42 +141,17 @@ const TransferModal: React.FC<TransferModalProps> = ({
         alert(getTranslation('wallet.dashboard.copyAddress') + '!');
     };
 
+    // 송금하기 버튼 클릭 시 작동하는 함수
     const handleSend = async () => {
-        if (!recipientAddress || !amount || !otpCode) {
-            alert(getTranslation('messages.error') || 'Please fill all fields.');
-            return;
-        }
+        setIsProcessing(true); // 로딩 시작
 
-        // [Phase 3] WalletService를 통한 정밀 검증 (availableBalance 기반)
-        const validation = walletService.validateTransferAmount(parseFloat(amount) + fee, availableBalance);
-        if (!validation.success) {
-            alert(getTranslation(validation.messageKey));
-            return;
-        }
+        // 브라우저 팝업 대신 커스텀 메시지 모달을 화면 한가운데에 노출합니다.
+        setAlertModal({
+            isOpen: true,
+            message: currentLanguage === 'ko' ? '아직 KYC 신청 기간이 아닙니다.' : 'It is not the KYC application period yet.'
+        });
 
-        setIsProcessing(true);
-        try {
-            const txData = {
-                senderAddress: walletAddress,
-                recipientAddress,
-                amount: parseFloat(amount),
-                fee
-            };
-
-            const response = await apiService.recordTransaction(txData);
-            
-            if (response && response.success) {
-                alert(getTranslation('wallet.p2p.send.messages.transferSuccess') || 'Transfer Requested Successfully!');
-                onClose();
-            } else {
-                alert(getTranslation('wallet.p2p.send.messages.transferFailed') || 'Transfer Failed.');
-            }
-        } catch (error) {
-            console.error('Transfer error:', error);
-            alert(getTranslation('wallet.p2p.send.messages.transferFailed') || 'Transfer Failed.');
-        } finally {
-            setIsProcessing(false);
-        }
+        setIsProcessing(false); // 로딩 종료
     };
 
     const styles = {
@@ -116,22 +161,23 @@ const TransferModal: React.FC<TransferModalProps> = ({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 10000,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            zIndex: 10200,
             backdropFilter: 'blur(10px)',
+            pointerEvents: 'auto' as const
         },
         modal: {
             width: '90%',
             maxWidth: '450px',
-            background: 'linear-gradient(145deg, rgba(30, 30, 40, 0.9), rgba(15, 15, 20, 0.95))',
+            background: 'linear-gradient(145deg, rgba(30, 30, 40, 0.95), rgba(15, 15, 20, 0.98))',
             borderRadius: '24px',
             padding: '30px',
             border: '1px solid rgba(255, 215, 0, 0.2)',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 215, 0, 0.05)',
-            position: 'relative' as const,
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(255, 215, 0, 0.05)',
+            position: 'fixed' as const,
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            cursor: isDragging ? 'grabbing' : 'default',
             color: '#fff',
             fontFamily: "'Inter', sans-serif",
             overflow: 'hidden',
@@ -139,6 +185,8 @@ const TransferModal: React.FC<TransferModalProps> = ({
         header: {
             textAlign: 'center' as const,
             marginBottom: '25px',
+            paddingBottom: '10px',
+            borderBottom: '1px solid rgba(255,255,255,0.05)'
         },
         title: {
             fontSize: '24px',
@@ -203,7 +251,7 @@ const TransferModal: React.FC<TransferModalProps> = ({
             fontSize: '13px',
             color: 'rgba(255, 255, 255, 0.5)',
             textAlign: 'right' as const,
-            marginTop: '-15px',
+            marginTop: '-10px',
         },
         cautionBox: {
             backgroundColor: 'rgba(255, 0, 0, 0.05)',
@@ -256,20 +304,60 @@ const TransferModal: React.FC<TransferModalProps> = ({
             fontSize: '14px',
             cursor: 'pointer',
             fontWeight: 600,
+        },
+        // 모달 정중앙 고급 팝업창 스타일 정의
+        alertOverlay: {
+            position: 'absolute' as const,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 10300,
+            borderRadius: '24px',
+            backdropFilter: 'blur(5px)',
+        },
+        alertBox: {
+            width: '280px',
+            backgroundColor: '#1E1E28',
+            border: '1px solid rgba(255, 215, 0, 0.3)',
+            borderRadius: '16px',
+            padding: '24px',
+            textAlign: 'center' as const,
+            boxShadow: '0 15px 30px rgba(0,0,0,0.5)',
+        },
+        alertBtn: {
+            width: '100%',
+            padding: '12px',
+            background: 'linear-gradient(135deg, #ffd700, #ffcc00)',
+            color: '#000',
+            border: 'none',
+            borderRadius: '8px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: '14px',
         }
     };
 
     return (
         <div style={styles.overlay} onClick={onClose}>
             <div style={styles.modal} onClick={e => e.stopPropagation()}>
-                <div style={styles.header}>
+                {/* 헤더 바 부분 */}
+                <div
+                    style={{ ...styles.header, cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}
+                    className="transfer-header-handle"
+                    onMouseDown={handleMouseDown}
+                >
                     <h2 style={styles.title}>{type === 'receive' ? p2p.receive.title : p2p.send.title}</h2>
                 </div>
 
                 <div style={styles.content}>
                     {type === 'receive' ? (
                         <div style={styles.qrContainer}>
-                            <QRCodeSVG 
+                            <QRCodeSVG
                                 value={walletAddress || 'BW_WALLET_UNAVAILABLE'}
                                 size={200}
                                 bgColor={"#ffffff"}
@@ -289,8 +377,8 @@ const TransferModal: React.FC<TransferModalProps> = ({
                         <>
                             <div style={styles.inputGroup}>
                                 <label style={styles.label}>{p2p.send.addressLabel}</label>
-                                <input 
-                                    style={styles.input} 
+                                <input
+                                    style={styles.input}
                                     placeholder={p2p.send.addressPlaceholder}
                                     value={recipientAddress}
                                     onChange={e => setRecipientAddress(e.target.value)}
@@ -298,21 +386,21 @@ const TransferModal: React.FC<TransferModalProps> = ({
                             </div>
                             <div style={styles.inputGroup}>
                                 <label style={styles.label}>{p2p.send.amountLabel}</label>
-                                <input 
-                                    style={styles.input} 
+                                <input
+                                    style={styles.input}
                                     type="number"
                                     placeholder={p2p.send.amountPlaceholder}
                                     value={amount}
                                     onChange={e => setAmount(e.target.value)}
                                 />
                                 <span style={styles.feeInfo}>
-                                    {p2p.send.feeLabel}: {fee.toFixed(8)} BW
+                                    {p2p.send.feeLabel}: {precisionCalculator.formatForUI(fee)} BW
                                 </span>
                             </div>
                             <div style={styles.inputGroup}>
                                 <label style={styles.label}>{p2p.send.otpLabel}</label>
-                                <input 
-                                    style={styles.input} 
+                                <input
+                                    style={styles.input}
                                     maxLength={6}
                                     placeholder={p2p.send.otpPlaceholder}
                                     value={otpCode}
@@ -326,7 +414,6 @@ const TransferModal: React.FC<TransferModalProps> = ({
                                 </p>
                             </div>
 
-                            {/* [Phase 3] 정산 안내 메시지 (15일 타임락) */}
                             <div style={{
                                 fontSize: '12px',
                                 color: 'rgba(255, 215, 0, 0.7)',
@@ -342,16 +429,16 @@ const TransferModal: React.FC<TransferModalProps> = ({
 
                     <div style={styles.buttonGroup}>
                         {type === 'send' && (
-                            <button 
+                            <button
                                 style={{
                                     ...styles.primaryBtn,
                                     opacity: isProcessing ? 0.7 : 1,
                                     cursor: isProcessing ? 'not-allowed' : 'pointer'
-                                }} 
+                                }}
                                 onClick={handleSend}
                                 disabled={isProcessing}
                             >
-                                {isProcessing ? 'Processing...' : p2p.send.confirmBtn}
+                                {p2p.send.confirmBtn}
                             </button>
                         )}
                         <button style={styles.secondaryBtn} onClick={onClose}>
@@ -359,6 +446,24 @@ const TransferModal: React.FC<TransferModalProps> = ({
                         </button>
                     </div>
                 </div>
+
+                {/* 송금하기 모달 중앙에 뜨는 고급스러운 안내 모달 */}
+                {alertModal.isOpen && (
+                    <div style={styles.alertOverlay}>
+                        <div style={styles.alertBox}>
+                            <div style={{ fontSize: '40px', marginBottom: '15px' }}>⚠️</div>
+                            <p style={{ fontSize: '14px', color: '#fff', fontWeight: '700', lineHeight: '1.6', marginBottom: '22px', textAlign: 'center' }}>
+                                {alertModal.message}
+                            </p>
+                            <button
+                                style={styles.alertBtn}
+                                onClick={() => setAlertModal({ isOpen: false, message: '' })}
+                            >
+                                {currentLanguage === 'ko' ? '확인' : 'Confirm'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

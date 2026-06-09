@@ -218,8 +218,18 @@ export class BitWishBlockchain extends EventEmitter {
         throw new Error(`블록 마이닝 실패: ${miningResult.error}`);
       }
 
+      // ★ 마이닝에 성공한 해시와 논스를 블록에 반드시 각인시킵니다 ★
+      newBlock.hash = miningResult.hash;
+      if (miningResult.nonce !== undefined) {
+        newBlock.header.nonce = miningResult.nonce;
+      }
+
       // 블록 추가
-      this.addBlock(newBlock);
+      const addResult = this.addBlock(newBlock);
+      if (!addResult.success) {
+        throw new Error(`블록 추가 실패: ${addResult.error}`);
+      }
+      await this.saveToDatabase();
 
       console.log(`🔗 블록 생성 완료: 높이 ${newBlock.header.blockHeight}, 해시: ${newBlock.hash}`);
       this.emit('blockCreated', newBlock);
@@ -353,9 +363,10 @@ export class BitWishBlockchain extends EventEmitter {
         return basicValidation;
       }
 
-      // 2. 잔액 검증 (시스템 트랜잭션 제외)
+      // 2. 잔액 검증 (시스템/마이닝 보상/스테이킹 보상 트랜잭션 제외)
       if (transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.SYSTEM &&
-        transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.MINING_REWARD) {
+        transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.MINING_REWARD &&
+        transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.STAKING_REWARD) {
 
         const account = this.accounts.get(transaction.from);
         if (!account) {
@@ -367,10 +378,14 @@ export class BitWishBlockchain extends EventEmitter {
         }
       }
 
-      // 3. Nonce 검증
-      const account = this.accounts.get(transaction.from);
-      if (account && transaction.nonce !== account.nonce) {
-        return { valid: false, error: '잘못된 nonce입니다' };
+      // 3. Nonce 검증 (시스템/마이닝/스테이킹 보상 트랜잭션은 제외)
+      if (transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.SYSTEM &&
+        transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.MINING_REWARD &&
+        transaction.type !== BITWISH_TRANSACTION_CONFIG.TYPES.STAKING_REWARD) {
+        const account = this.accounts.get(transaction.from);
+        if (account && transaction.nonce !== account.nonce) {
+          return { valid: false, error: '잘못된 nonce입니다' };
+        }
       }
 
       return { valid: true };
@@ -728,7 +743,9 @@ export class BitWishBlockchain extends EventEmitter {
       networkId: BITWISH_NETWORK_CONFIG.NETWORK_ID,
       ecosystemFund: this.ecosystemFund.toString(),
       foundationFund: this.foundationFund.toString(),
-      totalAccumulatedFees: this.totalAccumulatedFees.toString()
+      totalAccumulatedFees: this.totalAccumulatedFees.toString(),
+      adminMasterAddress: this.adminMasterAddress,
+      adminHardwareKeyID: this.adminHardwareKeyID
     };
   }
 
@@ -804,10 +821,7 @@ export class BitWishBlockchain extends EventEmitter {
     }
   }
 
-  /**
-   * 네트워크 기금 상태 로드 (Persistent Vault Recovery)
-   */
-  private async loadNetworkStats(): Promise<{ ecosystemFund: Decimal, foundationFund: Decimal, totalAccumulatedFees: Decimal } | null> {
+  private async loadNetworkStats(): Promise<{ ecosystemFund: Decimal, foundationFund: Decimal, totalAccumulatedFees: Decimal, adminMasterAddress: string | null, adminHardwareKeyID: string | null } | null> {
     try {
       const { MongoClient } = require('mongodb');
       const client = new MongoClient('mongodb://localhost:27017');
@@ -889,7 +903,7 @@ export class BitWishBlockchain extends EventEmitter {
       }
 
       // 엔진 계정 장부 업데이트
-      const targetAccount = this.accounts.get(targetAddress) || { address: targetAddress, balance: new Decimal(0), nonce: 0 };
+      const targetAccount = this.accounts.get(targetAddress) || this.createAccount(targetAddress, '0');
       targetAccount.balance = targetAccount.balance.plus(decimalAmount);
       this.accounts.set(targetAddress, targetAccount);
 

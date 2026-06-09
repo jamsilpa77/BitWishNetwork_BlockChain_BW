@@ -89,10 +89,18 @@
     gap: 8px;
 }
 
-.input-group label {
-    font-size: 0.9rem;
+.address-check-label {
+    font-size: 0.95rem;
     color: #a0aec0;
-    font-weight: 600;
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.address-input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 
 .auth-input {
@@ -112,10 +120,32 @@
     box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.2);
 }
 
-.auth-input.read-only {
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #a0aec0;
-    cursor: not-allowed;
+.address-confirm-button {
+    background: linear-gradient(90deg, #00c6ff, #0072ff);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.address-confirm-button:hover {
+    background: linear-gradient(90deg, #00b4db, #0083b0);
+}
+
+.warning-box {
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 1px solid #ffc107;
+    border-radius: 12px;
+    padding: 16px;
+    color: #ffd54f;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    text-align: left;
 }
 
 .error-message {
@@ -125,25 +155,6 @@
     background-color: rgba(252, 129, 129, 0.1);
     padding: 10px;
     border-radius: 8px;
-}
-
-.action-buttons {
-    display: flex;
-    justify-content: flex-end;
-}
-
-.link-button {
-    background: none;
-    border: none;
-    color: #63b3ed;
-    font-size: 0.9rem;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
-}
-
-.link-button:hover {
-    color: #90cdf4;
 }
 
 .login-button {
@@ -168,4 +179,14 @@
 
 .login-button:active {
     transform: translateY(0);
+}
+
+.close-modal-btn {
+    background: #4a5568 !important;
+    margin-top: 15px;
+}
+
+.close-modal-btn:hover {
+    background: #343b47 !important;
+    box-shadow: none !important;
 }

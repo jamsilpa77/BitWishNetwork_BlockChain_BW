@@ -15,7 +15,163 @@ import './AdminPage.css';
 import KYCManager from './KYCManager';
 
 const AdminPage: React.FC = () => {
+    // --- [플랫폼 및 전광판 제어용 신규 상태 변수] ---
+    const [tickerInputs, setTickerInputs] = useState({
+        ko: '📢 [공지] BitWish Network에 오신 것을 환영합니다. 실시간 채굴 시스템이 가동 중입니다. 추후 코인 마이그레이션을 위해 KYC 승인을 받아주세요.',
+        en: '📢 [Notice] Welcome to BitWish Network. Real-time mining is currently active. Please complete KYC verification for coin migration.',
+        ja: '📢 [お知らせ] BitWish Networkへようこそ。リアルタイムマイニング가有効입니다. KYC認証를 완료해주세요.',
+        zh: '📢 [公告] 欢迎来到 BitWish 网络。实时挖矿正在运行。请完成 KYC 验证以进行代币迁移。'
+    });
+
+    // --- [신규 삽입] 마우스 클릭형 이모지 입력 시스템 (상자 바깥에 배치) ---
+    const [activeInput, setActiveInput] = useState<'ko' | 'en' | 'ja' | 'zh'>('ko');
+    const handleInsertEmoji = (emoji: string) => {
+        // 현재 브라우저 상에서 커서가 깜빡이며 초점이 맞춰진 입력창을 감지합니다.
+        const activeElement = document.activeElement as HTMLInputElement;
+
+        if (activeElement && activeElement.tagName === 'INPUT') {
+            const start = activeElement.selectionStart || 0; // 커서 시작 위치
+            const end = activeElement.selectionEnd || 0;     // 커서 끝 위치
+            const currentValue = activeElement.value;
+
+            // 커서 기준 앞부분텍스트 + 이모지 + 뒷부분텍스트를 정교하게 슬라이싱하여 조립합니다.
+            const newValue = currentValue.substring(0, start) + emoji + currentValue.substring(end);
+
+            setTickerInputs(prev => ({
+                ...prev,
+                [activeInput]: newValue
+            }));
+
+            // 데이터가 입력된 후 커서가 맨 뒤로 튕기는 현상을 방지하고, 이모지 바로 뒤에 깜빡이도록 강제 조정합니다.
+            setTimeout(() => {
+                activeElement.focus();
+                const nextPosition = start + emoji.length;
+                activeElement.setSelectionRange(nextPosition, nextPosition);
+            }, 0);
+        } else {
+            // 혹시 커서 위치를 찾지 못할 경우의 대비책으로 맨 뒤에 이모지를 붙여넣습니다.
+            setTickerInputs(prev => ({
+                ...prev,
+                [activeInput]: (prev as any)[activeInput] + emoji
+            }));
+        }
+    };
+    // --------------------------------------------------
+
+    const [subAdmins] = useState([
+        { email: 'admin@bitwish.network', nickname: '최고 관리자', grade: 'Super-Admin' },
+        { email: 'sub_01@bitwish.network', nickname: '보안 담당자', grade: 'Sub-Admin' }
+    ]);
+
+    const [systemLogs, setSystemLogs] = useState([
+        { action: '메인 전광판 메시지 수정 및 동기화', operator: '최고 관리자', time: '2026-06-06 21:05:40' },
+        { action: '대시보드 시스템 초기 연결 성립', operator: 'System', time: '2026-06-06 12:00:00' }
+    ]);
+
+    const handleUpdateTicker = async () => {
+        const currentLangKey = (localStorage.getItem('bw_lang') || 'ko') as 'ko' | 'en' | 'ja' | 'zh';
+        const updatedText = tickerInputs[currentLangKey];
+
+        localStorage.setItem('BW_TICKER_TEXT_LOCAL', JSON.stringify(tickerInputs));
+        localStorage.setItem('BW_TICKER_UPDATE', Date.now().toString());
+
+        setSystemLogs(prev => [
+            { action: `[전광판 공지수정] ${updatedText}`, operator: '최고 관리자', time: new Date().toLocaleString() },
+            ...prev
+        ]);
+
+        try {
+            await fetch('http://localhost:5001/api/admin/system/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticker: tickerInputs })
+            });
+        } catch (e) {
+            console.log('Backend server is offline, running on local storage fallback.');
+        }
+
+        alert('✅ 전광판 문구 수정을 완료했습니다. 홈페이지 창에서 글자가 실시간으로 바뀌었는지 확인해보세요.');
+    };
+    // ----------------------------------------------------
+
     const [activeTab, setActiveTab] = useState<string>('dashboard');
+    // --- [다국어 확장] 로드맵 에디터 언어 선택 탭 ---
+    const [roadmapEditorLang, setRoadmapEditorLang] = useState<'ko' | 'en' | 'ja' | 'zh'>('ko');
+
+    // --- [다국어 확장] 로드맵 데이터 모델: {ko:{step1:{...},...}, en:{...}, ja:{...}, zh:{...}} ---
+    const ROADMAP_DEFAULTS: Record<string, any> = {
+        ko: {
+            step1: { title: '1. 베타 테스트 공식 출시', date: '2026년 7월 1일 출시', desc: '2만명 회원 가입 유치 및 약 1년 동안의 메인넷 가동성 안정화를 목표로 한 시범 채굴장이 전격 가동됩니다.', tooltipTitle: 'BW High-Precision Perpetual Mining', tooltipSubtitle: '"50단위 부동소수점의 정밀함, BW 네트워크의 완벽한 보안을 구축합니다."', tooltipContent: 'BitWishNetwork는 기존 PoW의 한계를 넘어선 \'50단위 부동소수점 연산 기술\'을 도입했습니다. 이 고도화된 연산 체계는 단순한 해시 반복을 넘어, 매우 복잡하고 정밀한 데이터 검증을 수행함으로써 네트워크의 보안 수준을 비약적으로 높였습니다. 본 시스템은 이러한 고도의 연산 최적화를 위해 \'상시 가동(Always-On) 프로토콜\'로 운영됩니다. 정밀 연산의 흐름이 끊기지 않을 때 비로소 최고의 효율과 보안이 보장되기에, 마이닝 시작 후 중단 없는 안정적 네트워크 참여를 지원합니다. BW만의 정밀한 연산 생태계에서 진정한 가치 창출을 경험하십시오.' },
+            step2: { title: '2. 폐쇄형 메인넷 시범 가동', date: '2027년 3~4분기 예정', desc: '외부 공격을 차단하고 초기 자산을 안전하게 보존하기 위한 격리형 제네시스 메인넷이 출범합니다.' },
+            step3: { title: '3. 글로벌 인프라 파트너십 모집', date: '2027년 3분기 개시', desc: '오프라인 실생활 가맹점 및 디앱(DApp) 생태계 허브를 본격 구축합니다.' },
+            step4: { title: '4. 1차 공식 기술 백서 공개', date: '2027년 3분기 발표 예정', desc: '50단위 고정밀 연산 암호 원리와 하이브리드 MongoDB의 독자적 데이터 저장 아키텍처에 대한 최종 개발 규격을 대중 및 학계에 정식으로 개시합니다.' },
+            step5: { title: '5. 블록 반감기 적용 및 유통 정책 가이드', date: '2027년 4분기 시동', desc: '유통량의 급격한 팽창을 제한하고 인플레이션을 억제하기 위해 블록당 채굴 수량이 최초로 감소하는 반감 기법이 가동됩니다.' },
+            step6: { title: '6. 2차 종합 백서 및 오픈 메인넷 공표', date: '2028년 2~3분기 예정', desc: '타 기종 블록체인 지갑과의 완벽한 크로스체인 전송 마이그레이션 기술 규격을 배포하여 글로벌 거래소 상장 및 탈중앙화 금융 시장으로의 완전 개방을 완성합니다.' }
+        },
+        en: {
+            step1: { title: '1. Official Beta Test Launch', date: 'Release on July 1, 2026', desc: 'A pilot mining camp is fully activated with the goal of securing 20,000 registered users and stabilizing mainnet operations over a one-year testing period.', tooltipTitle: 'BW High-Precision Perpetual Mining', tooltipSubtitle: '"Precision of 50-digit floating-point arithmetic establishes perfect security for the BW Network."', tooltipContent: 'BitWishNetwork has introduced a "50-digit floating-point operation technology" that goes beyond the limits of existing PoW. This sophisticated computing structure goes beyond simple hash repetition to perform complex and precise data verification, thereby epochally enhancing network security. To optimize high-performance computation, the system is run with an "Always-On Protocol". Since maximum efficiency and security are guaranteed only when the flow of high-precision calculations is continuous, we support uninterrupted, stable network participation after mining initiates. Experience true value creation within BW\'s own precision computing ecosystem.' },
+            step2: { title: '2. Enclosed Mainnet Trial Run', date: 'Scheduled for Q3-Q4 2027', desc: 'An isolated Genesis Mainnet launches to block external vectors and securely preserve early assets.' },
+            step3: { title: '3. Global Infrastructure Partnerships', date: 'Starting Q3 2027', desc: 'Establishing brick-and-mortar payment merchants and DApp ecosystem hubs.' },
+            step4: { title: '4. Release of Technical Whitepaper v1', date: 'Scheduled for Q3 2027', desc: 'Officially publishing technical standards on 50-digit precision arithmetic, encryption structures, and the hybrid MongoDB database storage layout.' },
+            step5: { title: '5. Reward Halving & Distribution Guide', date: 'Launching Q4 2027', desc: 'Deploying the inaugural block reward deflation mechanism to curb hyperinflation.' },
+            step6: { title: '6. Whitepaper v2 & Open Network Transition', date: 'Scheduled for Q2-Q3 2028', desc: 'Distributing final technical specs for cross-chain multi-signature wallets to complete public integration.' }
+        },
+        ja: {
+            step1: { title: '1. ベータテスト公式ローンチ', date: '2026年7月1日 開始', desc: '会員2万人突破および約1年間のメインネット動作安定化を目指した試験的なマイニング場が本格始動します。', tooltipTitle: 'BW High-Precision Perpetual Mining', tooltipSubtitle: '「50桁浮動小数点演算の精度が、BWネットワークの完全なセキュリティを構築します」', tooltipContent: 'BitWishNetworkは、従来のPoWの限界を超えた「50桁浮動小数点演算技術」を導入しました。この高度な演算システムは、単純なハッシュ反復処理を超え、複雑かつ精密なデータ検証を実行することで、ネットワークのセキュリティレベルを飛躍的に向上させました。' },
+            step2: { title: '2. クローズドメインネット試験運用', date: '2027年 第3〜4四半期 予定', desc: '外部攻撃を完全に遮断し、初期資産を保護するための隔離型メインネットを稼働します。' },
+            step3: { title: '3. グローバル決済加盟店の誘致', date: '2027年 第3四半期 開始', desc: '実生活で決済可能な加盟店やDApp連携ハブを大幅に開拓します。' },
+            step4: { title: '4. 第1次公式技術白書の公開', date: '2027年 第3四半期 発表予定', desc: '50桁高精度浮動小数点演算による暗号論理と、独自のハイブリッドMongoDB格納アルゴリズムの最終技術規約を公表します。' },
+            step5: { title: '5. ブロック半減期の適用と流通政策声明', date: '2027年 第4四半期 始动', desc: '流通量の過剰な膨張を防ぎインフレを抑えるため、新規採掘量が初めて自動的に減少する最初の半減期システムを適用します。' },
+            step6: { title: '6. 第2次総合白書およびオープンメインネット宣言', date: '2028年 第2〜3四半期 予定', desc: '異種チェーンとのシームレスなマルチチェーン資産移行プロトコルを提供します。' }
+        },
+        zh: {
+            step1: { title: '1. 官方测试版隆重推出', date: '2026年7月1日 启动', desc: '试运行挖矿场将全面启动，目标是吸引2万名注册用户并实现主网系统的高可用与稳定性。', tooltipTitle: 'BW High-Precision Perpetual Mining', tooltipSubtitle: '"50位浮动小数点计算的精密性，构筑了BW网络完美的安全屏障。"', tooltipContent: 'BitWishNetwork引入了超越传统PoW局限性的"50位高精度浮动点数计算技术"。该先进计算架构超越了单一的哈希碰撞，通过进行极其复杂、精密的区块校验，大幅提高了底层网络的安全性。' },
+            step2: { title: '2. 封闭式主网试运行', date: '预计 2027年 第3~4季度', desc: '为了拦截一切外部潜在风险并安全存储初始代币资产，我们将推出封闭式创世主网。' },
+            step3: { title: '3. 开启全球基础设施合作招商', date: '2027年 第3季度 启动', desc: '致力于构建广泛的线下商户零售及DApp分布式应用网络。' },
+            step4: { title: '4. 首次官方技术白皮书公开', date: '预计 2027年 第3季度', desc: '正式向全球开发者社区及研究机构发布50位高精度算法的安全计算框架。' },
+            step5: { title: '5. 部署区块奖励半减机制及流向政策', date: '2027年 第4季度 启动', desc: '上线防范代币无序扩张与恶性通货膨胀的首期减半惩罚。' },
+            step6: { title: '6. 编写第二次白皮书及全面开放主网', date: '预计 2028年 第2~3季度', desc: '公布异构区块链跨链多签钱包迁移的技术标准。' }
+        }
+    };
+
+    const [roadmapForm, setRoadmapForm] = useState(() => {
+        const saved = localStorage.getItem('BW_CUSTOM_ROADMAP');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // [구버전 호환] 플랫 구조(step1.title 직접 존재) → ko 하위로 자동 마이그레이션
+                if (parsed.step1 && typeof parsed.step1.title === 'string') {
+                    const migrated = { ko: parsed, en: ROADMAP_DEFAULTS['en'], ja: ROADMAP_DEFAULTS['ja'], zh: ROADMAP_DEFAULTS['zh'] };
+                    localStorage.setItem('BW_CUSTOM_ROADMAP', JSON.stringify(migrated));
+                    return migrated;
+                }
+                return parsed;
+            } catch (e) { }
+        }
+        return { ...ROADMAP_DEFAULTS };
+    });
+
+    // 현재 선택된 에디터 언어의 step 데이터 접근 헬퍼
+    const getEditorStep = (step: string) => {
+        return (roadmapForm[roadmapEditorLang] && roadmapForm[roadmapEditorLang][step]) || ROADMAP_DEFAULTS[roadmapEditorLang][step] || {};
+    };
+    const updateEditorStep = (step: string, field: string, value: string) => {
+        setRoadmapForm((prev: any) => ({
+            ...prev,
+            [roadmapEditorLang]: {
+                ...prev[roadmapEditorLang],
+                [step]: {
+                    ...(prev[roadmapEditorLang]?.[step] || ROADMAP_DEFAULTS[roadmapEditorLang][step]),
+                    [field]: value
+                }
+            }
+        }));
+    };
+
+    const handleSaveRoadmap = () => {
+        localStorage.setItem('BW_CUSTOM_ROADMAP', JSON.stringify(roadmapForm));
+        alert('💾 [완료] 로드맵 변경사항이 성공적으로 저장되었습니다! 로드맵 페이지를 새로고침 해보세요.');
+    };
     const [searchAddress, setSearchAddress] = useState<string>('');
     const [miningData, setMiningData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -197,14 +353,8 @@ const AdminPage: React.FC = () => {
             const data = await response.json();
 
             if (data.success) {
-                // [추가] 추천 보너스 localStorage 초기화
-                // [수정] 관리자 페이지에서 직접 데이터를 삭제하지 않습니다.
-                // 대신 'BW_SYSTEM_RESET_TRIGGER' 신호를 보내 각 서비스가 스스로 
-                // "금액은 0으로, 족보(추천인)는 유지"하도록 처리합니다.
                 console.log(`[Admin] 초기화 신호 전송 준비: ${searchAddress}`);
 
-                // [핵심] 다른 탭(마이닝 페이지)에 변경 사항을 알리기 위한 트리거 설정
-                // 이 코드가 실행되면 브라우저의 'storage' 이벤트가 발생하여 마이닝 페이지가 즉시 감지합니다.
                 localStorage.setItem('BW_SYSTEM_RESET_TRIGGER', JSON.stringify({
                     type: 'RESET',
                     target: searchAddress,
@@ -213,7 +363,6 @@ const AdminPage: React.FC = () => {
 
                 alert('✅ 마이닝 데이터가 초기화되었습니다\n\n초기화된 데이터:\n- 누적 보상: 0 BW\n- 마이닝 상태: 중지\n- 추천 보너스 보관함: 0 BW\n- 월별 정산내역: 0 BW');
 
-                // 초기화 후 자동으로 다시 검색하여 초기화된 데이터 표시
                 await handleSearchMining();
             } else {
                 setError(data.message || '초기화 실패');
@@ -271,7 +420,6 @@ const AdminPage: React.FC = () => {
         setReferralError('');
 
         try {
-            // [Step 2] 날짜 파라미터 제거 (전체 조회 보장)
             const response = await fetch(`http://localhost:5001/api/admin/referral/${referralSearchAddress}`);
 
             if (!response.ok) {
@@ -281,7 +429,6 @@ const AdminPage: React.FC = () => {
             const data = await response.json();
 
             if (data.success && data.data && data.data.records) {
-                // [핵심 지시 사항] 검색한 주소만 목록에 뜨도록 필터링 확약
                 const filtered = data.data.records.filter((r: any) =>
                     r.referrerAddress.toLowerCase() === referralSearchAddress.toLowerCase() ||
                     r.referredAddress.toLowerCase() === referralSearchAddress.toLowerCase()
@@ -326,7 +473,6 @@ const AdminPage: React.FC = () => {
         setReferralError('');
 
         try {
-            // [Step 2] 날짜 파라미터 제거 (전체 조회를 위해 ?year=...&month=... 삭제)
             const response = await fetch(`http://localhost:5001/api/admin/referral/all`);
 
             if (!response.ok) {
@@ -386,8 +532,6 @@ const AdminPage: React.FC = () => {
         return statusMap[status] || status || '알 수 없음';
     };
 
-
-
     return (
         <div className="admin-page">
             {/* 헤더 */}
@@ -405,12 +549,18 @@ const AdminPage: React.FC = () => {
 
             {/* 탭 네비게이션 */}
             <nav className="admin-tabs">
-                <button
-                    className={`admin-tab ${activeTab === 'dashboard' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('dashboard')}
-                >
-                    📊 대시보드
-                </button>
+                <div className="admin-tab-dropdown-wrapper">
+                    <button
+                        className={`admin-tab ${activeTab === 'dashboard' || activeTab === 'roadmapMgmt' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('dashboard')}
+                    >
+                        📊 대시보드 ▾
+                    </button>
+                    <div className="admin-dropdown-menu">
+                        <button onClick={() => setActiveTab('dashboard')}>대시보드 홈</button>
+                        <button onClick={() => setActiveTab('roadmapMgmt')}>🗺️ 로드맵 관리</button>
+                    </div>
+                </div>
                 <button
                     className={`admin-tab ${activeTab === 'mining' ? 'active' : ''}`}
                     onClick={() => setActiveTab('mining')}
@@ -441,24 +591,184 @@ const AdminPage: React.FC = () => {
                 >
                     🏪 가맹점 관리
                 </button>
-                <button
-                    className={`admin-tab ${activeTab === 'kyc' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('kyc')}
-                >
-                    🆔 KYC 관리
-                </button>
-                <button
-                    className={`admin-tab ${activeTab === 'halving' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('halving')}
-                >
-                    ⏰ 반감기 관리
-                </button>
+                <div className="admin-tab-dropdown-wrapper">
+                    <button
+                        className={`admin-tab ${activeTab === 'kyc' || activeTab === 'halving' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('kyc')}
+                    >
+                        🆔 KYC 관리 ▾
+                    </button>
+                    <div className="admin-dropdown-menu">
+                        <button onClick={() => setActiveTab('kyc')}>KYC 신청 목록</button>
+                        <button onClick={() => setActiveTab('halving')}>⏰ 반감기 관리</button>
+                    </div>
+                </div>
             </nav>
 
             {/* 메인 콘텐츠 */}
             <main className="admin-main">
+                {activeTab === 'roadmapMgmt' && (
+                    <div className="admin-panel animate-fade-in">
+                        <h2>🗺️ 로드맵 텍스트 관리도구 (실시간 연동형)</h2>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '-10px 0 25px 0' }}>
+                            여기에 적은 각 단계의 텍스트가 사용자용 'BW 로드맵' 멀티윈도우 창에 완전 실시간으로 교체 반영됩니다.
+                        </p>
+
+                        {/* [다국어 확장] 언어 선택 탭 */}
+                        <div className="roadmap-lang-tabs">
+                            {([
+                                { key: 'ko', label: '🇰🇷 한국어' },
+                                { key: 'en', label: '🇺🇸 English' },
+                                { key: 'ja', label: '🇯🇵 日本語' },
+                                { key: 'zh', label: '🇨🇳 中文' }
+                            ] as { key: 'ko' | 'en' | 'ja' | 'zh'; label: string }[]).map(tab => (
+                                <button
+                                    key={tab.key}
+                                    className={`roadmap-lang-tab-btn ${roadmapEditorLang === tab.key ? 'active' : ''}`}
+                                    onClick={() => setRoadmapEditorLang(tab.key)}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="roadmap-editor-container">
+                            {/* Step 1 */}
+                            <div className="roadmap-editor-card">
+                                <h3>Milestone 1단계 설정 (출석 연계 및 호버 툴팁)</h3>
+                                <div className="editor-field-group">
+                                    <div className="editor-single-field">
+                                        <label>1단계 제목</label>
+                                        <input type="text" value={getEditorStep('step1').title || ''} onChange={e => updateEditorStep('step1', 'title', e.target.value)} />
+                                    </div>
+                                    <div className="editor-single-field">
+                                        <label>1단계 날짜</label>
+                                        <input type="text" value={getEditorStep('step1').date || ''} onChange={e => updateEditorStep('step1', 'date', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="editor-single-field" style={{ marginBottom: '15px' }}>
+                                    <label>1단계 세부요약 설명</label>
+                                    <textarea rows={2} value={getEditorStep('step1').desc || ''} onChange={e => updateEditorStep('step1', 'desc', e.target.value)} />
+                                </div>
+                                <div className="editor-field-group" style={{ background: '#f1f5f9', padding: '15px', borderRadius: '8px' }}>
+                                    <div className="editor-single-field">
+                                        <label>💡 툴팁 내부 메인제목</label>
+                                        <input type="text" value={getEditorStep('step1').tooltipTitle || ''} onChange={e => updateEditorStep('step1', 'tooltipTitle', e.target.value)} />
+                                    </div>
+                                    <div className="editor-single-field">
+                                        <label>💡 툴팁 한줄 요약 문구</label>
+                                        <input type="text" value={getEditorStep('step1').tooltipSubtitle || ''} onChange={e => updateEditorStep('step1', 'tooltipSubtitle', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="editor-single-field" style={{ background: '#f1f5f9', padding: '0 15px 15px 15px', borderRadius: '0 0 8px 8px' }}>
+                                    <label>💡 툴팁 내부 세부 연산 본문 내용</label>
+                                    <textarea rows={4} value={getEditorStep('step1').tooltipContent || ''} onChange={e => updateEditorStep('step1', 'tooltipContent', e.target.value)} />
+                                </div>
+                            </div>
+
+                            {/* Step 2 */}
+                            <div className="roadmap-editor-card">
+                                <h3>Milestone 2단계 설정 (폐쇄형 메인넷)</h3>
+                                <div className="editor-field-group">
+                                    <div className="editor-single-field">
+                                        <label>2단계 제목</label>
+                                        <input type="text" value={getEditorStep('step2').title || ''} onChange={e => updateEditorStep('step2', 'title', e.target.value)} />
+                                    </div>
+                                    <div className="editor-single-field">
+                                        <label>2단계 날짜</label>
+                                        <input type="text" value={getEditorStep('step2').date || ''} onChange={e => updateEditorStep('step2', 'date', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="editor-single-field">
+                                    <label>2단계 세부요약 설명</label>
+                                    <textarea rows={2} value={getEditorStep('step2').desc || ''} onChange={e => updateEditorStep('step2', 'desc', e.target.value)} />
+                                </div>
+                            </div>
+
+                            {/* Step 3 */}
+                            <div className="roadmap-editor-card">
+                                <h3>Milestone 3단계 설정 (글로벌 파트너십)</h3>
+                                <div className="editor-field-group">
+                                    <div className="editor-single-field">
+                                        <label>3단계 제목</label>
+                                        <input type="text" value={getEditorStep('step3').title || ''} onChange={e => updateEditorStep('step3', 'title', e.target.value)} />
+                                    </div>
+                                    <div className="editor-single-field">
+                                        <label>3단계 날짜</label>
+                                        <input type="text" value={getEditorStep('step3').date || ''} onChange={e => updateEditorStep('step3', 'date', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="editor-single-field">
+                                    <label>3단계 세부요약 설명</label>
+                                    <textarea rows={2} value={getEditorStep('step3').desc || ''} onChange={e => updateEditorStep('step3', 'desc', e.target.value)} />
+                                </div>
+                            </div>
+
+                            {/* Step 4 */}
+                            <div className="roadmap-editor-card">
+                                <h3>Milestone 4단계 설정 (1차 백서)</h3>
+                                <div className="editor-field-group">
+                                    <div className="editor-single-field">
+                                        <label>4단계 제목</label>
+                                        <input type="text" value={getEditorStep('step4').title || ''} onChange={e => updateEditorStep('step4', 'title', e.target.value)} />
+                                    </div>
+                                    <div className="editor-single-field">
+                                        <label>4단계 날짜</label>
+                                        <input type="text" value={getEditorStep('step4').date || ''} onChange={e => updateEditorStep('step4', 'date', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="editor-single-field">
+                                    <label>4단계 세부요약 설명</label>
+                                    <textarea rows={2} value={getEditorStep('step4').desc || ''} onChange={e => updateEditorStep('step4', 'desc', e.target.value)} />
+                                </div>
+                            </div>
+
+                            {/* Step 5 */}
+                            <div className="roadmap-editor-card">
+                                <h3>Milestone 5단계 설정 (블록 반감기)</h3>
+                                <div className="editor-field-group">
+                                    <div className="editor-single-field">
+                                        <label>5단계 제목</label>
+                                        <input type="text" value={getEditorStep('step5').title || ''} onChange={e => updateEditorStep('step5', 'title', e.target.value)} />
+                                    </div>
+                                    <div className="editor-single-field">
+                                        <label>5단계 날짜</label>
+                                        <input type="text" value={getEditorStep('step5').date || ''} onChange={e => updateEditorStep('step5', 'date', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="editor-single-field">
+                                    <label>5단계 세부요약 설명</label>
+                                    <textarea rows={2} value={getEditorStep('step5').desc || ''} onChange={e => updateEditorStep('step5', 'desc', e.target.value)} />
+                                </div>
+                            </div>
+
+                            {/* Step 6 */}
+                            <div className="roadmap-editor-card">
+                                <h3>Milestone 6단계 설정 (2차 최종백서)</h3>
+                                <div className="editor-field-group">
+                                    <div className="editor-single-field">
+                                        <label>6단계 제목</label>
+                                        <input type="text" value={getEditorStep('step6').title || ''} onChange={e => updateEditorStep('step6', 'title', e.target.value)} />
+                                    </div>
+                                    <div className="editor-single-field">
+                                        <label>6단계 날짜</label>
+                                        <input type="text" value={getEditorStep('step6').date || ''} onChange={e => updateEditorStep('step6', 'date', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="editor-single-field">
+                                    <label>6단계 세부요약 설명</label>
+                                    <textarea rows={2} value={getEditorStep('step6').desc || ''} onChange={e => updateEditorStep('step6', 'desc', e.target.value)} />
+                                </div>
+                            </div>
+
+                            <button className="admin-button primary" onClick={handleSaveRoadmap} style={{ padding: '15px', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                                💾 작성 완료 및 전체 로드맵 실시간 저장 적용하기
+                            </button>
+                        </div>
+                    </div>
+                )}
                 {activeTab === 'dashboard' && (
-                    <div className="admin-panel">
+                    <div className="admin-panel animate-fade-in">
                         <h2>📊 대시보드</h2>
                         <div className="dashboard-grid">
                             <div className="dashboard-card">
@@ -478,6 +788,120 @@ const AdminPage: React.FC = () => {
                                 <div className="card-label">대기 중인 KYC</div>
                             </div>
                         </div>
+
+                        {/* =======================================================
+                           [신규 삽입] 최고 관리자를 위한 제어 및 로그 시스템 UI판 
+                           ======================================================= */}
+                        <div className="admin-system-container">
+                            <h3 className="admin-system-title">⚙️ 플랫폼 제어 및 관리자 시스템 (Admin Controls)</h3>
+
+                            <div className="admin-system-grid">
+                                {/* 1. 홈페이지 메시지 원격 수정 입력란 */}
+                                <div className="admin-system-card">
+                                    <h4>📢 실시간 흐르는 전광판 메시지 제어</h4>
+                                    {/* --- [신규 이식] 원클릭 이모지 빠른 선택 바 --- */}
+                                    <div style={{ display: 'flex', gap: '6px', marginBottom: '15px', flexWrap: 'wrap', background: '#f1f5f9', padding: '10px', borderRadius: '8px', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748b' }}>
+                                            {activeInput === 'ko' ? '🇰🇷 한국어 칸 입력중' : activeInput === 'en' ? '🇺🇸 English 입력중' : activeInput === 'ja' ? '🇯🇵 日本語 입력중' : '🇨🇳 中文 입력중'} (원클릭 입력):
+                                        </span>
+                                        {['📢', '🔥', '🚀', '💎', '🏆', '💰', '⚠️', '⭐', '🎁', '🔔', '🟢', '🔴', '⚡'].map(emoji => (
+                                            <button
+                                                key={emoji}
+                                                type="button"
+                                                onClick={() => handleInsertEmoji(emoji)}
+                                                style={{ padding: '4px 8px', fontSize: '1.2rem', background: '#fff', border: '1px solid #cbd5e1', cursor: 'pointer', borderRadius: '4px', transition: 'transform 0.1s' }}
+                                                onMouseDown={e => e.preventDefault()} // 마우스 클릭 시 입력창 커서가 풀리는 현상 방지
+                                            >
+                                                {emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="ticker-form">
+                                        <div className="form-group" style={{ marginBottom: '10px' }}>
+                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#666' }}>🇰🇷 한국어 공지 문구</label>
+                                            <input type="text" className="admin-input" style={{ width: '100%', marginTop: '5px' }} value={tickerInputs.ko} onChange={e => setTickerInputs({ ...tickerInputs, ko: e.target.value })} onFocus={() => setActiveInput('ko')} />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: '10px' }}>
+                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#666' }}>🇺🇸 English Notice</label>
+                                            <input type="text" className="admin-input" style={{ width: '100%', marginTop: '5px' }} value={tickerInputs.en} onChange={e => setTickerInputs({ ...tickerInputs, en: e.target.value })} onFocus={() => setActiveInput('en')} />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: '10px' }}>
+                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#666' }}>🇯🇵 日本語 お知らせ</label>
+                                            <input type="text" className="admin-input" style={{ width: '100%', marginTop: '5px' }} value={tickerInputs.ja} onChange={e => setTickerInputs({ ...tickerInputs, ja: e.target.value })} onFocus={() => setActiveInput('ja')} />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: '15px' }}>
+                                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', color: '#666' }}>🇨🇳 中文 公告</label>
+                                            <input type="text" className="admin-input" style={{ width: '100%', marginTop: '5px' }} value={tickerInputs.zh} onChange={e => setTickerInputs({ ...tickerInputs, zh: e.target.value })} onFocus={() => setActiveInput('zh')} />
+                                        </div>
+                                        <button className="admin-button primary" onClick={handleUpdateTicker} style={{ width: '100%', padding: '12px', fontWeight: 'bold' }}>
+                                            💾 입력한 전광판 공지 실시간 일괄 업데이트 적용
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* 2. 부관리자 권한 계정 승인 관리 테이블 */}
+                                <div className="admin-system-card">
+                                    <h4>👥 어드민 권한 부여 계정 관리</h4>
+                                    <table className="admin-system-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+                                        <thead>
+                                            <tr style={{ background: '#f1f5f9' }}>
+                                                <th style={{ padding: '8px', textAlign: 'left' }}>어드민 계정</th>
+                                                <th style={{ padding: '8px', textAlign: 'left' }}>별칭</th>
+                                                <th style={{ padding: '8px', textAlign: 'left' }}>권한 등급</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {subAdmins.map((adm, idx) => (
+                                                <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                    <td style={{ padding: '10px 8px', fontFamily: 'monospace' }}>{adm.email}</td>
+                                                    <td style={{ padding: '10px 8px' }}>{adm.nickname}</td>
+                                                    <td style={{ padding: '10px 8px' }}>
+                                                        <span style={{
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '11px',
+                                                            fontWeight: 'bold',
+                                                            background: adm.grade === 'Super-Admin' ? '#fee2e2' : '#e0f2fe',
+                                                            color: adm.grade === 'Super-Admin' ? '#ef4444' : '#0284c7'
+                                                        }}>
+                                                            {adm.grade}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div style={{ marginTop: '20px', display: 'flex', gap: '8px' }}>
+                                        <input type="text" className="admin-input" placeholder="어드민으로 등록할 이메일 주소 입력" style={{ flex: 1 }} />
+                                        <button className="admin-button primary" style={{ padding: '10px 20px' }}>임명하기</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 3. 보안 행위 이력 로그 콘솔 */}
+                            <div className="admin-system-card" style={{ marginTop: '20px' }}>
+                                <h4>📜 실시간 시스템 보안 로그 (System Timeline Logs)</h4>
+                                <div className="admin-log-console" style={{
+                                    background: '#0f172a',
+                                    color: '#38bdf8',
+                                    fontFamily: 'monospace',
+                                    padding: '15px',
+                                    borderRadius: '8px',
+                                    maxHeight: '130px',
+                                    overflowY: 'auto',
+                                    fontSize: '13px'
+                                }}>
+                                    {systemLogs.map((log, idx) => (
+                                        <div key={idx} style={{ marginBottom: '6px' }}>
+                                            <span style={{ color: '#64748b' }}>[{log.time}]</span>{' '}
+                                            <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{log.operator}</span> :{' '}
+                                            <span>{log.action}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 )}
 

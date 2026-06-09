@@ -32,6 +32,7 @@ export interface IMiningState extends Document {
     referralBonusRate: string;    // 현재 적용된 추천 보너스율
 
     partnerStatus: string;        // 가맹점 상태 (NOT_REGISTERED, PENDING, REGISTERED)
+    lastBlockRewardThreshold: string; // 마지막으로 블록이 생성된 BW 기준점 (1BW 도달 시마다 블록 생성 추적)
 }
 
 const MiningStateSchema: Schema = new Schema({
@@ -62,7 +63,11 @@ const MiningStateSchema: Schema = new Schema({
         type: String,
         enum: ['NOT_REGISTERED', 'PENDING', 'REGISTERED'],
         default: 'NOT_REGISTERED'
-    }
+    },
+
+    // [블록 +1 카운팅] 마지막으로 블록이 생성된 BW 기준점
+    // 유저의 accumulatedReward가 이 값 + 1 을 초과하면 블록을 +1 생성하고 이 값을 갱신
+    lastBlockRewardThreshold: { type: String, default: '0' }
 }, {
     timestamps: true
 });

@@ -33,6 +33,9 @@ export interface BitWishAccount {
     createdAt: number;
     lastActivity: number;
     isActive: boolean;
+    codeHash: string;
+    storageRoot: string;
+    isContract: boolean;
 }
 export interface BitWishBlockchainStats {
     totalBlocks: number;
@@ -41,6 +44,9 @@ export interface BitWishBlockchainStats {
     pendingTransactions: number;
     currentBlockHeight: number;
     totalSupply: Decimal;
+    ecosystemFund: Decimal;
+    foundationFund: Decimal;
+    totalAccumulatedFees: Decimal;
     averageBlockTime: number;
     networkHashRate: number;
 }
@@ -53,6 +59,11 @@ export declare class BitWishBlockchain extends EventEmitter {
     private genesisBlock;
     private pow;
     private isInitialized;
+    private ecosystemFund;
+    private foundationFund;
+    private totalAccumulatedFees;
+    private adminMasterAddress;
+    private adminHardwareKeyID;
     constructor();
     /**
      * 블록체인 초기화
@@ -161,6 +172,40 @@ export declare class BitWishBlockchain extends EventEmitter {
         currentDifficulty: number;
         miningStats: import("../consensus/BitWishPoW").BitWishMiningStats;
         networkId: string;
+        ecosystemFund: string;
+        foundationFund: string;
+        totalAccumulatedFees: string;
+        adminMasterAddress: string | null;
+        adminHardwareKeyID: string | null;
     };
+    /**
+     * [P2P 융합 결합용]
+     * 백엔드가 넘겨준 구버전 JSON 데이터를 메모리 상에서만 Decimal로 포장하여
+     * 3~4초 내에 무결점 블록체인 검증 및 암호화 마이닝 장부 기록만 수행하고 결과를 Return합니다.
+     */
+    verifyAndMineTransaction(senderAddress: string, receiverAddress: string, amount: string, currentSenderBalance: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    /**
+     * 네트워크 기금 상태 저장 (Persistent Vault Storage)
+     */
+    private saveNetworkStats;
+    private loadNetworkStats;
+    /**
+     * ★ 관리자(Administrator) 하드웨어 보안키 등록 ★
+     */
+    registerAdminKey(address: string, hardwareKeyID: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    /**
+     * ★ 최고 관리자 전용 금고 인출 (Supreme Withdrawal) ★
+     * 지문/물리 터치 보안 서명이 검증되어야만 실행됩니다.
+     */
+    adminSupremeWithdraw(targetAddress: string, amount: string, source: 'ECOSYSTEM' | 'FOUNDATION', hardwareSignature: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
 }
 //# sourceMappingURL=BitWishBlockchain.d.ts.map

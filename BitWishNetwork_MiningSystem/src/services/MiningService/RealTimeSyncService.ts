@@ -57,6 +57,7 @@ export class RealTimeSyncService {
       totalSupply: MINING_CONSTANTS.TOTAL_SUPPLY,
       currentIssued: 0,
       referralBonusStorage: 0,
+      referralBonusRate: 0, // [추가] 초기화
       remainingSupply: MINING_CONSTANTS.TOTAL_SUPPLY,
       remainingIssued: MINING_CONSTANTS.TOTAL_SUPPLY,
       issuanceRate: 0.00,
@@ -127,7 +128,7 @@ export class RealTimeSyncService {
     try {
       const status = await apiService.getUserStatus(address);
       const miningData = status?.data?.miningState || status?.miningState;
-
+      const userData = status?.data?.user || status?.user;
       if (miningData) {
         this.updateLocalStatusFromServer(miningData);
 
@@ -187,16 +188,25 @@ export class RealTimeSyncService {
         const normTarget = signal.target ? signal.target.trim().toLowerCase() : '';
         const normWallet = this.walletAddress.trim().toLowerCase();
 
-        if (normTarget === normWallet) {
-          this.stopMiningTicker(); // 리셋 시 티커도 정지
-          this.realTimeStatus = {
-            ...this.realTimeStatus,
-            currentIssued: 0,
-            issuanceRate: 0,
-            issueRate: 0
-          };
-          if (callback) callback(this.realTimeStatus);
-          return;
+        if (normTarget === normWallet || normTarget === 'all') {
+          // [공정 5 추가] 타임스탬프 검증 로직 도입 (동일 시그널 무한 반복 처리 방지)
+          const processingKey = `BW_REALTIME_SYNC_PROCESSED_${this.walletAddress.trim().toLowerCase()}`;
+          const lastProcessed = parseInt(localStorage.getItem(processingKey) || '0');
+
+          if (signal.timestamp > lastProcessed) {
+            this.stopMiningTicker(); // 리셋 시 티커 정지 (단 1회만 수행)
+            this.realTimeStatus = {
+              ...this.realTimeStatus,
+              currentIssued: 0,
+              referralBonusStorage: 0, // [추가] 리셋 시 보너스함도 0으로 초기화
+              issuanceRate: 0,
+              issueRate: 0
+            };
+            // [공정 5 추가] 처리 완료 시간 박제
+            localStorage.setItem(processingKey, signal.timestamp.toString());
+            if (callback) callback(this.realTimeStatus);
+            return;
+          }
         }
       }
     } catch (e) { }
@@ -243,6 +253,7 @@ export class RealTimeSyncService {
       ...this.realTimeStatus,
       currentIssued: currentIssued.toNumber(),
       referralBonusStorage: referralBonus.toNumber(),
+      referralBonusRate: parseFloat(serverData.referralBonusRate || '0'),
       remainingSupply: remaining.toNumber(),
       remainingIssued: remaining.toNumber(),
       issuanceRate: issuanceRate.toNumber(),

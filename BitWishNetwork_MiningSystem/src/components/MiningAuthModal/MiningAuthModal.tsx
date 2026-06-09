@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { walletService } from '../../services/BlockchainService/WalletService';
 import { LanguageManager } from '../../utils/LanguageManager/LanguageManager';
 import './MiningAuthModal.css';
 
@@ -15,13 +14,10 @@ const MiningAuthModal: React.FC<MiningAuthModalProps> = ({
     isOpen, onClose, onSuccess, onOpenSecondPassword, currentLanguage = 'ko'
 }) => {
     const [address, setAddress] = useState('');
-    const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const languageManager = new LanguageManager();
 
     useEffect(() => {
-        let cleanup: (() => void) | undefined;
-
         if (isOpen) {
             // 10분 유예 타임 체크
             const authData = localStorage.getItem('bw_mining_auth');
@@ -32,50 +28,53 @@ const MiningAuthModal: React.FC<MiningAuthModalProps> = ({
                     const gracePeriod = 10 * 60 * 1000; // 10분
 
                     if (now - timestamp < gracePeriod) {
-                        // 유효한 인증 정보가 있으면 자동 로그인
                         onSuccess(walletAddress);
                         return;
                     } else {
-                        // 만료된 인증 정보 삭제
                         localStorage.removeItem('bw_mining_auth');
                     }
                 } catch {
-                    // 파싱 오류 시 삭제
                     localStorage.removeItem('bw_mining_auth');
                 }
             }
 
-            // [FIX] 자동완성(강제 주소 로드) 로직 완전 제거
-            // 관련 코드 삭제됨
-
             // 초기화
-            setPassword('');
+            setAddress('');
             setError('');
         }
-    }, [isOpen]);
+    }, [isOpen, onSuccess]);
 
     if (!isOpen) return null;
 
     const t = (key: string) => languageManager.getTranslation(key, currentLanguage);
 
-    const handleLogin = async () => {
+    const handleVerifyAddress = () => {
         setError('');
-        if (!password) {
-            setError(t('miningAuth.loginFail'));
+
+        if (!address) {
+            setError('지갑 주소를 입력해주세요.');
             return;
         }
 
-        if (await walletService.verifySecondPassword(address, password)) {
-            // 인증 성공 시 localStorage에 저장 (10분 유예 타임 시작)
+        // 1. 로컬 저장소에서 저장된 지갑 주소 조회 (나의 지갑을 열었을 때 저장됨)
+        const savedAddress = localStorage.getItem('bw-wallet-address');
+
+        // 2. 단 한 번도 나의 지갑을 열지 않아 주소가 없는 경우 차단
+        if (!savedAddress) {
+            setError('인증 실패: 로컬에 등록된 지갑 정보가 없습니다. 상단 [나의 지갑] 메뉴에서 지갑을 먼저 열어주세요.');
+            return;
+        }
+
+        // 3. 입력한 주소와 로컬 주소가 일치하는지 확인
+        if (address.trim() === savedAddress.trim()) {
             const authData = {
-                walletAddress: address,
+                walletAddress: address.trim(),
                 timestamp: Date.now()
             };
             localStorage.setItem('bw_mining_auth', JSON.stringify(authData));
-
-            onSuccess(address);
+            onSuccess(address.trim());
         } else {
-            setError(t('miningAuth.loginFail'));
+            setError('입력하신 지갑 주소가 일치하지 않습니다.');
         }
     };
 
@@ -85,46 +84,39 @@ const MiningAuthModal: React.FC<MiningAuthModalProps> = ({
                 <div className="mining-auth-modal-header">
                     <h2>
                         <span className="shield-icon">🛡️</span>
-                        {t('miningAuth.title')}
+                        {t('miningAuth.title') || '니모닉 파편 보안 인증'}
                     </h2>
                     <button className="close-button" onClick={onClose}>&times;</button>
                 </div>
 
                 <div className="mining-auth-modal-body">
-                    <p className="auth-subtitle">{t('miningAuth.subtitle')}</p>
+                    <p className="auth-subtitle">{t('miningAuth.subtitle') || '보안 유예 시간이 만료되었습니다'}</p>
 
-                    <div className="input-group">
-                        <label>{t('miningAuth.addressLabel')}</label>
-                        <input
-                            type="text"
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            placeholder={t('miningAuth.addressPlaceholder')}
-                            className="auth-input"
-                        />
+                    {/* 노란색 경고 박스 */}
+                    <div className="warning-box">
+                        ⚠️ 브라우저 캐시 삭제 또는 기기 변경 후 첫 접속이신가요? "나의 지갑" 메뉴에서 단 한번만 지갑을 열어주세요. 그 즉시 보안 지문이 재설정되어, 이후부터는 다시 이 가벼운 인증만으로 즉시 마이닝장에 입장하실 수 있습니다.
                     </div>
 
                     <div className="input-group">
-                        <label>{t('miningAuth.passwordLabel')}</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder={t('miningAuth.passwordPlaceholder')}
-                            className="auth-input"
-                        />
+                        <label className="address-check-label">지갑 주소 확인</label>
+                        <div className="address-input-wrapper">
+                            <input
+                                type="text"
+                                value={address}
+                                onChange={(e) => setAddress(e.target.value)}
+                                placeholder="BW + 40자리 주소를 입력하세요"
+                                className="auth-input"
+                            />
+                            <button className="address-confirm-button" onClick={handleVerifyAddress}>
+                                주소 확인
+                            </button>
+                        </div>
                     </div>
 
                     {error && <p className="error-message">{error}</p>}
 
-                    <div className="action-buttons">
-                        <button className="link-button" onClick={onOpenSecondPassword}>
-                            {t('miningAuth.setSecondPassword')}
-                        </button>
-                    </div>
-
-                    <button className="login-button" onClick={handleLogin}>
-                        {t('miningAuth.loginBtn')}
+                    <button className="login-button close-modal-btn" onClick={onClose}>
+                        닫기
                     </button>
                 </div>
             </div>

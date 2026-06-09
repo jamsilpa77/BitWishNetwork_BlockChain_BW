@@ -47,6 +47,44 @@ export class LanguageManager {
     // 한국어 데이터
     this.languageData.set('ko', {
       // 네비게이션
+      roadmap: {
+        mainTitle: 'BW 글로벌 마일스톤 & 로드맵',
+        subTitle: 'BitWish Network가 그려나가는 고정밀 금융 영구 채굴 생태계의 여정',
+        hoverGuide: '💡 타이틀에 마우스를 올리면 상세 기술 명세서가 표시됩니다.',
+        step1: {
+          title: '1. 베타 테스트 공식 출시',
+          date: '2026년 7월 1일 출시',
+          desc: '2만명 회원 가입 유치 및 약 1년 동안의 메인넷 가동성 안정화를 목표로 한 시범 채굴장이 전격 가동됩니다.',
+          tooltipTitle: 'BW High-Precision Perpetual Mining',
+          tooltipSubtitle: '"50단위 부동소수점의 정밀함, BW 네트워크의 완벽한 보안을 구축합니다."',
+          tooltipContent: 'BitWishNetwork는 기존 PoW의 한계를 넘어선 \'50단위 부동소수점 연산 기술\'을 도입했습니다. 이 고도화된 연산 체계는 단순한 해시 반복을 넘어, 매우 복잡하고 정밀한 데이터 검증을 수행함으로써 네트워크의 보안 수준을 비약적으로 높였습니다. 본 시스템은 이러한 고도의 연산 최적화를 위해 \'상시 가동(Always-On) 프로토콜\'로 운영됩니다. 정밀 연산의 흐름이 끊기지 않을 때 비로소 최고의 효율과 보안이 보장되기에, 마이닝 시작 후 중단 없는 안정적 네트워크 참여를 지원합니다. BW만의 정밀한 연산 생태계에서 진정한 가치 창출을 경험하십시오.'
+        },
+        step2: {
+          title: '2. 폐쇄형 메인넷 시범 가동',
+          date: '2027년 3~4분기 예정',
+          desc: '외부 공격을 차단하고 초기 자산을 안전하게 보존하기 위한 격리형 제네시스 메인넷이 출범합니다. 이 기간 KYC 승인을 완료한 실사용자 자산의 모의 마이그레이션과 오프라인 블록 검증이 가동됩니다.'
+        },
+        step3: {
+          title: '3. 글로벌 인프라 파트너십 모집',
+          date: '2027년 3분기 개시',
+          desc: '오프라인 실생활 가맹점 및 디앱(DApp) 생태계 허브를 본격 구축합니다. 가맹점 연동 시 가맹 보너스가 마이닝 엔진과 자동 연계되어 실질적 유틸리티 토큰 이코노미를 활성화합니다.'
+        },
+        step4: {
+          title: '4. 1차 공식 기술 백서 공개',
+          date: '2027년 3분기 발표 예정',
+          desc: '50단위 고정밀 연산 암호 원리와 하이브리드 MongoDB의 독자적 데이터 저장 아키텍처에 대한 최종 개발 규격을 대중 및 학계에 정식으로 개시합니다.'
+        },
+        step5: {
+          title: '5. 블록 반감기 적용 및 유통 정책 가이드',
+          date: '2027년 4분기 시동',
+          desc: '유통량의 급격한 팽창을 제한하고 인플레이션을 억제하기 위해 블록당 채굴 수량이 최초로 감소하는 반감 기법이 가동됩니다. 장기 가치 상승 방어선 구축 방안이 수록됩니다.'
+        },
+        step6: {
+          title: '6. 2차 종합 백서 및 오픈 메인넷 공표',
+          date: '2028년 2~3분기 예정',
+          desc: '타 기종 블록체인 지갑과의 완벽한 크로스체인 전송 마이그레이션 기술 규격을 배포하여 글로벌 거래소 상장 및 탈중앙화 금융 시장으로의 완전 개방을 완성합니다.'
+        }
+      },
       navigation: {
         home: '홈',
         mainnet: 'BW 메인넷',
@@ -143,7 +181,23 @@ export class LanguageManager {
         txDetail: '상세 정보 닫기',
         txShowDetail: '상세 정보(해시) 보기',
         txCoinbase: '시스템 기반 (제네시스)',
-        transfer: '전송'
+        transfer: '전송',
+        assetAllocation: '자산 배분 규정 (100%)',
+        minerPayoutStatus: '개인채굴자 BW 지급 현황',
+        migrationWaitingList: '최근 마이그레이션 대기자 목록',
+        transferDone: '전송 완료',
+        done: '완료',
+        waiting: '대기',
+        bankingHistory: '실시간 뱅킹 이체 내역',
+        txType: '거래 유형',
+        noBankingHistory: '최근 뱅킹 거래 내역이 없습니다.',
+        backToMain: '메인 익스플로러로 돌아가기',
+        investigationSystem: '마이그레이션 15일 대기자 전수 조사 시스템',
+        investigationSubtitle: '실시간 30줄 페이징 및 지갑 주소 전수 검색 엔진 가동 중',
+        searchWalletPlaceholder: '검색할 지갑 주소를 입력하세요 (BW...)',
+        approvalDate: '정산 확정 일자',
+        waitingTime: '전송 대기시간',
+        migrationStatus: '마이그레이션 상태'
       },
       // 마이닝 관련
       mining: {
@@ -248,16 +302,16 @@ export class LanguageManager {
             kycApplyNow: '🛡️ KYC 인증 및 마운틴 뱅킹 신청',
             otpGuide: 'OTP 설정을 마치면 송금받기 송금하기 가 활성화 됩니다. 단 KYC인증 통과되지 않으면 거래가 불가능합니다. KYC통과 후 OTP설정 하시기 바랍니다.',
             messages: {
-                otpRequired: 'OTP 설정을 먼저 완료해주세요.',
-                kycNotPeriod: 'KYC신청 기간이 아닙니다.',
-                kycApprovedCongrats: 'KYC승인을 축하 드립니다. OTP설정으로 이동합니다.'
+              otpRequired: 'OTP 설정을 먼저 완료해주세요.',
+              kycNotPeriod: 'KYC신청 기간이 아닙니다.',
+              kycApprovedCongrats: 'KYC승인을 축하 드립니다. OTP설정으로 이동합니다.'
             },
             otpSetup: {
-                title: 'OTP 설정',
-                scanDesc: 'Google Authenticator 앱에서 QR 코드를 스캔하세요.',
-                inputLabel: 'OTP 6자리 코드',
-                confirm: '확인',
-                cancel: '취소'
+              title: 'OTP 설정',
+              scanDesc: 'Google Authenticator 앱에서 QR 코드를 스캔하세요.',
+              inputLabel: 'OTP 6자리 코드',
+              confirm: '확인',
+              cancel: '취소'
             },
             kycSuccess: 'KYC통과를 축하드립니다. 이제 구글 OTP설정이 가능합니다.',
             startMining: '마이닝 시작',
@@ -555,12 +609,51 @@ export class LanguageManager {
         globalSearch: '전역 유저 등수 검색',
         kycApproved: 'KYC 승인',
         kycWaiting: 'KYC 대기',
-        kycNotApplied: '미인증'
+        kycNotApplied: '미인증',
+        lastSync: '마지막 동기화'
       }
     });
 
     // 영어 데이터
     this.languageData.set('en', {
+      roadmap: {
+        mainTitle: 'BW Global Milestone & Roadmap',
+        subTitle: 'The Journey of BitWish Network High-Precision Perpetual Financial Ecosystem',
+        hoverGuide: '💡 Hover over the title to view the detailed technical specifications.',
+        step1: {
+          title: '1. Official Beta Test Launch',
+          date: 'Release on July 1, 2026',
+          desc: 'A pilot mining camp is fully activated with the goal of securing 20,000 registered users and stabilizing mainnet operations over a one-year testing period.',
+          tooltipTitle: 'BW High-Precision Perpetual Mining',
+          tooltipSubtitle: '"Precision of 50-digit floating-point arithmetic establishes perfect security for the BW Network."',
+          tooltipContent: 'BitWishNetwork has introduced a "50-digit floating-point operation technology" that goes beyond the limits of existing PoW. This sophisticated computing structure goes beyond simple hash repetition to perform complex and precise data verification, thereby epochally enhancing network security. To optimize high-performance computation, the system is run with an "Always-On Protocol". Since maximum efficiency and security are guaranteed only when the flow of high-precision calculations is continuous, we support uninterrupted, stable network participation after mining initiates. Experience true value creation within BW\'s own precision computing ecosystem.'
+        },
+        step2: {
+          title: '2. Enclosed Mainnet Trial Run',
+          date: 'Scheduled for Q3-Q4 2027',
+          desc: 'An isolated Genesis Mainnet launches to block external vectors and securely preserve early assets. Simulated migrations for KYC-approved users and offline block consensus audits will run in parallel during this phase.'
+        },
+        step3: {
+          title: '3. Global Infrastructure Partnerships',
+          date: 'Starting Q3 2027',
+          desc: 'Establishing brick-and-mortar payment merchants and DApp ecosystem hubs. Partner store transactions will link with our mining engines to unlock real-world utility and bonus distribution.'
+        },
+        step4: {
+          title: '4. Release of Technical Whitepaper v1',
+          date: 'Scheduled for Q3 2027',
+          desc: 'Officially publishing technical standards on 50-digit precision arithmetic, encryption structures, and the hybrid MongoDB database storage layout for the developer community.'
+        },
+        step5: {
+          title: '5. Reward Halving & Distribution Guide',
+          date: 'Launching Q4 2027',
+          desc: 'Deploying the inaugural block reward deflation mechanism to curb hyperinflation. An administrative policy statement for long-term price stability defenses will be released alongside the algorithm.'
+        },
+        step6: {
+          title: '6. Whitepaper v2 & Open Network Transition',
+          date: 'Scheduled for Q2-Q3 2028',
+          desc: 'Distributing final technical specs for cross-chain multi-signature wallets to complete public integration, preparing for tier-1 exchange listings and open financial markets.'
+        }
+      },
       navigation: {
         home: 'Home',
         mainnet: 'BW Mainnet',
@@ -657,7 +750,23 @@ export class LanguageManager {
         txDetail: 'Hide Details',
         txShowDetail: 'Show Details (Hash)',
         txCoinbase: 'System Base (Genesis)',
-        transfer: 'Sent'
+        transfer: 'Sent',
+        assetAllocation: 'Asset Allocation Rules (100%)',
+        minerPayoutStatus: 'Miner BW Payout Status',
+        migrationWaitingList: 'Recent Migration Waiting List',
+        transferDone: 'Transfer Done',
+        done: 'Done',
+        waiting: 'Waiting',
+        bankingHistory: 'Real-time Banking Transactions',
+        txType: 'TX Type',
+        noBankingHistory: 'No recent banking transactions.',
+        backToMain: 'Back to Main Explorer',
+        investigationSystem: 'Migration 15-day Waiting List Investigation System',
+        investigationSubtitle: 'Live 30-row paging and wallet address search engine active',
+        searchWalletPlaceholder: 'Enter wallet address to search (BW...)',
+        approvalDate: 'Approval Date',
+        waitingTime: 'Waiting Time',
+        migrationStatus: 'Status'
       },
       mining: {
         title: 'Real-time BW Mining Status',
@@ -850,22 +959,22 @@ export class LanguageManager {
             note: '📌 Migrated to Available Balance 15 days after the referred user passes KYC.',
             myCode: 'Referral Code:'
           },
-            actions: {
+          actions: {
             receive: 'Receive',
             send: 'Send',
             kycApplyNow: '🛡️ KYC & Mountain Banking',
             otpGuide: 'After setting up OTP, Deposit and Withdraw will be activated. However, transactions are not possible without KYC approval. Please set up OTP after passing KYC.',
             messages: {
-                otpRequired: 'Please complete OTP setup first.',
-                kycNotPeriod: 'It is not a KYC application period.',
-                kycApprovedCongrats: 'Congratulations on KYC approval. Moving to OTP setup.'
+              otpRequired: 'Please complete OTP setup first.',
+              kycNotPeriod: 'It is not a KYC application period.',
+              kycApprovedCongrats: 'Congratulations on KYC approval. Moving to OTP setup.'
             },
             otpSetup: {
-                title: 'OTP Setup',
-                scanDesc: 'Scan the QR code in your Google Authenticator app.',
-                inputLabel: '6-digit OTP Code',
-                confirm: 'Confirm',
-                cancel: 'Cancel'
+              title: 'OTP Setup',
+              scanDesc: 'Scan the QR code in your Google Authenticator app.',
+              inputLabel: '6-digit OTP Code',
+              confirm: 'Confirm',
+              cancel: 'Cancel'
             },
             kycSuccess: 'Congratulations on passing KYC. You can now set up Google OTP.',
             kycDisabled: 'KYC Application (Disabled)',
@@ -1115,6 +1224,44 @@ export class LanguageManager {
 
     // 일본어 데이터
     this.languageData.set('ja', {
+      roadmap: {
+        mainTitle: 'BW グローバルマイルストーン＆ロードマップ',
+        subTitle: 'BitWish Networkが築く高精度永久マイニングエコシステムの軌跡',
+        hoverGuide: '💡 タイトルにマウスを合わせると、詳細な仕様書が表示されます。',
+        step1: {
+          title: '1. ベータテスト公式ローンチ',
+          date: '2026年7月1日 開始',
+          desc: '会員2万人突破および約1年間のメインネット動作安定化を目指した試験的なマイニング場が本格始動します。',
+          tooltipTitle: 'BW High-Precision Perpetual Mining',
+          tooltipSubtitle: '「50桁浮動小数点演算の精度が、BWネットワークの完全なセキュリティを構築します」',
+          tooltipContent: 'BitWishNetworkは、従来のPoWの限界を超えた「50桁浮動小数点演算技術」を導入しました。この高度な演算システムは、単純なハッシュ反復処理を超え、複雑かつ精密なデータ検証を実行することで、ネットワークのセキュリティレベルを飛躍的に向上させました。本システムは、高度な演算の最適化を維持するため、「常時稼働（Always-On）プロトコル」を採用しています。精密演算のフローが途切れないことで初めて最大の効率と安全性が確保されるため、マイニング開始後の安定したネットワーク参加をサポートします。BW独自の精密演算エコシステムで、真の価値創出をご体験ください。'
+        },
+        step2: {
+          title: '2. クローズドメインネット試験運用',
+          date: '2027年 第3〜4四半期 予定',
+          desc: '外部攻撃を完全に遮断し、初期資産を保護するための隔離型メインネットを稼働します。この期間中、KYC承認済みの実ユーザーによるアセットの模擬移行検証が行われます。'
+        },
+        step3: {
+          title: '3. グローバル決済加盟店の誘致',
+          date: '2027年 第3四半期 開始',
+          desc: '実生活で決済可能な加盟店やDApp連携ハブを大幅に開拓します。加盟店とのデータ連携により、マイニングエンジンと連携した決済ボーナスを実装し、実質的な実用性を高めます。'
+        },
+        step4: {
+          title: '4. 第1次公式技術白書の公開',
+          date: '2027年 第3四半期 発表予定',
+          desc: '50桁高精度浮動小数点演算による暗号論理と、独自のハイブリッドMongoDB格納アルゴリズムの最終技術規約を公表します。'
+        },
+        step5: {
+          title: '5. ブロック半減期の適用と流通政策声明',
+          date: '2027年 第4四半期 始动',
+          desc: '流通量の過剰な膨張を防ぎインフレを抑えるため、新規採掘量が初めて自動的に減少する最初の半減期システムを適用します。'
+        },
+        step6: {
+          title: '6. 第2次総合白書およびオープンメインネット宣言',
+          date: '2028年 第2〜3四半期 予定',
+          desc: '異種チェーンとのシームレスなマルチチェーン資産移行プロトコルを提供し、グローバル取引所への上場および独立した金融エコシステムの完成を導きます。'
+        }
+      },
       navigation: {
         home: 'ホーム',
         mainnet: 'BWメインネット',
@@ -1205,7 +1352,23 @@ export class LanguageManager {
         txDetail: '詳細を閉じる',
         txShowDetail: '詳細（ハッシュ）を見る',
         txCoinbase: 'システム基盤 (ジェネシス)',
-        transfer: '送金'
+        transfer: '転送',
+        assetAllocation: '資産配分規定 (100%)',
+        minerPayoutStatus: '個人マイナーBW支給現況',
+        migrationWaitingList: '最近のマイグレーション待機リスト',
+        transferDone: '転送完了',
+        done: '完了',
+        waiting: '待機',
+        bankingHistory: 'リアルタイム銀行振込履歴',
+        txType: '取引タイプ',
+        noBankingHistory: '最近の銀行取引履歴はありません。',
+        backToMain: 'メインエクスプローラーに戻る',
+        investigationSystem: 'マイグレーション15日待機者全数調査システム',
+        investigationSubtitle: 'リアルタイム30行ページングおよびウォレットアドレス全数検索エンジン稼働中',
+        searchWalletPlaceholder: '検索するウォレットアドレスを入力してください (BW...)',
+        approvalDate: '精算確定日',
+        waitingTime: '転送待機時間',
+        migrationStatus: 'マイグレーション状態'
       },
       mining: {
         title: 'リアルタイムBWマイニング状況',
@@ -1385,16 +1548,16 @@ export class LanguageManager {
             kycApplyNow: '🛡️ KYC認証とマウンテンバンキング申請',
             otpGuide: 'OTP設定を完了すると、送金受け取りと送金が有効になります。ただし、KYC認証が完了していないと取引はできません。KYC通過後にOTP設定を行ってください。',
             messages: {
-                otpRequired: 'まずOTP設定を完了してください。',
-                kycNotPeriod: 'KYC申請期間ではありません。',
-                kycApprovedCongrats: 'KYC承認おめでとうございます。OTP設定に移動します。'
+              otpRequired: 'まずOTP設定を完了してください。',
+              kycNotPeriod: 'KYC申請期間ではありません。',
+              kycApprovedCongrats: 'KYC承認おめでとうございます。OTP設定に移動します。'
             },
             otpSetup: {
-                title: 'OTP 設定',
-                scanDesc: 'Google AuthenticatorアプリでQRコードをスキャンしてください。',
-                inputLabel: 'OTP 6桁のコード',
-                confirm: '確認',
-                cancel: 'キャンセル'
+              title: 'OTP 設定',
+              scanDesc: 'Google AuthenticatorアプリでQRコードをスキャンしてください。',
+              inputLabel: 'OTP 6桁のコード',
+              confirm: '確認',
+              cancel: 'キャンセル'
             },
             kycDisabled: 'KYC申請 (無効)',
             startMining: 'マイニング開始',
@@ -1615,7 +1778,8 @@ export class LanguageManager {
         globalSearch: '全ユーザー順位検索',
         kycApproved: 'KYC 承認',
         kycWaiting: 'KYC 待機',
-        kycNotApplied: '未認証'
+        kycNotApplied: '未認証',
+        lastSync: '最終同期'
       },
       // 가맹점 보너스 관련
       partner: {
@@ -1657,6 +1821,44 @@ export class LanguageManager {
 
     // 중국어 데이터
     this.languageData.set('zh', {
+      roadmap: {
+        mainTitle: 'BW 全球里程碑与路线图',
+        subTitle: 'BitWish Network 高精度永久挖矿金融生态圈建设历程',
+        hoverGuide: '💡 将鼠标悬停在标题上即可查看详细的技术说明。',
+        step1: {
+          title: '1. 官方测试版隆重推出',
+          date: '2026年7月1日 启动',
+          desc: '试运行挖矿场将全面启动，目标是吸引 2 万名注册用户并在大约一年的测试期内实现主网系统的高可用与稳定性。',
+          tooltipTitle: 'BW High-Precision Perpetual Mining',
+          tooltipSubtitle: '“50位浮动小数点计算的精密性，构筑了 BW 网络完美的安全屏障。”',
+          tooltipContent: 'BitWishNetwork 引入了超越传统 PoW 局限性的“50位高精度浮动点数计算技术”。该先进计算架构超越了单一的哈希碰撞，通过进行极其复杂、精密的区块校验，大幅提高了底层网络的安全性。为实现高密度计算的最优性能，系统引入了“常时启动(Always-On)协议”。由于高精度计算的连续性是保障系统效率与安全的底层基石，我们将全力支持用户启动挖矿后无间断、稳定地接入网络。欢迎体验 BW 专有的精密计算生态，发现真正的财富价值。'
+        },
+        step2: {
+          title: '2. 封闭式主网试运行',
+          date: '预计 2027年 第3~4季度',
+          desc: '为了拦截一切外部潜在风险并安全存储初始代币资产，我们将推出封闭式创世主网。在此阶段，通过 KYC 认证用户的测试资产迁移与离线出块审计将并行推进。'
+        },
+        step3: {
+          title: '3. 开启全球基础设施合作招商',
+          date: '2027年 第3季度 启动',
+          desc: '致力于构建广泛的线下商户零售及 DApp 分布式应用网络。商户支付场景接入后，交易将深度绑定挖矿引擎，发放专属结算加倍奖励。'
+        },
+        step4: {
+          title: '4. 首次官方技术白皮书公开',
+          date: '预计 2027年 第3季度',
+          desc: '正式向全球开发者社区及研究机构发布 50位高精度算法的安全计算框架、独立加密密钥生成，以及混合型 MongoDB 混合存储模型的详细标准。'
+        },
+        step5: {
+          title: '5. 部署区块奖励半减机制及流向政策',
+          date: '2027年 第4季度 启动',
+          desc: '上线防范代币无序扩张与恶性通货膨胀的首期减半惩罚。同时，提供有助于长期价格支撑和稳定流通的精算模型防御政策白皮书。'
+        },
+        step6: {
+          title: '6. 编写第二次白皮书及全面开放主网',
+          date: '预计 2028年 第2~3季度',
+          desc: '公布异构区块链跨链多签钱包迁移的技术标准，从而全面实现公链对外集成，为上线全球主流交易所和活跃去中心化金融业务做好全方位准备。'
+        }
+      },
       navigation: {
         home: '首页',
         mainnet: 'BW主网',
@@ -1750,7 +1952,23 @@ export class LanguageManager {
         txDetail: '隐藏详情',
         txShowDetail: '查看详情（哈希）',
         txCoinbase: '系统基础 (创世)',
-        transfer: '转账'
+        transfer: '转账',
+        assetAllocation: '资产分配规定 (100%)',
+        minerPayoutStatus: '个人矿工BW发放现状',
+        migrationWaitingList: '最近迁移等待列表',
+        transferDone: '传输完成',
+        done: '完成',
+        waiting: '等待',
+        bankingHistory: '实时银行转账记录',
+        txType: '交易类型',
+        noBankingHistory: '最近没有银行交易记录。',
+        backToMain: '返回主浏览器',
+        investigationSystem: '迁移15天等待人员全量调查系统',
+        investigationSubtitle: '实时30行分页及钱包地址全量搜索引擎运行中',
+        searchWalletPlaceholder: '请输入要搜索的钱包地址 (BW...)',
+        approvalDate: '结算确定日期',
+        waitingTime: '传输等待时间',
+        migrationStatus: '迁移状态'
       },
       mining: {
         title: '实时BW挖矿状态',
@@ -1928,16 +2146,16 @@ export class LanguageManager {
             kycApplyNow: '🛡️ KYC认证及山地银行申请',
             otpGuide: '完成OTP设置后，充值和提现功能将被激活。但是，如果KYC认证未通过，则无法进行交易。请在KYC通过后设置OTP。',
             messages: {
-                otpRequired: '请先完成OTP设置。',
-                kycNotPeriod: '当前不是KYC申请期。',
-                kycApprovedCongrats: '恭喜通过KYC认证。正在前往OTP设置。'
+              otpRequired: '请先完成OTP设置。',
+              kycNotPeriod: '当前不是KYC申请期。',
+              kycApprovedCongrats: '恭喜通过KYC认证。正在前往OTP设置。'
             },
             otpSetup: {
-                title: 'OTP 设置',
-                scanDesc: '请使用 Google Authenticator 应用扫描二维码。',
-                inputLabel: 'OTP 6位验证码',
-                confirm: '确认',
-                cancel: '取消'
+              title: 'OTP 设置',
+              scanDesc: '请使用 Google Authenticator 应用扫描二维码。',
+              inputLabel: 'OTP 6位验证码',
+              confirm: '确认',
+              cancel: '取消'
             },
             kycSuccess: '恭喜通过KYC。现在可以进行谷歌OTP设置。',
             kycDisabled: 'KYC申请 (禁用)',
@@ -2118,7 +2336,8 @@ export class LanguageManager {
         globalSearch: '全网用户排名查询',
         kycApproved: 'KYC 已批准',
         kycWaiting: 'KYC 等待',
-        kycNotApplied: '未认证'
+        kycNotApplied: '未认证',
+        lastSync: '最后同步'
       },
       mnemonicAuth: {
         title: '助记词片段安全验证',

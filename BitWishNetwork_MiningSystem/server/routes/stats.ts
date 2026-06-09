@@ -55,8 +55,8 @@ router.get('/realtime', async (req, res) => {
                     locked: {
                         $sum: {
                             $cond: [
-                                { $in: ["$migrationStatus", ["LOCKED", "WAITING_KYC"]] }, 
-                                { $toDouble: "$totalAmount" }, 
+                                { $in: ["$migrationStatus", ["LOCKED", "WAITING_KYC"]] },
+                                { $toDouble: "$totalAmount" },
                                 0
                             ]
                         }
@@ -64,8 +64,8 @@ router.get('/realtime', async (req, res) => {
                     released: {
                         $sum: {
                             $cond: [
-                                { $in: ["$migrationStatus", ["UNLOCKED", "MIGRATED"]] }, 
-                                { $toDouble: "$totalAmount" }, 
+                                { $in: ["$migrationStatus", ["UNLOCKED", "MIGRATED"]] },
+                                { $toDouble: "$totalAmount" },
                                 0
                             ]
                         }
@@ -108,14 +108,30 @@ router.get('/realtime', async (req, res) => {
         // 5. 발행률 (%)
         const issuanceRate = currentSupply.div(totalSupply).times(100).toNumber();
 
-        // 6. 실시간 생성 블록 (DB 연동)
-        // blocks 컬렉션이 존재하는지 먼저 확인 후 카운트
-        let totalBlocks = 0;
+        // 기본 제네시스 블록 1개 + 추천 보상 총 30 BW 스냅샷(총 31)을 기반으로 시작하고 이후 마이닝될 때마다 +1씩 증가
+        let totalBlocks = 31;
+        let blockCreationFee = '0';
+        let ecosystemFund = '0';
+        let foundationFund = '0';
         try {
-            const networkDb = mongoose.connection.getClient().db('bitwish_network');
-            totalBlocks = await networkDb.collection('blocks').countDocuments({}) || 0;
+            const { MongoClient } = require('mongodb');
+            const nativeClient = new MongoClient('mongodb://localhost:27017');
+            await nativeClient.connect();
+            const networkDb = nativeClient.db('bitwish_network');
+            const dbCount = await networkDb.collection('blocks').countDocuments({}) || 0;
+            totalBlocks = dbCount + 30;
+
+            // network_stats 에서 기금 정보 가져오기
+            const fundStats = await networkDb.collection('network_stats').findOne({ id: 'global_fund_stats' });
+            if (fundStats) {
+                blockCreationFee = fundStats.totalAccumulatedFees || '0';
+                ecosystemFund = fundStats.ecosystemFund || '0';
+                foundationFund = fundStats.foundationFund || '0';
+            }
+
+            await nativeClient.close();
         } catch (blockError) {
-            console.warn('Block count check failed, default to 0:', blockError);
+            console.warn('Block count check failed, default to 31:', blockError);
         }
 
         // 네트워크 상태
@@ -133,7 +149,10 @@ router.get('/realtime', async (req, res) => {
                 totalSettlementAmount: totalSettlementAmount.toFixed(8), // [프리미엄 UI 신설 데이터 - 호환성 보존]
                 totalLockedAmount: totalLockedAmount.toFixed(8), // [Phase 4: 분리된 잠금 자산]
                 totalReleasedAmount: totalReleasedAmount.toFixed(8), // [Phase 4: KYC 승인 후 해제 자산]
-                networkStatus
+                networkStatus,
+                blockCreationFee,
+                ecosystemFund,
+                foundationFund
             }
         });
 
@@ -149,13 +168,16 @@ router.get('/realtime', async (req, res) => {
  */
 router.get('/blocks', async (req, res) => {
     try {
-        const networkDb = mongoose.connection.getClient().db('bitwish_network');
+        const { MongoClient } = require('mongodb');
+        const nativeClient = new MongoClient('mongodb://localhost:27017');
+        await nativeClient.connect();
+        const networkDb = nativeClient.db('bitwish_network');
         const blocks = await networkDb.collection('blocks')
             .find({})
             .sort({ 'header.blockHeight': -1 })
             .limit(20)
             .toArray();
-
+        await nativeClient.close();
         res.json({ success: true, data: blocks });
     } catch (error) {
         console.error('Explorer Blocks API Error:', error);

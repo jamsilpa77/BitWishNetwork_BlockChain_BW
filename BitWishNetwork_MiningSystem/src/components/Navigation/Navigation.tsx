@@ -194,7 +194,10 @@ const Navigation: React.FC = () => {
         <div className="nav-item dropdown">
           <button className="nav-button">{getTranslation('navigation.whitepaper')}</button>
           <div className="dropdown-content">
-            <button onClick={() => handleNavigationClick('/roadmap')}>
+            <button onClick={() => {
+              const win = window.open('/roadmap', 'BW_ROADMAP_WINDOW', 'width=1280,height=850,scrollbars=yes,resizable=yes');
+              if (win) win.focus();
+            }}>
               {getTranslation('navigation.roadmap')}
             </button>
           </div>

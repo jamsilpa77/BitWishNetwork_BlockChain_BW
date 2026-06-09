@@ -25,11 +25,13 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Switch, Route } from 'react-router-dom';
+import { BrowserRouter, Switch, Route, Redirect } from 'react-router-dom';
 import HomePage from './components/HomePage/HomePage';
+import RoadmapPage from './components/RoadmapPage/RoadmapPage';
 import AdminPage from './components/AdminPage/AdminPage';
 import ExplorerPage from './components/Explorer/ExplorerPage';
 import RankingPage from './components/RankingPage/RankingPage';
+import { BWCommunityWindow } from './components/BWCommunityWindow/BWCommunityWindow';
 import './styles/global.css';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -44,9 +46,14 @@ if (rootElement) {
       <BrowserRouter>
         <Switch>
           <Route exact path="/" component={HomePage} />
-          <Route path="/explorer" component={ExplorerPage} />
-          <Route path="/ranking" component={RankingPage} />
+          {/* [Step 1] 독립 페이지 정격 경로 개통 */}
+          <Route path="/bw-explorer" component={ExplorerPage} />
+          <Route path="/ranking-board" component={RankingPage} />
+          <Route path="/bw-community" component={BWCommunityWindow} />
           <Route path="/bitwish/testadmin" component={AdminPage} />
+          <Route path="/roadmap" component={RoadmapPage} />
+          {/* [Step 1] Fallback 보안 가드: 잘못된 경로는 홈으로 리다이렉트 */}
+          <Redirect to="/" />
         </Switch>
       </BrowserRouter>
     </ErrorBoundary>

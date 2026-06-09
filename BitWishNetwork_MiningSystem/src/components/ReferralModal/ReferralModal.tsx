@@ -9,13 +9,17 @@ interface ReferralModalProps {
     onClose: () => void;
     currentLanguage?: string;
     walletAddress?: string; // 지갑 주소 prop 추가 필요
+    isActive?: boolean;
+    onFocus?: () => void;
 }
 
 const ReferralModal: React.FC<ReferralModalProps> = ({
     isOpen,
     onClose,
     currentLanguage,
-    walletAddress
+    walletAddress,
+    isActive,
+    onFocus
 }) => {
     const [languageManager] = useState(() => new LanguageManager());
     const [, setForceUpdate] = useState(0);
@@ -26,6 +30,63 @@ const ReferralModal: React.FC<ReferralModalProps> = ({
     const [myReferralCode, setMyReferralCode] = useState<string | null>(null);
     const [friendsInvited, setFriendsInvited] = useState<number>(0);
     const [bonusRate, setBonusRate] = useState<number>(0);
+
+    // [Step 1-2] 드래그 및 위치 상태 관리 로직 이식
+    // [Step 6] 1프레임 위치 오류(잔상) 방지를 위한 렌더링 즉시 초기값 할당
+    const [position, setPosition] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return { x: (window.innerWidth - 450) / 2, y: 450 };
+        }
+        return { x: 0, y: 450 };
+    });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+    // [Step 5-2 & 6.3] 오픈/클로즈 양방향에서 좌표를 리셋하여 유령 궤적(Ghosting) 원천 차단
+    useEffect(() => {
+        // isOpen이 true든 false든 상태가 변할 때마다 무조건 중앙 좌표로 리셋해둠
+        const width = 450; // Modal approx width
+        const x = (window.innerWidth - width) / 2;
+        const y = 450; // 지정 좌표 적용
+        setPosition({ x, y });
+    }, [isOpen]);
+
+    // 드래그 이벤트 핸들러
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if ((e.target as HTMLElement).closest('.referral-header')) {
+            setIsDragging(true);
+            setDragOffset({
+                x: e.clientX - position.x,
+                y: e.clientY - position.y
+            });
+        }
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (isDragging) {
+                // [Step 5-3] 드래그 경계 제한 완전 철폐
+                const newX = e.clientX - dragOffset.x;
+                const newY = e.clientY - dragOffset.y;
+
+                setPosition({ x: newX, y: newY });
+            }
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+
+        if (isDragging) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging, dragOffset]);
 
     useEffect(() => {
         if (currentLanguage) {
@@ -112,10 +173,37 @@ const ReferralModal: React.FC<ReferralModalProps> = ({
     };
 
     return (
-        <div className="referral-modal-overlay" onClick={onClose}>
-            <div className="referral-modal" onClick={(e) => e.stopPropagation()}>
+        <div
+            className="referral-modal-overlay"
+            onMouseDownCapture={onFocus} // 배경 클릭 시에도 포커스 전환
+            style={{
+                pointerEvents: 'none',
+                backgroundColor: 'transparent',
+                backdropFilter: 'none',
+                zIndex: isActive ? 10100 : 10005 // [핵심] 최상위 레이어 우선순위 제어
+            }}
+        >
+            <div
+                className="referral-modal"
+                onMouseDown={(e) => {
+                    handleMouseDown(e);
+                    if (onFocus) onFocus();
+                }}
+                onMouseDownCapture={onFocus} // 내부 모든 클릭 감지
+                style={{
+                    position: 'fixed',
+                    left: `${position.x}px`,
+                    top: `${position.y}px`,
+                    pointerEvents: 'auto',
+                    cursor: isDragging ? 'grabbing' : 'default',
+                    zIndex: isActive ? 10100 : 10005, // 포커스 시 격상
+                    boxShadow: isActive ? '0 20px 50px rgba(0,0,0,0.4)' : '0 10px 30px rgba(0,0,0,0.2)',
+                    transition: 'box-shadow 0.2s ease',
+                    margin: 0
+                }}
+            >
                 {/* 헤더 */}
-                <div className="referral-header">
+                <div className="referral-header" style={{ cursor: 'grab', userSelect: 'none' }}>
                     <div className="referral-icon">🎁</div>
                     <h2 className="referral-title">{getTranslation('referral.modal.title')}</h2>
                     <p className="referral-subtitle">{getTranslation('referral.modal.subtitle')}</p>

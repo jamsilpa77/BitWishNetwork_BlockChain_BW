@@ -258,6 +258,63 @@ export class UserController {
             await newUserMiningState.save();
             console.log(`[REFERRAL] New user 2% policy engine restored: ${newWalletAddress}`);
 
+            // blocktransactions 컬렉션에 실시간 가입 보상 및 추천 보상 블록 트랜잭션 기록
+            const mongooseObj = require('mongoose');
+            const networkDb = mongooseObj.connection.useDb('bitwish_network');
+            let BlockTxModel: any;
+            try {
+                BlockTxModel = networkDb.model('BlockTransaction');
+            } catch {
+                const BlockTxSchema = new mongooseObj.Schema({
+                    txId: { type: String, required: true, unique: true },
+                    walletAddress: { type: String, required: true, index: true },
+                    blockHeight: { type: Number, required: true },
+                    amount: { type: String, default: '1.00000000' },
+                    type: { type: String, default: 'Minting' },
+                    status: { type: String, default: 'Confirmed' }
+                }, { timestamps: { createdAt: true, updatedAt: false } });
+                BlockTxSchema.index({ walletAddress: 1, blockHeight: -1 });
+                BlockTxModel = networkDb.model('BlockTransaction', BlockTxSchema);
+            }
+
+            // 1. 추천인(부모) 블록 트랜잭션 실시간 생성
+            const parentTxId = 'BW_REF_TX_' + newWalletAddress;
+            const parentBlockHeight = 100000 + (realReferralCount - 1);
+            await BlockTxModel.findOneAndUpdate(
+                { txId: parentTxId },
+                {
+                    $setOnInsert: {
+                        txId: parentTxId,
+                        walletAddress: referrer.walletAddress,
+                        blockHeight: parentBlockHeight,
+                        amount: '1.00000000',
+                        type: 'Referral Reward',
+                        status: 'Confirmed'
+                    }
+                },
+                { upsert: true, new: true }
+            );
+            console.log(`[REFERRAL] Real-time parent BlockTransaction created for ${referrer.walletAddress}`);
+
+            // 2. 가입자(자식) 블록 트랜잭션 실시간 생성
+            const childTxId = 'BW_REF_CHILD_TX_' + newWalletAddress;
+            const childBlockHeight = 200000;
+            await BlockTxModel.findOneAndUpdate(
+                { txId: childTxId },
+                {
+                    $setOnInsert: {
+                        txId: childTxId,
+                        walletAddress: newWalletAddress,
+                        blockHeight: childBlockHeight,
+                        amount: '1.00000000',
+                        type: 'Referral Reward',
+                        status: 'Confirmed'
+                    }
+                },
+                { upsert: true, new: true }
+            );
+            console.log(`[REFERRAL] Real-time child BlockTransaction created for ${newWalletAddress}`);
+
             console.log(`[REFERRAL] Process completed successfully`);
         } catch (error) {
             console.error('[REFERRAL] Error:', error);

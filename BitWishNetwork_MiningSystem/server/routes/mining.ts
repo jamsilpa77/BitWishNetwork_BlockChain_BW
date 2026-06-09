@@ -1,3 +1,5 @@
+import MiningState from '../models/MiningState';
+import User from '../models/User';
 import express from 'express';
 import { miningController } from '../controllers/MiningController';
 
@@ -13,27 +15,37 @@ router.post('/stop', (req, res) => miningController.stopMining(req, res));
 router.post('/sync', (req, res) => miningController.syncMiningData(req, res));
 
 // 사용자 상태 조회 (초기 접속 시)
-router.get('/status/:walletAddress', (req, res) => miningController.getUserStatus(req, res));
+// 사용자 상태 조회 (초기 접속 시) - [실시간 시간 및 KYC 날짜 무결성 보정 패치]
+router.get('/status/:walletAddress', async (req, res) => {
+    const { walletAddress } = req.params;
 
-/**
- * [최종복구] 월별 채굴 보상 내역 조회 (나의 지갑용)
- * 진짜 DB (bitwish_mining)의 MonthlySettlement 컬렉션에서 데이터를 가져옵니다.
- */
-router.get('/history/:walletAddress', async (req, res) => {
-    try {
-        const { walletAddress } = req.params;
-        const MonthlySettlement = require('../models/MonthlySettlement').default;
+    // 기존 Express의 res.json 전송 함수를 임시 가로챕니다.
+    const originalJson = res.json.bind(res);
 
-        // 지갑 주소 대소문자 무시 검색 (데이터 정밀 복구)
-        const history = await MonthlySettlement.find({
-            walletAddress: { $regex: new RegExp("^" + walletAddress + "$", "i") }
-        }).sort({ year: -1, month: -1 });
+    (res as any).json = async function (body: any) {
+        try {
+            if (body && body.success && body.data) {
+                // 1. DB에서 해당 지갑의 실제 마이닝 시작 시각(miningStartTime)을 가져옵니다.
+                const state = await MiningState.findOne({
+                    walletAddress: { $regex: new RegExp("^" + walletAddress + "$", "i") }
+                });
 
-        res.json({ success: true, history });
-    } catch (error) {
-        console.error('Mining history restore error:', error);
-        res.json({ success: false, history: [] });
-    }
+                // 2. DB에서 해당 지갑의 실제 KYC 승인 날짜(kycVerifiedDate)를 가져옵니다.
+                const userObj = await User.findOne({
+                    walletAddress: { $regex: new RegExp("^" + walletAddress + "$", "i") }
+                });
+
+                // 3. 기존 컨트롤러의 가짜 기본값 대신 실제 데이터베이스 참값을 실시간 매핑합니다.
+                body.data.miningStartedAt = state && state.miningStartTime ? state.miningStartTime.toISOString() : '';
+                body.data.kycVerifiedDate = userObj && userObj.kycVerifiedDate ? userObj.kycVerifiedDate.toISOString() : null;
+            }
+        } catch (err) {
+            console.error('[API Interceptor Error] 시간 무결성 보정 실패:', err);
+        }
+        return originalJson(body);
+    };
+
+    return miningController.getUserStatus(req, res);
 });
 
 // [4단계 핵심] 익스플로러 전수 조사 (페이징/검색) 및 통계 API
@@ -75,8 +87,8 @@ router.get('/global-stats', async (req, res) => {
             if (now < T0) continue; // 아직 최초 해제 시점도 안 됨
 
             // 해당 유저의 모든 정산 내역을 날짜순으로 정렬하여 가져옴
-            const userSettlements = await MonthlySettlement.find({ 
-                walletAddress: { $regex: new RegExp("^" + user.walletAddress + "$", "i") } 
+            const userSettlements = await MonthlySettlement.find({
+                walletAddress: { $regex: new RegExp("^" + user.walletAddress + "$", "i") }
             }).sort({ year: 1, month: 1 });
 
             for (let i = 0; i < userSettlements.length; i++) {
@@ -85,7 +97,7 @@ router.get('/global-stats', async (req, res) => {
 
                 // N번째 정산분의 해제 예정 시각: T0 + (i개월 * 30일)
                 const unlockTime = new Date(T0.getTime() + (i * 30 * 24 * 60 * 60 * 1000));
-                
+
                 if (now >= unlockTime) {
                     await MonthlySettlement.updateOne(
                         { _id: settlement._id },
@@ -194,6 +206,107 @@ router.get('/global-stats', async (req, res) => {
         });
     } catch (error) {
         console.error('Failed to get global stats:', error);
+        return res.status(500).json({ success: false, message: '서버 오류 발생' });
+    }
+});
+
+/**
+ * [블록 트랜잭션 조회 API] 커서 기반 초고속 페이징
+ * GET /api/mining/block-transactions/:walletAddress
+ * Query: cursor (blockHeight 경계값), direction ('next' | 'prev')
+ * 10개씩 끊어서 반환, hasNext/hasPrev 상태 포함
+ */
+router.get('/block-transactions/:walletAddress', async (req, res) => {
+    try {
+        const { walletAddress } = req.params;
+        const cursor = req.query.cursor ? parseInt(req.query.cursor as string) : null;
+        const direction = (req.query.direction as string) || 'next';
+        const limit = 10;
+        const mongoose = require('mongoose');
+        const db = mongoose.connection.useDb('bitwish_network');
+
+        let BlockTxModel: any;
+        try {
+            BlockTxModel = db.model('BlockTransaction');
+        } catch {
+            const BlockTxSchema = new mongoose.Schema({
+                txId: { type: String, required: true, unique: true },
+                walletAddress: { type: String, required: true, index: true },
+                blockHeight: { type: Number, required: true },
+                amount: { type: String, default: '1.00000000' },
+                type: { type: String, default: 'Minting' },
+                status: { type: String, default: 'Confirmed' }
+            }, { timestamps: { createdAt: true, updatedAt: false } });
+            BlockTxSchema.index({ walletAddress: 1, blockHeight: -1 });
+            BlockTxModel = db.model('BlockTransaction', BlockTxSchema);
+        }
+
+        // 커서 기반 쿼리 조건 빌드
+        const query: any = { walletAddress: { $regex: new RegExp("^" + walletAddress + "$", "i") } };
+
+        if (cursor !== null) {
+            if (direction === 'prev') {
+                query.blockHeight = { $gt: cursor };
+            } else {
+                query.blockHeight = { $lt: cursor };
+            }
+        }
+
+        // 정렬 방향: prev일 경우 오름차순으로 가져온 뒤 역순 정렬
+        const sortOrder = direction === 'prev' ? 1 : -1;
+        const rows = await BlockTxModel.find(query)
+            .sort({ blockHeight: sortOrder })
+            .limit(limit + 1) // 1개 더 가져와서 hasNext/hasPrev 판별
+            .lean();
+
+        let hasMore = rows.length > limit;
+        if (hasMore) rows.pop(); // 초과분 제거
+
+        // prev 방향이면 역순으로 다시 정렬 (최신순 유지)
+        if (direction === 'prev') rows.reverse();
+
+        // hasNext/hasPrev 결정
+        let hasNext = false;
+        let hasPrev = false;
+
+        if (rows.length > 0) {
+            const oldestHeight = rows[rows.length - 1].blockHeight;
+            const newestHeight = rows[0].blockHeight;
+
+            if (direction === 'prev') {
+                hasPrev = hasMore;
+                // next 존재 여부: 현재 최하단 블록보다 낮은 블록이 있는지
+                const nextCheck = await BlockTxModel.countDocuments({
+                    walletAddress: query.walletAddress,
+                    blockHeight: { $lt: oldestHeight }
+                });
+                hasNext = nextCheck > 0;
+            } else {
+                hasNext = hasMore;
+                // prev 존재 여부: 현재 최상단 블록보다 높은 블록이 있는지
+                const prevCheck = await BlockTxModel.countDocuments({
+                    walletAddress: query.walletAddress,
+                    blockHeight: { $gt: newestHeight }
+                });
+                hasPrev = prevCheck > 0;
+            }
+        }
+
+        return res.json({
+            success: true,
+            transactions: rows.map((r: any) => ({
+                txId: r.txId,
+                blockHeight: r.blockHeight,
+                amount: r.amount,
+                type: r.type,
+                status: r.status,
+                createdAt: r.createdAt
+            })),
+            hasNext,
+            hasPrev
+        });
+    } catch (error) {
+        console.error('[블록 트랜잭션 조회 에러]:', error);
         return res.status(500).json({ success: false, message: '서버 오류 발생' });
     }
 });

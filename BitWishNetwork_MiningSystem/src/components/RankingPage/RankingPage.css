@@ -7,22 +7,53 @@
     min-height: 100vh;
     background: var(--bg-color, #0a0a0a);
     color: var(--text-color, #ffffff);
-    padding: 100px 20px 60px;
+    padding: 0 0 60px; /* Step 1.5: 100px 상단 패딩 제거하여 헤더 천장 밀착 */
     font-family: 'Inter', sans-serif;
     transition: all 0.3s ease;
+}
+
+/* Step 3: 테마 시스템 변수 정의 (익스플로러 표준 이식) */
+.ranking-page.dark-mode {
+    --bg-color: #0a0a0a;
+    --text-color: #ffffff;
+    --card-bg: rgba(255, 255, 255, 0.02);
+    --card-border: rgba(255, 255, 255, 0.05);
+    --header-bg: rgba(10, 10, 10, 0.8);
+    --input-bg: rgba(255, 255, 255, 0.03);
+    --input-border: rgba(243, 186, 47, 0.2);
+    --sub-text: #888;
+    --table-header: #666;
+    --table-border: rgba(255, 255, 255, 0.05);
+    --list-bg: rgba(255, 255, 255, 0.01);
+    --card-shadow: rgba(0, 0, 0, 0.4);
+    --addr-color: #bbb;
+}
+
+.ranking-page.light-mode {
+    --bg-color: #f8faff;
+    --text-color: #1a1a1a;
+    --card-bg: #ffffff;
+    --card-border: rgba(0, 0, 0, 0.08);
+    --header-bg: rgba(255, 255, 255, 0.9);
+    --input-bg: #ffffff;
+    --input-border: rgba(243, 186, 47, 0.4);
+    --sub-text: #555;
+    --table-header: #444;
+    --table-border: rgba(0, 0, 0, 0.05);
+    --list-bg: #ffffff;
+    --card-shadow: rgba(0, 0, 0, 0.1);
+    --addr-color: #444;
 }
 
 .ranking-container {
     max-width: 1200px;
     margin: 0 auto;
+    padding-top: 40px; /* Step 1.5: 헤더와 본문 사이의 간격 수복 */
     position: relative; /* 버튼 배치를 위한 기준점 */
 }
 
-/* ★ Phase 10: Scoped Back Button (Explorer Interference Blocked) ★ */
+/* ★ Step 2: 기형적인 버튼 위치 해킹 코드 완전 삭제 및 통일화 ★ */
 .ranking-page .back-button {
-    position: absolute;
-    top: -40px;
-    left: 0;
     background: rgba(100, 181, 246, 0.1);
     color: #64b5f6;
     border: 1px solid #64b5f6;
@@ -31,7 +62,8 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    z-index: 100;
+    position: relative; /* Step 1.6: 레이아웃 무시하고 강제로 시각적 끌어올림 */
+    top: -15px; /* Step 1.6: -20과 -10의 정확한 황금비율 중간값으로 최종 1픽셀 보정 */
 }
 
 .ranking-page .back-button:hover {
@@ -41,27 +73,62 @@
     box-shadow: 0 0 15px rgba(100, 181, 246, 0.4);
 }
 
-/* Header Section */
-.ranking-header {
-    text-align: center;
-    margin-bottom: 60px;
+/* ★ Step 2: 새로운 헤더 바 뼈대 추가 (익스플로러 100% 동일 수치 적용) ★ */
+.ranking-header-bar {
+    background: var(--header-bg); /* Step 3: 테마별 배경색 적용 */
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid var(--card-border);
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 1001;
+    margin-bottom: 60px; /* 기존 ranking-header의 마진을 계승하여 간격 유지 */
+    transition: all 0.3s ease; /* Step 3: 테마 전환 애니메이션 */
 }
 
-.ranking-title {
-    font-size: 3rem;
+.ranking-header-bar .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* 3. 중앙 타이틀 그룹 상하 정렬 */
+.header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ranking-header-bar .ranking-title {
+    margin-bottom: 5px; /* 기존 10px에서 줄여서 헤더 안에 예쁘게 배치 */
+    font-size: 2.2rem; /* 헤더 바에 맞게 사이즈 최적화 */
     font-weight: 800;
-    margin-bottom: 10px;
     background: linear-gradient(135deg, #f3ba2f 0%, #ffdf91 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 0 15px rgba(243, 186, 47, 0.4));
 }
 
-.ranking-subtitle {
+.ranking-header-bar .ranking-subtitle {
     font-size: 1.1rem;
-    color: #888;
+    color: var(--sub-text); /* Step 3 */
     letter-spacing: 1px;
+    margin: 0;
 }
+
+/* 4. 좌우 균형추 (타이틀이 정확히 정중앙에 오기 위함) */
+.header-left, .header-right {
+    flex: 1; /* 양쪽 여백을 동일하게 주어 중앙 영역이 무조건 센터에 오게 강제 */
+}
+.header-left { 
+    display: flex; 
+    justify-content: flex-start; 
+    align-items: center; /* Step 1.6: 버튼 상하 늘어짐 방지 및 기준축 확보 */
+}
+.header-right { display: flex; justify-content: flex-end; }
 
 /* Search Section */
 .ranking-search-section {
@@ -79,10 +146,10 @@
 .search-input {
     width: 100%;
     padding: 18px 25px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(243, 186, 47, 0.2);
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
     border-radius: 15px;
-    color: #fff;
+    color: var(--text-color);
     font-size: 1rem;
     backdrop-filter: blur(20px);
     transition: all 0.3s ease;
@@ -106,7 +173,7 @@
 
 /* My Rank Card (Search Result) */
 .my-rank-card {
-    background: linear-gradient(135deg, rgba(243, 186, 47, 0.15), rgba(243, 186, 47, 0.05));
+    background: linear-gradient(135deg, rgba(243, 186, 47, 0.2), rgba(243, 186, 47, 0.05));
     border: 1px solid rgba(243, 186, 47, 0.3);
     border-radius: 16px;
     padding: 25px 35px;
@@ -117,10 +184,11 @@
     justify-content: space-between;
     align-items: center;
     backdrop-filter: blur(15px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 30px var(--card-shadow);
     animation: fade-in-down 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    transition: all 0.3s ease; /* Step 3 */
 }
 
 .my-rank-card::before {
@@ -183,8 +251,8 @@
 }
 
 .premium-card {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 18px;
     padding: 25px 15px;
     text-align: center;
@@ -386,7 +454,7 @@
 
 .wallet-address-short {
     font-size: 0.75rem;
-    color: #bbb;
+    color: var(--addr-color);
     margin-bottom: 12px;
     font-family: 'Roboto Mono', monospace;
 }
@@ -394,7 +462,7 @@
 .mining-amount-display {
     font-size: 1rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-color);
 }
 
 .amount-unit {
@@ -515,11 +583,12 @@
 
 /* 11-50 Standard List */
 .ranking-list-container {
-    background: rgba(255, 255, 255, 0.01);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--list-bg);
+    border: 1px solid var(--card-border);
     border-radius: 20px;
     padding: 5px;
     backdrop-filter: blur(10px);
+    transition: all 0.3s ease; /* Step 3 */
 }
 
 .ranking-table {
@@ -531,33 +600,33 @@
     text-align: left;
     padding: 12px 15px;
     /* 패딩 축소: 20px -> 12px */
-    color: #666;
+    color: var(--table-header);
     font-weight: 500;
     font-size: 0.85rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--table-border);
 }
 
 .ranking-table td {
     padding: 12px 15px;
     /* 패딩 축소: 18px -> 12px */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--table-border);
 }
 
 .standard-rank {
     font-size: 1rem;
     font-weight: 600;
-    color: #888;
+    color: var(--sub-text);
 }
 
 .standard-address {
     font-family: 'Roboto Mono', monospace;
     font-size: 0.9rem;
-    color: #ccc;
+    color: var(--addr-color);
 }
 
 .standard-amount {
     font-weight: 600;
-    color: #fff;
+    color: var(--text-color);
     font-size: 0.95rem;
 }
 

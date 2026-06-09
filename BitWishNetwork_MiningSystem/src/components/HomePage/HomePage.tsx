@@ -55,6 +55,56 @@ const HomePage: React.FC = () => {
     const [precisionCalculator] = useState(() => new PrecisionCalculator());
 
     const [currentLanguage, setCurrentLanguage] = useState<Language>(() => (localStorage.getItem('bw_lang') as Language) || 'ko');
+    // --- [신규 삽입] 흐르는 전광판 메시지 제어 변수 ---
+    const [tickerMessage, setTickerMessage] = useState<string>('');
+
+    useEffect(() => {
+        const fetchTickerMessage = async () => {
+            // 1. 우선 로컬 저장소에 저장된 메시지가 있는지 확인합니다.
+            const localDataStr = localStorage.getItem('BW_TICKER_TEXT_LOCAL');
+            if (localDataStr) {
+                try {
+                    const localObj = JSON.parse(localDataStr);
+                    const msg = localObj[currentLanguage] || localObj['en'];
+                    if (msg) {
+                        setTickerMessage(msg);
+                        return;
+                    }
+                } catch (e) { }
+            }
+
+            // 2. 서버가 켜져 있다면 서버 데이터를 가져옵니다.
+            try {
+                const response = await fetch('http://localhost:5001/api/admin/system/config');
+                const data = await response.json();
+                if (data.success && data.config) {
+                    const msg = data.config.ticker[currentLanguage] || data.config.ticker['en'];
+                    setTickerMessage(msg);
+                }
+            } catch (error) {
+                // 3. 서버가 꺼져 있을 때 기본으로 출력될 4개국어 메시지입니다.
+                const fallbacks: any = {
+                    ko: '📢 [공지] BitWish Network에 오신 것을 환영합니다. 실시간 채굴 시스템이 가동 중입니다. 추후 코인 마이그레이션을 위해 KYC 승인을 받아주세요.',
+                    en: '📢 [Notice] Welcome to BitWish Network. Real-time mining is currently active. Please complete KYC verification for coin migration.',
+                    ja: '📢 [お知らせ] BitWish Networkへようこそ。リアルタイムマイニング가有効です。KYC認証を完了してください。',
+                    zh: '📢 [公告] 欢迎来到 BitWish 网络。实时挖矿正在运行。请完成 KYC 验证以进行代币迁移。'
+                };
+                setTickerMessage(fallbacks[currentLanguage] || fallbacks['en']);
+            }
+        };
+
+        fetchTickerMessage();
+
+        // 관리자 창에서 전광판 문구를 수정했을 때 실시간으로 즉시 글자가 바뀌도록 감지하는 신호기입니다.
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'BW_TICKER_UPDATE') {
+                fetchTickerMessage();
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, [currentLanguage]);
+    // ----------------------------------------------------
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [miningStatus, setMiningStatus] = useState<RealTimeMiningStatus | null>(null);
     const [networkStatus, setNetworkStatus] = useState<NetworkStatus>('DISCONNECTED');
@@ -90,9 +140,15 @@ const HomePage: React.FC = () => {
     const [isMyWalletModalOpen, setIsMyWalletModalOpen] = useState(false);
     const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
     const [isWalletAuthModalOpen, setIsWalletAuthModalOpen] = useState(false);
-    const [isMiningAuthModalOpen, setIsMiningAuthModalOpen] = useState(false);
     const [isSecondPasswordModalOpen, setIsSecondPasswordModalOpen] = useState(false);
     const [isMnemonicModalOpen, setIsMnemonicModalOpen] = useState(false);
+
+    // [Step 3-1] 멀티 포커스(Z-Index) 관리 상태 추가
+    const [activeModal, setActiveModal] = useState<string>('');
+
+    const handleFocus = (id: string) => {
+        setActiveModal(id);
+    };
 
     const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
     const [tickerInterval, setTickerInterval] = useState<NodeJS.Timeout | null>(null); // [신규] 홈페이지 전용 티커
@@ -108,10 +164,23 @@ const HomePage: React.FC = () => {
         startAutoRefresh();
         startHomePageTicker(); // [신규] 초당 통계 엔진 시작
 
+        // 마이닝 시작 성공 시 최신 블록 카운트 즉시 반영용 이벤트 리스너 등록
+        const handleBlockCreated = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail && detail.totalBlockCount !== undefined) {
+                setGlobalStats(prev => ({
+                    ...prev,
+                    totalBlocks: detail.totalBlockCount
+                }));
+            }
+        };
+        window.addEventListener('mining-block-created', handleBlockCreated);
+
         return () => {
             stopRealTimeSync();
             stopAutoRefresh();
             if (tickerInterval) clearInterval(tickerInterval);
+            window.removeEventListener('mining-block-created', handleBlockCreated);
         };
     }, []);
 
@@ -319,16 +388,14 @@ const HomePage: React.FC = () => {
                     }
                 }
             }
-            
+
             // [Phase 3] 세션 만료 시 니모닉 파편 인증 모달 호출
             const currentAddr = walletService.getCurrentWalletAddress();
             if (currentAddr) {
                 setAuthenticatedAddress(currentAddr);
-                setIsMnemonicModalOpen(true);
-            } else {
-                // 저장된 지갑이 없으면 지갑 인증 모달로 유도
-                setIsWalletAuthModalOpen(true);
             }
+            // 지갑 주소 저장 여부와 상관없이 무조건 "니모닉 파편 보안 인증" 창을 엽니다!
+            setIsMnemonicModalOpen(true);
         } catch (error) {
             console.error('마이닝 시작 핸들러 오류:', error);
         }
@@ -461,7 +528,7 @@ const HomePage: React.FC = () => {
             default: return '월별 확정 정산 잠금 수량';
         }
     };
-    
+
     const getSettlementDesc = () => {
         switch (currentLanguage) {
             case 'en': return 'Total verified and safely locked settlement amount';
@@ -511,14 +578,14 @@ const HomePage: React.FC = () => {
                                 {getTranslation('navigation.mainnet')}
                             </button>
                             <div className="dropdown-content">
-                                <button onClick={() => window.location.href = '/explorer'}>{getTranslation('navigation.explorer')}</button>
+                                <button onClick={() => { const win = window.open('/bw-explorer', 'BW_EXPLORER_WINDOW'); if (win) win.focus(); }}>{getTranslation('navigation.explorer')}</button>
                                 <button onClick={() => window.location.href = '/node'}>{getTranslation('navigation.node')}</button>
                             </div>
                         </div>
-                        <button className="nav-button hover-button" onClick={() => window.location.href = '/community'}>
+                        <button className="nav-button hover-button" onClick={() => { const win = window.open('/bw-community', 'BW_COMMUNITY_WINDOW'); if (win) win.focus(); }}>
                             {getTranslation('navigation.community')}
                         </button>
-                        <button className="nav-button hover-button" onClick={() => window.location.href = '/ranking'}>
+                        <button className="nav-button hover-button" onClick={() => { const win = window.open('/ranking-board', 'BW_RANKING_WINDOW'); if (win) win.focus(); }}>
                             {getTranslation('navigation.rankingBoard')}
                         </button>
                         <div className="nav-item dropdown">
@@ -526,7 +593,12 @@ const HomePage: React.FC = () => {
                                 {getTranslation('navigation.whitepaper')}
                             </button>
                             <div className="dropdown-content">
-                                <button onClick={() => window.location.href = '/roadmap'}>{getTranslation('navigation.roadmap')}</button>
+                                <button onClick={() => {
+                                    const win = window.open('/roadmap', 'BW_ROADMAP_WINDOW');
+                                    if (win) win.focus();
+                                }}>
+                                    {getTranslation('navigation.roadmap')}
+                                </button>
                             </div>
                         </div>
                     </nav>
@@ -559,7 +631,12 @@ const HomePage: React.FC = () => {
                     </div>
                 </div>
             </header>
-
+            {/* --- [신규 삽입] 우측에서 좌측으로 흐르는 메시지 전광판 영역 --- */}
+            <div className="home-ticker-banner">
+                <div className="home-ticker-track">
+                    <span className="home-ticker-text">{tickerMessage}</span>
+                </div>
+            </div>
             {/* 메인 콘텐츠 */}
             <main className="home-main">
                 <section className="blockchain-status-section">
@@ -568,8 +645,8 @@ const HomePage: React.FC = () => {
                             <span className="chain-icon">⛓️</span>
                             {getTranslation('mining.title')}
                         </h1>
-                        <button 
-                            className="mining-bonus-button" 
+                        <button
+                            className="mining-bonus-button"
                             onClick={handleStartMining}
                             title={getTranslation('mining.startMiningTooltip')}
                         >
@@ -606,7 +683,7 @@ const HomePage: React.FC = () => {
                                     <p className="ledger-description">{getSettlementDesc()}</p>
                                 </div>
                             </div>
-                            
+
                             {/* 중앙: 네온 세로 구분선 */}
                             <div className="ledger-divider"></div>
 
@@ -743,7 +820,23 @@ const HomePage: React.FC = () => {
                     onClose={() => setIsMiningModalOpen(false)}
                     currentLanguage={currentLanguage as string}
                     walletAddress={authenticatedAddress}
-                    onOpenReferralModal={() => setIsReferralModalOpen(true)}
+                    onOpenReferralModal={() => {
+                        setIsReferralModalOpen(true);
+                        handleFocus('referral');
+                    }}
+                    isActive={activeModal === 'mining'}
+                    onFocus={() => handleFocus('mining')}
+                />
+            )}
+
+            {isReferralModalOpen && (
+                <ReferralModal
+                    isOpen={isReferralModalOpen}
+                    onClose={() => setIsReferralModalOpen(false)}
+                    currentLanguage={currentLanguage}
+                    walletAddress={authenticatedAddress}
+                    isActive={activeModal === 'referral'}
+                    onFocus={() => handleFocus('referral')}
                 />
             )}
 
@@ -772,9 +865,12 @@ const HomePage: React.FC = () => {
                         method: 'WALLET_DIRECT_ACCESS'
                     };
                     localStorage.setItem('bw_mining_auth', JSON.stringify(sessionData));
-                    setIsMyWalletModalOpen(false);
+                    // [Step 4 Fix] 지갑 창을 닫지 않고 마이닝 창을 나란히 띄움
                     setIsMiningModalOpen(true);
+                    handleFocus('mining');
                 }}
+                isActive={activeModal === 'wallet'}
+                onFocus={() => handleFocus('wallet')}
             />
 
             {isWalletAuthModalOpen && (
@@ -851,6 +947,7 @@ const HomePage: React.FC = () => {
                     currentLanguage={currentLanguage}
                 />
             )}
+
         </div>
     );
 };

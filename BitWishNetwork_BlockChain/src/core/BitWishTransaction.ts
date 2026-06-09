@@ -72,7 +72,7 @@ export class BitWishTransaction {
     this.type = data.type || BITWISH_TRANSACTION_CONFIG.TYPES.TRANSFER;
     this.signature = data.signature;
     this.status = data.status || BITWISH_TRANSACTION_CONFIG.STATUS.PENDING;
-    this.hash = data.hash;
+    this.hash = data.hash || this.calculateHash();
     this.size = this.calculateSize();
   }
 
@@ -111,14 +111,20 @@ export class BitWishTransaction {
         return { valid: false, error: '트랜잭션 금액은 0보다 커야 합니다' };
       }
 
-      // 3. 가스 검증
-      if (this.gasLimit <= 0 || this.gasPrice.lte(0)) {
-        return { valid: false, error: '가스 설정이 올바르지 않습니다' };
+      // 3. 가스 검증 (시스템/마이닝/스테이킹 보상 등 수수료가 없는 트랜잭션 제외)
+      if (this.type !== BITWISH_TRANSACTION_CONFIG.TYPES.SYSTEM &&
+        this.type !== BITWISH_TRANSACTION_CONFIG.TYPES.MINING_REWARD &&
+        this.type !== BITWISH_TRANSACTION_CONFIG.TYPES.STAKING_REWARD) {
+        if (this.gasLimit <= 0 || this.gasPrice.lte(0)) {
+          return { valid: false, error: '가스 설정이 올바르지 않습니다' };
+        }
       }
 
-      // 4. 주소 형식 검증
+      // 4. 주소 형식 검증 (시스템/마이닝/스테이킹 보상의 발신/수신 주소는 'BitWish-' 식별자 허용)
       const addressRegex = /^BW[0-9A-Fa-f]{40}$/;
-      if (!addressRegex.test(this.from) || !addressRegex.test(this.to)) {
+      const isSystemFrom = this.from.startsWith('BitWish-');
+      const isSystemTo = this.to.startsWith('BitWish-');
+      if ((!isSystemFrom && !addressRegex.test(this.from)) || (!isSystemTo && !addressRegex.test(this.to))) {
         return { valid: false, error: '유효하지 않은 주소 형식입니다' };
       }
 

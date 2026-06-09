@@ -9,11 +9,13 @@
  */
 
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import MiningState from '../models/MiningState';
 import User from '../models/User';
 import BonusRecord from '../models/BonusRecord';
 import MonthlySettlement from '../models/MonthlySettlement';
 import Decimal from 'decimal.js';
+import { BlockMiningService } from '../services/BlockMiningService';
 
 // 50자리 정밀도 설정
 Decimal.set({ precision: 50 });
@@ -27,66 +29,119 @@ export class MiningController {
         try {
             const { walletAddress } = req.body;
 
-            let state = await MiningState.findOne({ walletAddress });
+            let totalBlockCount = 31;
+            let distributedFee = null;
+            let successState = null;
 
-            if (!state) {
-                // 최초 시작 시 상태 생성
-                state = new MiningState({
-                    walletAddress,
-                    isMining: true,
-                    miningStartTime: new Date(),
-                    lastSyncTime: new Date()
-                });
-            } else {
-                // 이미 존재하는 경우 상태 업데이트
-                if (!state.isMining) {
-                    state.isMining = true;
-                    state.miningStartTime = new Date(); // 재시작 시간 기록
-                    state.lastSyncTime = new Date();
+            // [절대 준수 3] 블록 생성, 추천 보상 30 BW 스냅샷 유지, 수수료 누적 연산 및 MongoDB 반영을 트랜잭션으로 묶는 함수 정의
+            const runDatabaseOperations = async (dbSession?: mongoose.ClientSession) => {
+                let state = await MiningState.findOne({ walletAddress }).session(dbSession || null);
+
+                if (!state) {
+                    // 최초 시작 시 상태 생성
+                    state = new MiningState({
+                        walletAddress,
+                        isMining: true,
+                        miningStartTime: new Date(),
+                        lastSyncTime: new Date()
+                    });
+                } else {
+                    // 이미 존재하는 경우 상태 업데이트
+                    if (!state.isMining) {
+                        state.isMining = true;
+                        state.miningStartTime = new Date(); // 재시작 시간 기록
+                        state.lastSyncTime = new Date();
+                    }
                 }
+
+                // [7단계 수술] 실시간 동기화 보정 엔진 (Sync Guard) 이식
+                // 채굴을 시작하는 시점에 실제 자식 수를 다시 카운트하여 마이닝 상태를 강제 동기화함
+                const user = await User.findOne({ walletAddress: new RegExp('^' + walletAddress + '$', 'i') }).session(dbSession || null);
+                if (user) {
+                    // 1. 실제 자식 수 전수 조사 (신/구 버전 및 지갑주소 변종 동시 대응)
+                    const parentBase = (user.myReferralCode || '').substring(0, 11);
+                    const searchQuery = {
+                        $or: [
+                            { referrerCode: new RegExp('^\\s*' + (user.myReferralCode || '').trim() + '\\s*$', 'i') },
+                            { referrerCode: new RegExp('^\\s*' + (user.walletAddress || '').trim() + '\\s*$', 'i') },
+                            { referrerCode: new RegExp('^' + parentBase, 'i') }
+                        ]
+                    };
+                    const actualReferralCount = await User.countDocuments(searchQuery).session(dbSession || null);
+
+                    console.log(`[SyncGuard] Re-counting for ${walletAddress}: Actual=${actualReferralCount}, Stored=${state.referralCount}`);
+
+                    // 2. 수치 강제 보정 및 보너스율 재계산 (공정 1 정규 공식 이식)
+                    const hasParent = user.referrerCode && user.referrerCode.trim() !== '';
+                    const initialBonus = hasParent ? new Decimal(0.02) : new Decimal(0);
+                    const correctedReferralRate = initialBonus.plus(new Decimal(actualReferralCount).mul(0.02));
+
+                    state.referralCount = actualReferralCount;
+                    state.referralBonusRate = correctedReferralRate.toString();
+
+                    // 3. 최종 채굴률(currentTotalRate) 합산 업데이트
+                    const baseRate = new Decimal(state.currentBaseRate || '0.25');
+                    const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
+                    const partnerRate = state.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
+
+                    state.currentTotalRate = baseRate
+                        .mul(new Decimal(1).plus(attendanceRate))
+                        .mul(new Decimal(1).plus(correctedReferralRate))
+                        .mul(new Decimal(1).plus(partnerRate))
+                        .toString();
+
+                    console.log(`[SyncGuard] ${walletAddress} rate corrected to: ${state.currentTotalRate}`);
+                }
+
+                await state.save({ session: dbSession });
+                successState = state;
+
+                // [백엔드 블록 생성 및 수수료 정밀 분배 실행 - 최초 채굴 시작 시에만 1회 즉시 지급]
+                const networkDb = mongoose.connection.useDb('bitwish_network');
+                const userBlockCount = await networkDb.collection('blocks').countDocuments({
+                    'data.header.validator': new RegExp('^' + walletAddress + '$', 'i')
+                });
+
+                if (userBlockCount === 0) {
+                    const blockResult = await BlockMiningService.onMiningBlock(walletAddress, dbSession);
+                    totalBlockCount = blockResult.totalBlockCount;
+                    distributedFee = blockResult.distributedFee;
+                    state.lastBlockRewardThreshold = '0'; // 시작 즉시 지급 기준선 0으로 지정
+                } else {
+                    // 이미 채굴을 기동하여 지급 완료된 경우, 추가 생성하지 않고 정상 대시보드 카운트 유지
+                    const currentBlockCount = await BlockMiningService.getTotalBlockCount();
+                    totalBlockCount = currentBlockCount;
+                    distributedFee = { ecosystemFund: '0', foundationFund: '0' };
+                }
+            };
+
+            // Mongoose 세션 트랜잭션 수행 시도 (ReplicaSet 환경 대응)
+            const session = await mongoose.startSession();
+            try {
+                await session.withTransaction(async () => {
+                    await runDatabaseOperations(session);
+                });
+            } catch (txError: any) {
+                // Standalone MongoDB 환경 등의 이유로 트랜잭션이 지원되지 않는 경우 예외 처리 후 트랜잭션 없이 실행
+                if (txError.message?.includes('Transaction numbers are only allowed') ||
+                    txError.message?.includes('does not support transactions') ||
+                    txError.codeName === 'CommandNotSupportedOnReplicaSetMember' ||
+                    txError.code === 20) {
+                    console.warn('[MiningController] DB does not support transactions. Falling back to non-transaction execution.');
+                    await runDatabaseOperations();
+                } else {
+                    throw txError;
+                }
+            } finally {
+                await session.endSession();
             }
 
-            // [7단계 수술] 실시간 동기화 보정 엔진 (Sync Guard) 이식
-            // 채굴을 시작하는 시점에 실제 자식 수를 다시 카운트하여 마이닝 상태를 강제 동기화함
-            const user = await User.findOne({ walletAddress: new RegExp('^' + walletAddress + '$', 'i') });
-            if (user) {
-                // 1. 실제 자식 수 전수 조사 (신/구 버전 및 지갑주소 변종 동시 대응)
-                const parentBase = (user.myReferralCode || '').substring(0, 11);
-                const searchQuery = {
-                    $or: [
-                        { referrerCode: new RegExp('^\\s*' + (user.myReferralCode || '').trim() + '\\s*$', 'i') },
-                        { referrerCode: new RegExp('^\\s*' + (user.walletAddress || '').trim() + '\\s*$', 'i') },
-                        { referrerCode: new RegExp('^' + parentBase, 'i') }
-                    ]
-                };
-                const actualReferralCount = await User.countDocuments(searchQuery);
-
-                console.log(`[SyncGuard] Re-counting for ${walletAddress}: Actual=${actualReferralCount}, Stored=${state.referralCount}`);
-
-                // 2. 수치 강제 보정 및 보너스율 재계산
-                const initialBonus = new Decimal(0.02);
-                const correctedReferralRate = initialBonus.plus(new Decimal(actualReferralCount).mul(0.02));
-
-                state.referralCount = actualReferralCount;
-                state.referralBonusRate = correctedReferralRate.toString();
-
-                // 3. 최종 채굴률(currentTotalRate) 합산 업데이트
-                const baseRate = new Decimal(state.currentBaseRate || '0.25');
-                const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
-                const partnerRate = state.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
-
-                state.currentTotalRate = baseRate
-                    .mul(new Decimal(1).plus(attendanceRate))
-                    .mul(new Decimal(1).plus(correctedReferralRate))
-                    .mul(new Decimal(1).plus(partnerRate))
-                    .toString();
-
-                console.log(`[SyncGuard] ${walletAddress} rate corrected to: ${state.currentTotalRate}`);
-            }
-
-            await state.save();
-
-            res.status(200).json({ success: true, data: state });
+            res.status(200).json({
+                success: true,
+                data: successState,
+                totalBlockCount: totalBlockCount,
+                distributedFee: distributedFee
+            });
         } catch (error) {
             console.error('Start mining error:', error);
             res.status(500).json({ success: false, message: 'Internal server error' });
@@ -128,7 +183,7 @@ export class MiningController {
         try {
             const { walletAddress } = req.body;
 
-            const state = await MiningState.findOne({ walletAddress });
+            const state = await MiningState.findOne({ walletAddress: new RegExp('^' + walletAddress + '$', 'i') });
 
             if (!state) {
                 res.status(404).json({ success: false, message: 'Mining state not found' });
@@ -148,7 +203,8 @@ export class MiningController {
                 });
 
                 const actualCount = referrals.length;
-                const initialBonus = new Decimal(0.02);
+                const hasParent = user.referrerCode && user.referrerCode.trim() !== '';
+                const initialBonus = hasParent ? new Decimal(0.02) : new Decimal(0);
                 const correctedRate = initialBonus.plus(new Decimal(actualCount).mul(0.02));
 
                 let isChanged = false;
@@ -165,13 +221,13 @@ export class MiningController {
                     const baseRate = new Decimal(state.currentBaseRate || '0.25');
                     const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                     const partnerRate = state.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
-                    
+
                     state.currentTotalRate = baseRate
                         .mul(new Decimal(1).plus(attendanceRate))
                         .mul(new Decimal(1).plus(correctedRate))
                         .mul(new Decimal(1).plus(partnerRate))
                         .toString();
-                    
+
                     console.log(`[HEALER-SYNC] Corrected for ${walletAddress}: Count=${actualCount}`);
                 }
             }
@@ -218,8 +274,36 @@ export class MiningController {
                     }
 
                     // 3. 전체 누적 보상 업데이트 (추천 보너스 포함)
-                    state.accumulatedReward = currentReward.plus(totalAdditionalReward).toString();
+                    const newAccumulatedReward = currentReward.plus(totalAdditionalReward);
+                    state.accumulatedReward = newAccumulatedReward.toString();
                     state.lastSyncTime = now;
+
+                    // [블록 +1 카운팅] 1BW 경계 초과 시 자동 블록 생성
+                    const lastThreshold = new Decimal(state.lastBlockRewardThreshold || '0');
+                    const nextThreshold = lastThreshold.plus(1); // 다음 블록 생성 기준: 이전 기준 + 1BW
+
+                    if (newAccumulatedReward.gte(nextThreshold)) {
+                        // 한 번에 여러 BW를 넘었을 수 있으므로 몇 개의 블록을 생성해야 하는지 계산
+                        const blocksToCreate = newAccumulatedReward.minus(lastThreshold).floor().toNumber();
+
+                        if (blocksToCreate > 0) {
+                            console.log(`⛏️ [블록 +1 카운팅] ${walletAddress}: ${newAccumulatedReward.toFixed(4)} BW 도달 → +${blocksToCreate} 블록 생성`);
+
+                            for (let i = 0; i < blocksToCreate; i++) {
+                                try {
+                                    await BlockMiningService.onMiningBlock(walletAddress);
+                                    console.log(`✅ [블록 +1 카운팅] 블록 ${i + 1}/${blocksToCreate} 생성 완료`);
+                                } catch (blockError) {
+                                    console.error(`❌ [블록 +1 카운팅] 블록 생성 실패:`, blockError);
+                                }
+                            }
+
+                            // 기준점을 현재 정수 경계로 갱신 (예: 2.3 BW → 기준점 2)
+                            state.lastBlockRewardThreshold = lastThreshold.plus(blocksToCreate).toString();
+                            console.log(`📊 [블록 +1 카운팅] 새 기준점: ${state.lastBlockRewardThreshold} BW`);
+                        }
+                    }
+
                     await state.save();
                 }
             }
@@ -267,16 +351,17 @@ export class MiningController {
 
                 const actualCount = referrals.length;
 
-                // 2. MiningState 카운트 및 보너스율 강제 보정
-                const initialBonus = new Decimal(0.02);
+                // 2. MiningState 카운트 및 보너스율 강제 보정 (공정 1 정규 공식 이식)
+                const hasParent = user?.referrerCode && user.referrerCode.trim() !== '';
+                const initialBonus = hasParent ? new Decimal(0.02) : new Decimal(0);
                 const correctedRate = initialBonus.plus(new Decimal(actualCount).mul(0.02));
-                
+
                 let isChanged = false;
                 if (miningState.referralCount !== actualCount) {
                     miningState.referralCount = actualCount;
                     isChanged = true;
                 }
-                
+
                 // 보너스율 정밀 비교 (Decimal.js 사용)
                 if (!new Decimal(miningState.referralBonusRate || '0').equals(correctedRate)) {
                     miningState.referralBonusRate = correctedRate.toString();
@@ -287,13 +372,13 @@ export class MiningController {
                     const baseRate = new Decimal(miningState.currentBaseRate || '0.25');
                     const attendanceRate = miningState.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                     const partnerRate = miningState.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
-                    
+
                     miningState.currentTotalRate = baseRate
                         .mul(new Decimal(1).plus(attendanceRate))
                         .mul(new Decimal(1).plus(correctedRate))
                         .mul(new Decimal(1).plus(partnerRate))
                         .toString();
-                    
+
                     await miningState.save();
                     console.log(`[HEALER] MiningState corrected for ${walletAddress}: Count=${actualCount}, Rate=${miningState.currentTotalRate}`);
                 }
@@ -319,7 +404,7 @@ export class MiningController {
                             rewardStatus: 'PENDING'
                         }));
                     }
-                    
+
                     await record.save();
                     // 하단 응답에서 최신 데이터를 사용하도록 변수 업데이트
                     (bonusRecord as any) = record;
@@ -356,8 +441,54 @@ export class MiningController {
             }
 
             if (miningState && miningState.isMining) {
-                // 접속하지 않았던 시간(오프라인) 동안의 보상 계산 및 반영
-                await this.calculatePendingReward(miningState);
+                const now = new Date();
+                const lastSync = new Date(miningState.lastSyncTime);
+                const diffSeconds = (now.getTime() - lastSync.getTime()) / 1000;
+
+                if (diffSeconds > 0) {
+                    // 1. 메인 채굴 보상 소급 정산
+                    await this.calculatePendingReward(miningState);
+
+                    // 2. 추천 보너스 보관함 소급 정산 (공정 3 치료 B 이식)
+                    if (new Decimal(miningState.referralBonusRate || '0').gt(0)) {
+                        const baseRate = new Decimal(miningState.currentBaseRate || '0.25');
+                        const referralRate = new Decimal(miningState.referralBonusRate || '0');
+                        const referralRatePerSecond = baseRate.mul(referralRate).div(3600);
+                        const referralBonusDelta = referralRatePerSecond.mul(diffSeconds);
+
+                        // 장부 수록
+                        if (bonusRecord) {
+                            const currentStorage = new Decimal(bonusRecord.referralBonusStorage || '0');
+                            bonusRecord.referralBonusStorage = currentStorage.plus(referralBonusDelta).toString();
+                            await bonusRecord.save();
+                        }
+                    }
+
+                    // [소급 정산 블록 +1 카운팅] 1BW 경계 초과 시 자동 블록 생성
+                    const newAccumulatedReward = new Decimal(miningState.accumulatedReward);
+                    const lastThreshold = new Decimal(miningState.lastBlockRewardThreshold || '0');
+                    const nextThreshold = lastThreshold.plus(1);
+
+                    if (newAccumulatedReward.gte(nextThreshold)) {
+                        const blocksToCreate = newAccumulatedReward.minus(lastThreshold).floor().toNumber();
+
+                        if (blocksToCreate > 0) {
+                            console.log(`⛏️ [소급 블록 +1 카운팅] ${walletAddress}: ${newAccumulatedReward.toFixed(4)} BW 도달 → +${blocksToCreate} 블록 생성`);
+
+                            for (let i = 0; i < blocksToCreate; i++) {
+                                try {
+                                    await BlockMiningService.onMiningBlock(walletAddress);
+                                    console.log(`✅ [소급 블록 +1 카운팅] 블록 ${i + 1}/${blocksToCreate} 생성 완료`);
+                                } catch (blockError) {
+                                    console.error(`❌ [소급 블록 +1 카운팅] 블록 생성 실패:`, blockError);
+                                }
+                            }
+
+                            miningState.lastBlockRewardThreshold = lastThreshold.plus(blocksToCreate).toString();
+                            console.log(`📊 [소급 블록 +1 카운팅] 새 기준점: ${miningState.lastBlockRewardThreshold} BW`);
+                        }
+                    }
+                }
                 miningState.lastSyncTime = new Date();
                 await miningState.save();
             }

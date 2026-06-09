@@ -47,6 +47,7 @@ export class ReferralBonusService {
   private userReferralStatus: Map<string, ReferralBonus>;
   private referralBonusStorage: Map<string, number>; // 추천 보너스 보관함 (UI 호환용)
   private referralRewardStorage: Map<string, number>; // 추천 보상 보관함 (UI 호환용)
+  private isServerDataLoaded: boolean = false; // 안전 보안 플래그 (공정 4 지갑 데이터 댐)
 
   private readonly WALLET_STORAGE_KEY = 'bw_wallet_data';
 
@@ -135,8 +136,9 @@ export class ReferralBonusService {
       // [Step 3 Fixed] 레거시 파일 DB 및 로컬 스토리지 백업 로직 완전 폐기
       // 이제 모든 데이터 정합성은 서버의 MiningController(MongoDB)가 전담함
       console.log('[ReferralBonusService] 📡 Modern Mode: 서버 API 정합성 체제로 완전 전환됨');
-      
-      this.saveData(); 
+
+      this.isServerDataLoaded = true; // 서버 데이터 로드 락 해제 (공정 4)
+      this.saveData();
     } catch (error) {
       console.error('[ReferralBonusService] 데이터 로드 중 오류:', error);
     }
@@ -167,6 +169,12 @@ export class ReferralBonusService {
    */
   private syncWithWallet(): void {
     try {
+      // 서버 데이터 로드가 완료되지 않았다면 지갑 동기화 완전 차단 (공정 4 지갑 데이터 댐)
+      if (!this.isServerDataLoaded) {
+        console.log('[ReferralBonusService] 🛡️ [데이터 댐] 서버 데이터 미로드로 지갑 동기화 일시 차단');
+        return;
+      }
+
       const savedWallet = localStorage.getItem(this.WALLET_STORAGE_KEY);
       if (savedWallet) {
         const walletData = JSON.parse(savedWallet);

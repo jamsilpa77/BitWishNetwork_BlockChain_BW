@@ -153,8 +153,8 @@ class ApiService {
             if (response.data && response.data.success) {
                 return {
                     referral: {
-                        bonusStorage: parseFloat(response.data.data.referralBonusStorage),
-                        rewardStorage: parseFloat(response.data.data.referralRewardStorage)
+                        bonusStorage: response.data.data.referralBonusStorage,
+                        rewardStorage: response.data.data.referralRewardStorage
                     }
                 };
             }
@@ -284,7 +284,7 @@ class ApiService {
     /**
      * [Phase 4] P2P 송금 내역 기록 및 익스플로러 동기화
      */
-    public async recordTransaction(txData: { senderAddress: string, recipientAddress: string, amount: number, fee: number }): Promise<any> {
+    public async recordTransaction(txData: { senderAddress: string, recipientAddress: string, amount: number | string, fee: number | string }): Promise<any> {
         try {
             const response = await this.client.post('/transactions/record', txData);
             return response.data;

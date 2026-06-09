@@ -59,6 +59,7 @@ const MiningPage: React.FC = () => {
   const [miningStatus, setMiningStatus] = useState<MiningStatus>(MINING_STATUS.STOPPED);
   const [miningTime, setMiningTime] = useState<number>(0);
   const [accumulatedReward, setAccumulatedReward] = useState<number>(0);
+  const [trueLifeTimeMined, setTrueLifeTimeMined] = useState<number>(0);
   const [attendanceBonus, setAttendanceBonus] = useState<string | null>(null);
   const [referralBonus, setReferralBonus] = useState<ReferralBonus | null>(null);
   const [partnerBonus, setPartnerBonus] = useState<PartnerBonus | null>(null);
@@ -125,6 +126,7 @@ const MiningPage: React.FC = () => {
       setMiningStatus(status.status);
       setMiningTime(status.miningTime);
       setAccumulatedReward(status.accumulatedReward);
+      setTrueLifeTimeMined((status as any).trueLifeTimeMined || status.accumulatedReward);
 
       // [Phase 1 Fixed] 서버에서 전송된 추천 관련 보관함과 비율을 마이닝 페이지 UI에 동기화
       setReferralRewardStorage(status.referralRewardStorage);
@@ -167,18 +169,47 @@ const MiningPage: React.FC = () => {
       }
 
       const rewardPerSecond = totalRate / 3600;
-      setAccumulatedReward(prev => prev + rewardPerSecond);
 
+      setAccumulatedReward(prev => {
+        const next = prev + rewardPerSecond;
+
+        // [실시간 1BW 돌파 즉시 동기화 트리거]
+        // 50단위 정밀 부동소수점 하에, 소수점을 버린 정수 단위가 증가했는지 검사
+        const prevFloor = Math.floor(prev);
+        const nextFloor = Math.floor(next);
+
+        if (nextFloor > prevFloor && nextFloor >= 1) {
+          console.log(`🚀 [실시간 1BW 돌파!] ${prev.toFixed(4)} BW → ${next.toFixed(4)} BW. 즉시 백엔드 동기화 트리거!`);
+
+          miningService.syncMiningData(walletAddress).then(result => {
+            if (result.success && result.data) {
+              console.log('✅ [실시간 동기화 완료] 서버 상태:', result.data);
+
+              // 동기화 결과 반환된 최신 블록 기준점이 있다면 대시보드 갱신 이벤트 발행
+              if (result.data.lastBlockRewardThreshold) {
+                const thresholdVal = parseInt(result.data.lastBlockRewardThreshold);
+                window.dispatchEvent(new CustomEvent('mining-block-created', {
+                  detail: { totalBlockCount: thresholdVal + 30 } // 오프셋 30 합산 반영
+                }));
+              }
+            }
+          }).catch(err => console.error('❌ 실시간 동기화 에러:', err));
+        }
+
+        return next;
+      });
+      setTrueLifeTimeMined(prev => prev + rewardPerSecond);
       // [Phase 1 Fixed] 2% 추천 보너스 보관함 초당 카운팅 동기화 로직 추가
       // referralBonusRate (예: 0.02) 를 기반으로 초당 수익을 구해 보너스 보관함 전용으로 증분시킴
       if (referralBonusRate > 0) {
+
         const bonusPerSecond = (baseRate * referralBonusRate) / 3600;
         setReferralBonusStorage(prev => prev + bonusPerSecond);
       }
     } catch (error) {
       console.error('누적 보상 업데이트 오류:', error);
     }
-  }, [attendanceBonus, referralBonusService, partnerBonus, partnerBonusService, referralBonusRate]);
+  }, [attendanceBonus, referralBonusService, partnerBonus, partnerBonusService, referralBonusRate, walletAddress, miningService]);
 
   // 4. Effects
   useEffect(() => {
@@ -231,6 +262,7 @@ const MiningPage: React.FC = () => {
         localStorage.setItem(`BW_RESET_PROCESSED_${walletAddress}`, signal.timestamp.toString());
 
         setMiningStatus(MINING_STATUS.STOPPED);
+        setTrueLifeTimeMined(0);
         setMiningTime(0);
         setAccumulatedReward(0);
         setAttendanceBonus(null);
@@ -265,6 +297,20 @@ const MiningPage: React.FC = () => {
     };
   }, [miningStatus, updateAccumulatedReward]);
 
+  // [정기 동기화 백업 루프] 마이닝 중일 때 30초마다 서버로 백업 동기화 전송
+  useEffect(() => {
+    let syncInterval: NodeJS.Timeout;
+    if (miningStatus === MINING_STATUS.MINING && walletAddress) {
+      syncInterval = setInterval(() => {
+        console.log('🔄 [백업 동기화] 30초 정기 백엔드 동기화 수행');
+        miningService.syncMiningData(walletAddress).catch(e => console.error(e));
+      }, 30000);
+    }
+    return () => {
+      if (syncInterval) clearInterval(syncInterval);
+    };
+  }, [miningStatus, walletAddress, miningService]);
+
   // 5. Event Handlers
   const handleStartMining = async (): Promise<void> => {
     try {
@@ -277,6 +323,13 @@ const MiningPage: React.FC = () => {
       if (result.success) {
         setMiningStatus(MINING_STATUS.MINING);
         loadMiningStatus();
+
+        // 마이닝 시작 성공 시 최신 블록 카운트로 대시보드 갱신 트리거
+        if ((result as any).totalBlockCount !== undefined) {
+          window.dispatchEvent(new CustomEvent('mining-block-created', {
+            detail: { totalBlockCount: (result as any).totalBlockCount }
+          }));
+        }
       } else {
         console.error(result.message);
       }
@@ -425,7 +478,7 @@ const MiningPage: React.FC = () => {
           <div className="mining-reward">
             <span className="reward-label">{getTranslation('mining.accumulatedReward')}</span>
             <div className="reward-value-container">
-              <span className="reward-value">{formatNumber(accumulatedReward)}</span>
+              <span className="reward-value">{formatNumber(trueLifeTimeMined)}</span>
               <span className="reward-unit">BW</span>
             </div>
           </div>

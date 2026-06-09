@@ -612,6 +612,42 @@
     text-shadow: 0 0 25px rgba(250, 176, 5, 0.7);
 }
 
+.fee-split-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.fee-split-item {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.fee-split-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(250, 176, 5, 0.25);
+    box-shadow: 0 0 10px rgba(250, 176, 5, 0.05);
+}
+
+.fee-split-item .split-label {
+    color: #a0aec0;
+    font-weight: 500;
+}
+
+.fee-split-item .split-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: #fab005;
+}
+
 /* 센터 푸터 */
 .center-footer {
     display: flex;

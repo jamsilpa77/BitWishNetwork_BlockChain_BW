@@ -26,6 +26,31 @@ const RankingPage: React.FC = () => {
     const [searchAddress, setSearchAddress] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [lastSync, setLastSync] = useState<Date>(new Date());
+    const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('bw-theme') === 'dark');
+
+    /**
+     * [Step 3] 테마 실시간 동기화 (익스플로러 표준 이식)
+     */
+    useEffect(() => {
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === 'bw-theme') {
+                setIsDarkMode(e.newValue === 'dark');
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+
+        const themeSync = setInterval(() => {
+            const currentTheme = localStorage.getItem('bw-theme') === 'dark';
+            if (currentTheme !== isDarkMode) {
+                setIsDarkMode(currentTheme);
+            }
+        }, 1000);
+
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            clearInterval(themeSync);
+        };
+    }, [isDarkMode]);
 
     /**
      * 전역 랭킹 데이터 동기화
@@ -140,18 +165,27 @@ const RankingPage: React.FC = () => {
     };
 
     return (
-        <div className="ranking-page">
-            <div className="ranking-container">
-                {/* [Phase 10] 상단 다국어 홈 이동 버튼 (격리 설계 적용) */}
-                <button className="back-button" onClick={() => window.location.href = '/'}>
-                    ← {getTranslation('navigation.home')}
-                </button>
+        <div className={`ranking-page ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
+            {/* [Step 1.5] 헤더 바 전체를 ranking-container 바깥으로 분리하여 100vw 폭 달성 */}
+            <div className="ranking-header-bar">
+                <div className="header-inner">
+                    {/* 좌측: 홈 버튼 */}
+                    <div className="header-left">
+                        {/* 독립 윈도우 환경: 브라우저 닫기 버튼 사용을 위해 내부 버튼 제거 */}
+                    </div>
 
-                {/* Header */}
-                <header className="ranking-header">
-                    <h1 className="ranking-title">{getTranslation('ranking.title')}</h1>
-                    <p className="ranking-subtitle">{getTranslation('ranking.subtitle')}</p>
-                </header>
+                    {/* 중앙: 메인 타이틀 & 서브타이틀 */}
+                    <div className="header-center">
+                        <h1 className="ranking-title">{getTranslation('ranking.title')}</h1>
+                        <p className="ranking-subtitle">{getTranslation('ranking.subtitle')}</p>
+                    </div>
+
+                    {/* 우측: 중앙 정렬 균형을 맞추기 위한 투명 더미 블록 */}
+                    <div className="header-right"></div>
+                </div>
+            </div>
+
+            <div className="ranking-container">
 
                 {/* Search */}
                 <section className="ranking-search-section">
@@ -331,7 +365,7 @@ const RankingPage: React.FC = () => {
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '40px', color: '#555', fontSize: '0.9rem' }}>
-                    Last Sync: {lastSync.toLocaleTimeString()}
+                    {getTranslation('ranking.lastSync')}: {lastSync.toLocaleTimeString()}
                 </div>
             </div>
         </div>
