@@ -3,6 +3,7 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -121,6 +122,22 @@ module.exports = (env, argv) => {
       }
     },
     optimization: {
+      minimize: isProduction,
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              drop_console: true,
+              drop_debugger: true,
+            },
+            mangle: true,
+            format: {
+              comments: false,
+            },
+          },
+          extractComments: false,
+        }),
+      ],
       splitChunks: {
         chunks: 'all',
         cacheGroups: {
@@ -132,6 +149,6 @@ module.exports = (env, argv) => {
         }
       }
     },
-    devtool: isProduction ? 'source-map' : 'eval-source-map'
+    devtool: isProduction ? false : 'eval-source-map'
   };
 };
