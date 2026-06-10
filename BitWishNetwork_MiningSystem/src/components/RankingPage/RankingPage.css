@@ -301,7 +301,7 @@
     transform: translate(-50%, -50%);
     width: 150%;
     height: 150%;
-    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_gold_aura_1777870473826.png') no-repeat center;
+    background: url('./images/bw_ranking_gold_aura_1777870473826.png') no-repeat center;
     background-size: contain;
     opacity: 0.5;
     z-index: -1;
@@ -364,7 +364,7 @@
     transform: translate(-50%, -50%);
     width: 140%;
     height: 140%;
-    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_silver_aura_1777870863047.png') no-repeat center;
+    background: url('./images/bw_ranking_silver_aura_1777870863047.png') no-repeat center;
     background-size: contain;
     opacity: 0.4;
     z-index: -1;
@@ -388,7 +388,7 @@
     transform: translate(-50%, -50%);
     width: 140%;
     height: 140%;
-    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_bronze_aura_1777870899082.png') no-repeat center;
+    background: url('./images/bw_ranking_bronze_aura_1777870899082.png') no-repeat center;
     background-size: contain;
     opacity: 0.4;
     z-index: -1;
@@ -411,7 +411,7 @@
     transform: translate(-50%, -50%);
     width: 140%;
     height: 140%;
-    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_amethyst_aura_1777879040935.png') no-repeat center;
+    background: url('./images/bw_ranking_amethyst_aura_1777879040935.png') no-repeat center;
     background-size: contain;
     opacity: 0.35;
     z-index: -1;
@@ -434,7 +434,7 @@
     transform: translate(-50%, -50%);
     width: 140%;
     height: 140%;
-    background: url('file:///C:/Users/saman/.gemini/antigravity/brain/996d6ed8-0813-446c-9d39-4e3e9bb0f3f5/bw_ranking_emerald_aura_1777879084739.png') no-repeat center;
+    background: url('./images/bw_ranking_emerald_aura_1777879084739.png') no-repeat center;
     background-size: contain;
     opacity: 0.35;
     z-index: -1;
