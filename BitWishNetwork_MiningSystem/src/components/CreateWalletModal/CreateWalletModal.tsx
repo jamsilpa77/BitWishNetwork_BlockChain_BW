@@ -18,6 +18,7 @@ const CreateWalletModal: React.FC<CreateWalletModalProps> = ({ isOpen, onClose, 
     const [verificationInputs, setVerificationInputs] = useState<{ [key: number]: string }>({});
     const [targetIndices, setTargetIndices] = useState<number[]>([]);
     const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if (currentLanguage) {
@@ -68,6 +69,8 @@ const CreateWalletModal: React.FC<CreateWalletModalProps> = ({ isOpen, onClose, 
     };
 
     const handleCompleteVerification = () => {
+        if (isLoading) return;
+
         const isCorrect = targetIndices.every(index => {
             const inputWord = verificationInputs[index]?.trim().toLowerCase() || '';
             const targetWord = seedPhrase[index - 1]?.toLowerCase() || '';
@@ -75,7 +78,8 @@ const CreateWalletModal: React.FC<CreateWalletModalProps> = ({ isOpen, onClose, 
         });
 
         if (isCorrect) {
-            // 지갑 생성 (2차 비밀번호는 일단 'PENDING' 처리하거나 유저가 나중에 설정하도록 함)
+            setIsLoading(true);
+            // 지갑 생성 (2차 비밀번호는 일단 'TEMPPASSWORD123!' 처리하거나 유저가 나중에 설정하도록 함)
             // 지시사항 7번에 따라 지갑 생성 시 2차 비번을 받도록 되어 있으나 일단 원본 로직 유지하며 5001포트 연동
             walletService.createWallet(seedPhrase, 'TEMPPASSWORD123!', referralCode)
                 .then((walletData) => {
@@ -85,6 +89,9 @@ const CreateWalletModal: React.FC<CreateWalletModalProps> = ({ isOpen, onClose, 
                 .catch((err: any) => {
                     console.error('Wallet creation failed:', err);
                     alert(err.message || 'Wallet creation failed.');
+                })
+                .finally(() => {
+                    setIsLoading(false);
                 });
         } else {
             alert(t('wallet.verifyFail'));
@@ -181,7 +188,9 @@ const CreateWalletModal: React.FC<CreateWalletModalProps> = ({ isOpen, onClose, 
                                 ))}
                             </div>
                             <div className="seed-actions">
-                                <button className="complete-btn" onClick={handleCompleteVerification}>{t('wallet.completeBtn')}</button>
+                                <button className="complete-btn" onClick={handleCompleteVerification} disabled={isLoading}>
+                                    {isLoading ? 'Processing...' : t('wallet.completeBtn')}
+                                </button>
                             </div>
                         </div>
                     )}
