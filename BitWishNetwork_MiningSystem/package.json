@@ -9,6 +9,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "ts-node --project server/tsconfig.json server/index.ts",
+    "start:server": "cross-env PORT=5001 ts-node --project server/tsconfig.json server/index.ts",
+    "start:frontend": "cross-env PORT=5000 webpack serve --config webpack.config.js --mode production",
     "dev:server": "nodemon --watch server --exec ts-node --project server/tsconfig.json server/index.ts",
     "backend": "set PORT=5001 && nodemon --watch server --exec ts-node --project server/tsconfig.json server/index.ts",
     "frontend": "webpack serve --config webpack.config.js --mode development",

@@ -389,9 +389,27 @@ app.use('/api/transactions', transactionRoutes);
 import bwCommunityRoutes from './routes/bw_community_api';
 app.use('/api/bw-community', bwCommunityRoutes);
 
-// API 서버 메인 페이지 접속 시 public/index.html을 반환하는 static 서빙 미들웨어 추가
+// API 서버 메인 페이지 및 정적 자산(CSS/JS)을 반환하는 static 서빙 미들웨어 추가 (dist 및 public 병행 서빙)
+app.use(express.static('dist'));
+app.use(express.static(path.join(__dirname, '../dist')));
 app.use(express.static('public'));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// SPA 라우팅 지원: API 라우트 이외의 모든 경로 요청은 프론트엔드 빌드 결과물(index.html)로 포워딩
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+        return next();
+    }
+    res.sendFile(path.join(__dirname, '../dist/index.html'), (err) => {
+        if (err) {
+            res.sendFile(path.join(__dirname, 'public/index.html'), (err2) => {
+                if (err2) {
+                    res.status(404).send('Not Found');
+                }
+            });
+        }
+    });
+});
 
 // MongoDB Connection
 mongoose.connect(MONGODB_URI)
