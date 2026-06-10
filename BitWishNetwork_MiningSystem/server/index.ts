@@ -7,6 +7,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import path from 'path';
 import miningRoutes from './routes/mining';
 import userRoutes from './routes/user';
 import adminRoutes from './routes/admin';
@@ -387,6 +388,9 @@ app.use('/api/transactions', transactionRoutes);
 // [BW Community Plugin] 마이닝 로직과 100% 완벽하게 독립된 커뮤니티 전용 라우터 안전 마운트
 import bwCommunityRoutes from './routes/bw_community_api';
 app.use('/api/bw-community', bwCommunityRoutes);
+
+// API 서버 메인 페이지 접속 시 public/index.html을 반환하는 static 서빙 미들웨어 추가
+app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB Connection
 mongoose.connect(MONGODB_URI)
