@@ -33,46 +33,67 @@ export class UserController {
 
             console.log(`[REGISTER] New user registration: ${walletAddress}`);
 
-            // 1. 중복 검사 (대소문자 무시 검색 적용)
-            const existingUser = await User.findOne({ walletAddress: new RegExp('^' + walletAddress + '$', 'i') });
-            if (existingUser) {
-                res.status(400).json({ success: false, message: 'Wallet address already exists' });
+            const resolvedIp = ipAddress || (Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim()) || req.ip || '127.0.0.1';
+
+            // [핵심 수정] findOneAndUpdate + upsert 방식으로 Race Condition 완전 차단
+            // 동시에 2번 호출되더라도 절대 2개 문서가 생성되지 않음
+            const result = await User.findOneAndUpdate(
+                { walletAddress: new RegExp('^' + walletAddress + '$', 'i') },
+                {
+                    $setOnInsert: {
+                        walletAddress,
+                        publicKey,
+                        encryptedMnemonic,
+                        secondPasswordHash,
+                        myReferralCode,
+                        referrerCode,
+                        ipAddress: resolvedIp
+                    }
+                },
+                { upsert: true, new: true, rawResult: true }
+            );
+
+            // rawResult.lastErrorObject.updatedExisting === true 이면 이미 존재하는 유저
+            const isExistingUser = result.lastErrorObject?.updatedExisting === true;
+
+            if (isExistingUser) {
+                console.log(`[REGISTER] User already exists, skipping duplicate: ${walletAddress}`);
+                // 이미 존재해도 200 OK로 반환 (프론트엔드 setSecondPassword 호환성 보존)
+                res.status(200).json({ success: true, data: result.value, duplicate: true });
                 return;
             }
 
-            // 2. 사용자 생성
-            const newUser = new User({
-                walletAddress,
-                publicKey,
-                encryptedMnemonic,
-                secondPasswordHash,
-                myReferralCode,
-                referrerCode,
-                ipAddress: ipAddress || (Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim()) || req.ip || '127.0.0.1'
-            });
+            console.log(`[REGISTER] User saved (NEW)`);
 
-            await newUser.save();
-            console.log(`[REGISTER] User saved`);
-
-            // 3. 마이닝 상태 초기화
-            const miningState = new MiningState({
-                walletAddress,
-                isMining: false,
-                accumulatedReward: '0.00000000000000000000000000000000000000000000000000',
-                referralCount: 0
-            });
-            await miningState.save();
+            // 3. 마이닝 상태 초기화 (역시 upsert로 중복 방지)
+            await MiningState.findOneAndUpdate(
+                { walletAddress: new RegExp('^' + walletAddress + '$', 'i') },
+                {
+                    $setOnInsert: {
+                        walletAddress,
+                        isMining: false,
+                        accumulatedReward: '0.00000000000000000000000000000000000000000000000000',
+                        referralCount: 0
+                    }
+                },
+                { upsert: true, new: true }
+            );
             console.log(`[REGISTER] MiningState created`);
 
-            // 4. 보너스 레코드 초기화 (1BW 가입 보상 정책 반영)
-            const bonusRecord = new BonusRecord({
-                walletAddress,
-                referralBonusStorage: '0.00000000000000000000000000000000000000000000000000',
-                referralRewardStorage: referrerCode ? '1.00000000000000000000000000000000000000000000000000' : '0.00000000000000000000000000000000000000000000000000', // 추천인 코드 있을 시 1BW 즉시 지급
-                referralList: [],
-                attendanceHistory: []
-            });
-            await bonusRecord.save();
+            // 4. 보너스 레코드 초기화 (1BW 가입 보상 정책 반영, upsert 중복 방지)
+            await BonusRecord.findOneAndUpdate(
+                { walletAddress: new RegExp('^' + walletAddress + '$', 'i') },
+                {
+                    $setOnInsert: {
+                        walletAddress,
+                        referralBonusStorage: '0.00000000000000000000000000000000000000000000000000',
+                        referralRewardStorage: referrerCode ? '1.00000000000000000000000000000000000000000000000000' : '0.00000000000000000000000000000000000000000000000000',
+                        referralList: [],
+                        attendanceHistory: []
+                    }
+                },
+                { upsert: true, new: true }
+            );
             console.log(`[REGISTER] BonusRecord created`);
 
             // 5. 추천인 관계 처리 (Step 2: 검증 강화 - 빈 문자열 및 공백 체크 강화)
@@ -82,7 +103,7 @@ export class UserController {
                 await this.processReferral(cleanCode, walletAddress);
             }
 
-            res.status(201).json({ success: true, data: newUser });
+            res.status(201).json({ success: true, data: result.value });
         } catch (error: any) {
             console.error('[REGISTER] Error:', error);
             console.error('[REGISTER] Error message:', error.message);
