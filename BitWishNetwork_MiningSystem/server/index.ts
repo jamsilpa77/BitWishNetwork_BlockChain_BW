@@ -368,11 +368,33 @@ runOneTimeCleanup().then(() => {
 const app = express();
 const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bitwish_mining';
+const isProduction = process.env.NODE_ENV === 'production';
+
+// [보안] Express 프레임워크 정보 노출 차단 (해커에게 서버 기술 스택 은닉)
+app.disable('x-powered-by');
 
 // Middleware
-app.use(cors());
+// [보안] CORS 도메인 제한 - 프로덕션에서는 bitwishnetwork.com만 API 호출 허용
+app.use(cors(isProduction ? {
+    origin: ['https://bitwishnetwork.com', 'https://www.bitwishnetwork.com'],
+    credentials: true
+} : {}));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// [보안] 민감 파일 접근 차단 미들웨어 - .env, 소스코드, 설정파일 접근 원천 차단
+app.use((req, res, next) => {
+    const reqPath = req.path.toLowerCase();
+    if (reqPath.startsWith('/api')) return next();
+
+    const blockedPatterns = ['.env', '.git', '.ssh', 'tsconfig', 'package.json', 'package-lock', 'webpack.config', 'node_modules', '/server/'];
+    for (const pattern of blockedPatterns) {
+        if (reqPath.includes(pattern)) return res.status(404).send('Not Found');
+    }
+    if (/\.(ts|tsx)$/i.test(reqPath)) return res.status(404).send('Not Found');
+
+    next();
+});
 
 // Routes
 app.use('/api/mining', miningRoutes);
@@ -418,7 +440,8 @@ mongoose.connect(MONGODB_URI)
         console.log('✅ Connected to MongoDB Hybrid Storage');
 
         // Start Server
-        app.listen(PORT, () => {
+        // [보안] 프로덕션에서는 127.0.0.1에만 바인딩하여 외부에서 5001 포트 직접 접근 원천 차단
+        app.listen(Number(PORT), isProduction ? '127.0.0.1' : '0.0.0.0', () => {
             console.log(`🚀 Server is running on port ${PORT}`);
             console.log(`🔄 Server restarted at ${new Date().toLocaleString()}`);
         });
