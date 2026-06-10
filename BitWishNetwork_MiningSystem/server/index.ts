@@ -390,6 +390,7 @@ import bwCommunityRoutes from './routes/bw_community_api';
 app.use('/api/bw-community', bwCommunityRoutes);
 
 // API 서버 메인 페이지 접속 시 public/index.html을 반환하는 static 서빙 미들웨어 추가
+app.use(express.static('public'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB Connection
