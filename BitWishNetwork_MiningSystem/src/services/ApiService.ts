@@ -10,20 +10,20 @@
 
 import axios, { AxiosInstance } from 'axios';
 
-// 환경 변수에서 API URL 로드 (없으면 기본값)
-// 환경 변수 안전하게 로드
-let apiUrl = 'http://localhost:5001/api';
+// 환경 변수에서 API URL 로드 (프로덕션: 상대경로 '/api', 개발: 'http://localhost:5001/api')
+// 프로덕션 빌드 시 Nginx 리버스 프록시를 통해 동일 도메인에서 API를 서빙하므로 상대경로 사용
+let API_BASE_URL = '/api';
 try {
     // @ts-ignore
     if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_URL) {
         // @ts-ignore
-        apiUrl = process.env.REACT_APP_API_URL;
+        API_BASE_URL = process.env.REACT_APP_API_URL;
+    } else if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+        API_BASE_URL = 'http://localhost:5001/api';
     }
 } catch (error) {
     console.warn('Failed to load environment variable, using default URL');
 }
-// 환경 변수 제거하고 하드코딩 (안전성 확보)
-const API_BASE_URL = 'http://localhost:5001/api';
 
 class ApiService {
     private client: AxiosInstance;

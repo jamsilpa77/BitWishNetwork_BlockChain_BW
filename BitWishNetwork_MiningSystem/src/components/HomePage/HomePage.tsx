@@ -75,7 +75,7 @@ const HomePage: React.FC = () => {
 
             // 2. 서버가 켜져 있다면 서버 데이터를 가져옵니다.
             try {
-                const response = await fetch('http://localhost:5001/api/admin/system/config');
+                const response = await fetch('/api/admin/system/config');
                 const data = await response.json();
                 if (data.success && data.config) {
                     const msg = data.config.ticker[currentLanguage] || data.config.ticker['en'];

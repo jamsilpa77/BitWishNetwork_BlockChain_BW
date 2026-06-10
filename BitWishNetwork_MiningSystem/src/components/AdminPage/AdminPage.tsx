@@ -81,7 +81,7 @@ const AdminPage: React.FC = () => {
         ]);
 
         try {
-            await fetch('http://localhost:5001/api/admin/system/config', {
+            await fetch('/api/admin/system/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ticker: tickerInputs })
@@ -203,7 +203,7 @@ const AdminPage: React.FC = () => {
     // 1. 추천 보상 전체 합계 조회
     const fetchTotalRewards = async () => {
         try {
-            const response = await fetch('http://localhost:5001/api/admin/rewards/total');
+            const response = await fetch('/api/admin/rewards/total');
             const data = await response.json();
             if (data.success) {
                 setTotalRewardIssued(data.totalIssued);
@@ -223,7 +223,7 @@ const AdminPage: React.FC = () => {
 
         setRewardLoading(true);
         try {
-            const response = await fetch(`http://localhost:5001/api/admin/rewards/detail/${rewardSearchAddress}`);
+            const response = await fetch(`/api/admin/rewards/detail/${rewardSearchAddress}`);
             const data = await response.json();
             if (data.success) {
                 setRewardStatusDetail(data.data);
@@ -305,7 +305,7 @@ const AdminPage: React.FC = () => {
         setError('');
 
         try {
-            const response = await fetch(`http://localhost:5001/api/admin/mining/${searchAddress}`);
+            const response = await fetch(`/api/admin/mining/${searchAddress}`);
 
             // 응답 상태 확인
             if (!response.ok) {
@@ -344,7 +344,7 @@ const AdminPage: React.FC = () => {
         setError('');
 
         try {
-            const response = await fetch('http://localhost:5001/api/admin/mining/reset', {
+            const response = await fetch('/api/admin/mining/reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ walletAddress: searchAddress })
@@ -385,7 +385,7 @@ const AdminPage: React.FC = () => {
         setAttendanceError('');
 
         try {
-            const response = await fetch(`http://localhost:5001/api/admin/attendance/${attendanceSearchAddress}?year=${selectedYear}&month=${selectedMonth}`);
+            const response = await fetch(`/api/admin/attendance/${attendanceSearchAddress}?year=${selectedYear}&month=${selectedMonth}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -420,7 +420,7 @@ const AdminPage: React.FC = () => {
         setReferralError('');
 
         try {
-            const response = await fetch(`http://localhost:5001/api/admin/referral/${referralSearchAddress}`);
+            const response = await fetch(`/api/admin/referral/${referralSearchAddress}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -473,7 +473,7 @@ const AdminPage: React.FC = () => {
         setReferralError('');
 
         try {
-            const response = await fetch(`http://localhost:5001/api/admin/referral/all`);
+            const response = await fetch(`/api/admin/referral/all`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);

@@ -388,6 +388,7 @@ app.use('/api/transactions', transactionRoutes);
 // [BW Community Plugin] 마이닝 로직과 100% 완벽하게 독립된 커뮤니티 전용 라우터 안전 마운트
 import bwCommunityRoutes from './routes/bw_community_api';
 app.use('/api/bw-community', bwCommunityRoutes);
+app.use('/api/community', bwCommunityRoutes);
 
 // API 서버 메인 페이지 및 정적 자산(CSS/JS)을 반환하는 static 서빙 미들웨어 추가 (dist 및 public 병행 서빙)
 app.use(express.static('dist'));

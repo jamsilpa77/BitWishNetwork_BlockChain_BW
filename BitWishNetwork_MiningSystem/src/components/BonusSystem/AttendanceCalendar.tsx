@@ -132,7 +132,7 @@ const AttendanceCalendar: React.FC = memo(() => {
   const loadAttendanceRecords = useCallback(async (): Promise<void> => {
     try {
       // [Fix] LocalStorage 대신 서버 API 호출 (캐시 방지용 타임스탬프 추가)
-      const response = await fetch(`http://localhost:5001/api/admin/attendance/${WALLET_ADDRESS}?_t=${Date.now()}`);
+      const response = await fetch(`/api/admin/attendance/${WALLET_ADDRESS}?_t=${Date.now()}`);
       const data = await response.json();
 
       if (data.success && data.data) {
