@@ -51,7 +51,7 @@ export class UserController {
                     }
                 },
                 { upsert: true, new: true, rawResult: true }
-            );
+            ) as any;
 
             // rawResult.lastErrorObject.updatedExisting === true 이면 이미 존재하는 유저
             const isExistingUser = result.lastErrorObject?.updatedExisting === true;
