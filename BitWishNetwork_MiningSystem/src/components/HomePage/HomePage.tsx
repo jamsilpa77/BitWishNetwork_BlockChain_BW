@@ -697,7 +697,7 @@ const HomePage: React.FC = () => {
                     </div>
                     {!isExtensionInstalled ? (
                         <a 
-                            href="https://chromewebstore.google.com"
+                            href="https://chromewebstore.google.com" // 추후 크롬 웹스토어 등록 완료 시 실제 상세 페이지 URL로 대체 가능
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="bw-btn" 
