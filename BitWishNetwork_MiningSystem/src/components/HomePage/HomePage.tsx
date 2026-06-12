@@ -697,7 +697,7 @@ const HomePage: React.FC = () => {
                     </div>
                     {!isExtensionInstalled ? (
                         <a 
-                            href="https://chromewebstore.google.com" // 추후 크롬 웹스토어 등록 완료 시 실제 상세 페이지 URL로 대체 가능
+                            href="https://chromewebstore.google.com/search/BitWish" // 크롬 웹스토어 검색창에 'BitWish'로 자동 검색한 페이지로 연결 (심사 통과 후 검색됨)
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="bw-btn" 
