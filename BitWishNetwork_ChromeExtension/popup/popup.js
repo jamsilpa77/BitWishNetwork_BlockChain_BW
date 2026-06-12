@@ -392,12 +392,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /**
    * 서버에 보너스 업데이트 요청 전송
+   * [중요] 출석 보너스(5%)는 /api/attendance/check 엔드포인트에서
+   * MiningState.isAttendanceActive를 통해 별도로 관리됩니다.
+   * 여기서는 니모닉 보너스(30%)만 extensionBonusRate로 전송합니다.
+   * 출석 보너스를 여기에 포함하면 서버에서 이중 계산됩니다.
    */
   async function syncBonusToServer() {
     if (!walletAddress) return;
     
+    // [Fix] 출석 보너스는 서버의 isAttendanceActive에서 처리하므로 제외
+    // 니모닉 보너스만 extensionBonusRate로 전송
     let rate = 0;
-    if (attendanceBonusActive) rate += 0.05;
     if (mnemonicBonusActive) rate += 0.30;
     
     const decimalRate = rate.toFixed(50);
