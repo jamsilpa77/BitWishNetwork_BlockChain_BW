@@ -12,6 +12,7 @@ async function checkRate() {
         console.log('currentTotalRate:', state.currentTotalRate);
         console.log('referralBonusRate:', state.referralBonusRate);
         console.log('isAttendanceActive:', state.isAttendanceActive);
+        console.log('extensionBonusRate:', state.extensionBonusRate);
 
     } catch (error) {
         console.error('Error:', error);

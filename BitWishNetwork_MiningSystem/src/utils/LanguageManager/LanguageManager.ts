@@ -487,7 +487,8 @@ export class LanguageManager {
         myWallet: '나의 지갑',
         close: '닫기',
         refresh: '상태 새로고침',
-        createWallet: '지갑 만들기'
+        createWallet: '지갑 만들기',
+        miningInProgress: '채굴 진행중'
       },
       // 메시지
       messages: {
@@ -888,7 +889,8 @@ export class LanguageManager {
         myWallet: 'My Wallet',
         close: 'Close',
         refresh: 'Refresh Status',
-        createWallet: 'Create Wallet'
+        createWallet: 'Create Wallet',
+        miningInProgress: 'Mining in Progress'
       },
       messages: {
         miningStarted: 'Mining has started.',
@@ -1473,7 +1475,8 @@ export class LanguageManager {
         myWallet: 'マイウォレット',
         close: '閉じる',
         refresh: '状況更新',
-        createWallet: 'ウォレット作成'
+        createWallet: 'ウォレット作成',
+        miningInProgress: 'マイニング進行中'
       },
       messages: {
         miningStarted: 'マイニングが開始されました。',
@@ -2073,7 +2076,8 @@ export class LanguageManager {
         myWallet: '我的钱包',
         close: '关闭',
         refresh: '刷新状态',
-        createWallet: '创建钱包'
+        createWallet: '创建钱包',
+        miningInProgress: '挖矿进行中'
       },
       messages: {
         miningStarted: '挖矿已开始。',

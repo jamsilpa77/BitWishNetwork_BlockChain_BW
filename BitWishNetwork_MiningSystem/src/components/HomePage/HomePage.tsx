@@ -105,6 +105,30 @@ const HomePage: React.FC = () => {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, [currentLanguage]);
     // ----------------------------------------------------
+    const [isExtensionInstalled, setIsExtensionInstalled] = useState(false);
+
+    useEffect(() => {
+        const checkExtensionAndWallet = () => {
+            if (document.documentElement.dataset['bitwishInstalled'] === "true") {
+                setIsExtensionInstalled(true);
+            } else {
+                setIsExtensionInstalled(false);
+            }
+            
+            const currentAddr = walletService.getCurrentWalletAddress();
+            if (currentAddr) {
+                window.postMessage({
+                    type: "BITWISH_WALLET_CONNECTED",
+                    walletAddress: currentAddr
+                }, "*");
+            }
+        };
+
+        checkExtensionAndWallet();
+        const interval = setInterval(checkExtensionAndWallet, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [miningStatus, setMiningStatus] = useState<RealTimeMiningStatus | null>(null);
     const [networkStatus, setNetworkStatus] = useState<NetworkStatus>('DISCONNECTED');
@@ -153,6 +177,7 @@ const HomePage: React.FC = () => {
     const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
     const [tickerInterval, setTickerInterval] = useState<NodeJS.Timeout | null>(null); // [신규] 홈페이지 전용 티커
     const [isConnected, setIsConnected] = useState(true);
+    const [isMiningInProgress, setIsMiningInProgress] = useState(false);
     const [authenticatedAddress, setAuthenticatedAddress] = useState<string>('');
 
     /**
@@ -331,6 +356,8 @@ const HomePage: React.FC = () => {
         try {
             const status = realTimeSyncService.getCurrentStatus();
             setMiningStatus(status);
+            // [신규] 마이닝 진행 여부 실시간 감지
+            setIsMiningInProgress(realTimeSyncService.isMiningActive());
         } catch (error) {
             console.error('마이닝 상태 로드 오류:', error);
         }
@@ -631,10 +658,83 @@ const HomePage: React.FC = () => {
                     </div>
                 </div>
             </header>
-            {/* --- [신규 삽입] 우측에서 좌측으로 흐르는 메시지 전광판 영역 --- */}
-            <div className="home-ticker-banner">
-                <div className="home-ticker-track">
-                    <span className="home-ticker-text">{tickerMessage}</span>
+            {/* [신규 수술] 크롬 확장프로그램 설치 유도 프리미엄 노란색 배너 바탕 영역 */}
+            <div className="extension-banner-wrapper" style={{
+                background: isExtensionInstalled 
+                    ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)' // 활성화 시 부드러운 그린 계열
+                    : 'linear-gradient(135deg, #fef08a 0%, #fde047 100%)',
+                padding: '20px 0 0 0',
+                borderBottom: isExtensionInstalled ? '1px solid #22c55e' : '1px solid #eab308',
+                position: 'relative',
+                overflow: 'hidden'
+            }}>
+                <div style={{
+                    maxWidth: '1200px',
+                    margin: '0 auto 16px auto',
+                    padding: '0 2rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    zIndex: 1,
+                    position: 'relative'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '24px', animation: 'pulse 1.5s infinite' }}>{isExtensionInstalled ? '⚡' : '🧩'}</span>
+                        <div>
+                            <strong style={{ color: isExtensionInstalled ? '#166534' : '#854d0e', fontSize: '15px', display: 'block' }}>
+                                {isExtensionInstalled 
+                                    ? 'Chrome Extension Active! (Max +35% Boost Connected)' 
+                                    : 'Chrome Extension Promotion Bonus (Attendance 5% + Mnemonic 30% = Max 35% Boost)'}
+                            </strong>
+                            <span style={{ color: isExtensionInstalled ? '#15803d' : '#a16207', fontSize: '13px' }}>
+                                {isExtensionInstalled 
+                                    ? '확장프로그램 연결이 감지되었습니다. 출석(5%) & 니모닉(30%) 부스트가 활성화됩니다. (클로즈 베타가 끝나면 팝업 보너스 부스터는 10%로 내려갑니다.)'
+                                    : 'Chrome 확장프로그램을 설치하고 출석 보너스(5%)와 안전 니모닉 인증(30%) 채굴률 부스트를 받으세요! (클로즈 베타가 끝나면 팝업 보너스 부스터는 10%로 내려갑니다.)'}
+                            </span>
+                        </div>
+                    </div>
+                    {!isExtensionInstalled ? (
+                        <a 
+                            href="https://chromewebstore.google.com"
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="bw-btn" 
+                            style={{
+                                background: '#1e293b',
+                                color: '#ffffff',
+                                fontWeight: 'bold',
+                                padding: '10px 20px',
+                                borderRadius: '8px',
+                                textDecoration: 'none',
+                                fontSize: '13px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                transition: 'all 0.3s ease'
+                            }}
+                        >
+                            ⚡ Chrome Web Store 설치하기
+                        </a>
+                    ) : (
+                        <span style={{
+                            background: '#15803d',
+                            color: '#ffffff',
+                            fontWeight: 'bold',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                        }}>
+                            ✓ 연동 완료
+                        </span>
+                    )}
+                </div>
+
+                {/* --- [신규 삽입] 우측에서 좌측으로 흐르는 메시지 전광판 영역 --- */}
+                <div className="home-ticker-banner" style={{ background: 'rgba(255, 255, 255, 0.4)', borderBottom: 'none', borderTop: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                    <div className="home-ticker-track">
+                        <span className="home-ticker-text" style={{ color: '#854d0e' }}>{tickerMessage}</span>
+                    </div>
                 </div>
             </div>
             {/* 메인 콘텐츠 */}
@@ -646,12 +746,13 @@ const HomePage: React.FC = () => {
                             {getTranslation('mining.title')}
                         </h1>
                         <button
-                            className="mining-bonus-button"
+                            className={`mining-bonus-button ${isMiningInProgress ? 'mining-active-disabled' : ''}`}
                             onClick={handleStartMining}
-                            title={getTranslation('mining.startMiningTooltip')}
+                            disabled={isMiningInProgress}
+                            title={isMiningInProgress ? '채굴이 진행 중입니다' : getTranslation('mining.startMiningTooltip')}
                         >
-                            <span className="pickaxe-icon">⛏️</span>
-                            {getTranslation('mining.startMining')}
+                            <span className="pickaxe-icon">{isMiningInProgress ? '🔄' : '⛏️'}</span>
+                            {isMiningInProgress ? '채굴 진행중' : getTranslation('mining.startMining')}
                         </button>
                         <p className="status-description">{getTranslation('mining.description')}</p>
                         <p className="last-update-time">

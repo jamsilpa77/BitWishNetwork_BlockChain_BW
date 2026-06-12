@@ -10,9 +10,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10003;
     backdrop-filter: blur(8px);
     animation: fadeIn 0.3s ease-out;
+
+    /* ─── 클릭 통과 해결을 위해 아래 2줄을 수정/추가해 주세요 ─── */
+    z-index: 9999999 !important;
+    /* 어떤 모달 레이아웃보다 최상위에 위치시킴 */
+    pointer-events: auto !important;
+    /* 투명 검은 배경이 클릭을 직접 차단하고 통과시키지 않음 */
 }
 
 .attendance-modal {

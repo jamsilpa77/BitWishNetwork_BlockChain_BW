@@ -229,6 +229,7 @@ export interface RealTimeMiningStatus {
   currentIssued: number;
   referralBonusStorage: number; // [Step 4] 2% 추천 보너스 보관함 실시간 필드 추가
   referralBonusRate: number; //
+  extensionBonusRate?: number; // [신규] 크롬 확장프로그램 보너스율 실시간 필드 추가
   remainingSupply: number;
   remainingIssued: number;
   issuanceRate: number;

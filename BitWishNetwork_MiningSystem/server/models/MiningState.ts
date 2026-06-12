@@ -30,6 +30,7 @@ export interface IMiningState extends Document {
 
     referralCount: number;        // 현재 반영된 추천인 수
     referralBonusRate: string;    // 현재 적용된 추천 보너스율
+    extensionBonusRate: string;   // [신규] 크롬 확장프로그램 보너스율 (출석 5% + 니모닉 10% = 최대 15% 누적)
 
     partnerStatus: string;        // 가맹점 상태 (NOT_REGISTERED, PENDING, REGISTERED)
     lastBlockRewardThreshold: string; // 마지막으로 블록이 생성된 BW 기준점 (1BW 도달 시마다 블록 생성 추적)
@@ -58,6 +59,7 @@ const MiningStateSchema: Schema = new Schema({
 
     referralCount: { type: Number, default: 0 },
     referralBonusRate: { type: String, default: '0.00000000000000000000000000000000000000000000000000' },
+    extensionBonusRate: { type: String, default: '0.00000000000000000000000000000000000000000000000000' },
 
     partnerStatus: {
         type: String,

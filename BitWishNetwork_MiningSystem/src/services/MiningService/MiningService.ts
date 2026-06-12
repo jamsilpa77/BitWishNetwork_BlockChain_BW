@@ -74,6 +74,7 @@ export class MiningService {
     referralBonusStorage: number;
     referralRewardStorage: number;
     referralBonusRate: number;
+    extensionBonusRate: number;
   }> {
     try {
       if (!walletAddress) {
@@ -108,7 +109,8 @@ export class MiningService {
           isAttendanceActive: state.isAttendanceActive || false,
           referralBonusStorage: user ? parseFloat(user.referralBonusStorage || '0') : 0,
           referralRewardStorage: user ? parseFloat(user.referralRewardStorage || '0') : 0,
-          referralBonusRate: parseFloat(state.referralBonusRate || '0')
+          referralBonusRate: parseFloat(state.referralBonusRate || '0'),
+          extensionBonusRate: parseFloat(state.extensionBonusRate || '0')
         };
       }
 
@@ -120,7 +122,8 @@ export class MiningService {
         isAttendanceActive: false,
         referralBonusStorage: 0,
         referralRewardStorage: 0,
-        referralBonusRate: 0
+        referralBonusRate: 0,
+        extensionBonusRate: 0
       };
     } catch (error) {
       console.error('Get mining status error:', error);
@@ -132,7 +135,8 @@ export class MiningService {
         isAttendanceActive: false,
         referralBonusStorage: 0,
         referralRewardStorage: 0,
-        referralBonusRate: 0
+        referralBonusRate: 0,
+        extensionBonusRate: 0
       };
     }
   }

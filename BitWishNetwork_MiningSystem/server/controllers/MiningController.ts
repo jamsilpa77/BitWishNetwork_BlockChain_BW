@@ -84,10 +84,13 @@ export class MiningController {
                     const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                     const partnerRate = state.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
 
+                    const extensionRate = new Decimal(state.extensionBonusRate || '0');
+
                     state.currentTotalRate = baseRate
                         .mul(new Decimal(1).plus(attendanceRate))
                         .mul(new Decimal(1).plus(correctedReferralRate))
                         .mul(new Decimal(1).plus(partnerRate))
+                        .mul(new Decimal(1).plus(extensionRate))
                         .toString();
 
                     console.log(`[SyncGuard] ${walletAddress} rate corrected to: ${state.currentTotalRate}`);
@@ -222,10 +225,13 @@ export class MiningController {
                     const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                     const partnerRate = state.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
 
+                    const extensionRate = new Decimal(state.extensionBonusRate || '0');
+
                     state.currentTotalRate = baseRate
                         .mul(new Decimal(1).plus(attendanceRate))
                         .mul(new Decimal(1).plus(correctedRate))
                         .mul(new Decimal(1).plus(partnerRate))
+                        .mul(new Decimal(1).plus(extensionRate))
                         .toString();
 
                     console.log(`[HEALER-SYNC] Corrected for ${walletAddress}: Count=${actualCount}`);
@@ -373,10 +379,13 @@ export class MiningController {
                     const attendanceRate = miningState.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                     const partnerRate = miningState.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
 
+                    const extensionRate = new Decimal(miningState.extensionBonusRate || '0');
+
                     miningState.currentTotalRate = baseRate
                         .mul(new Decimal(1).plus(attendanceRate))
                         .mul(new Decimal(1).plus(correctedRate))
                         .mul(new Decimal(1).plus(partnerRate))
+                        .mul(new Decimal(1).plus(extensionRate))
                         .toString();
 
                     await miningState.save();
@@ -430,10 +439,14 @@ export class MiningController {
                         console.log('[AUTO-EXPIRE] Attendance bonus expired for:', walletAddress);
                         miningState.isAttendanceActive = false;
 
-                        // [FIX] 추천 보너스 유지하면서 재계산
+                        // [FIX] 추천 및 확장프로그램 보너스 유지하면서 재계산
                         const baseRate = new Decimal(miningState.currentBaseRate);
                         const referralRate = new Decimal(miningState.referralBonusRate || 0);
-                        miningState.currentTotalRate = baseRate.mul(new Decimal(1).plus(referralRate)).toString();
+                        const extensionRate = new Decimal(miningState.extensionBonusRate || 0);
+                        miningState.currentTotalRate = baseRate
+                            .mul(new Decimal(1).plus(referralRate))
+                            .mul(new Decimal(1).plus(extensionRate))
+                            .toString();
 
                         await miningState.save();
                     }

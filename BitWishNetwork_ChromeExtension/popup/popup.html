@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>BitWish Network 확장프로그램</title>
+  <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- 헤더 -->
+    <header class="popup-header">
+      <div class="logo-area">
+        <span class="logo-icon">💎</span>
+        <div>
+          <h1 class="logo-title">BitWish Network</h1>
+          <span class="logo-subtitle">크롬 확장프로그램 v1.0</span>
+        </div>
+      </div>
+      <div class="bonus-badge">
+        <span class="badge-label">총 보너스율</span>
+        <span class="badge-value" id="totalBoost">0%</span>
+      </div>
+    </header>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="popup-main">
+      <!-- 1. 실시간 네트워크 카드 -->
+      <section class="stat-section">
+        <h2 class="section-title">📊 실시간 네트워크 현황</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">총 공급량</span>
+            <span class="stat-value font-mono">21,000,000,000</span>
+            <span class="stat-desc">210억개 고정</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">실시간 현재 발행량</span>
+            <span class="stat-value font-mono" id="currentIssued">0.0000</span>
+            <span class="stat-desc">실시간 발행량</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">실시간 잔여 발행량</span>
+            <span class="stat-value font-mono" id="remainingPool">21,000,000,000.0000</span>
+            <span class="stat-desc">실시간 잔여량</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 마이닝 실시간 핵심 데이터 4종 카드 -->
+      <section class="stat-section">
+        <h2 class="section-title">⛏️ 실시간 마이닝 상태</h2>
+        <div class="stats-grid mining-grid">
+          <div class="stat-card">
+            <span class="stat-label">실시간 누적 보상</span>
+            <span class="stat-value font-mono green-text" id="accumulatedReward">0.00000000 BW</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">진행 시간</span>
+            <span class="stat-value font-mono green-text" id="progressTime">00:00:00</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">추천 보너스 비율</span>
+            <span class="stat-value font-mono" id="referralBonusRate">0.00%</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">추천 보너스 보관함</span>
+            <span class="stat-value font-mono" id="referralBonusStorage">0.00000000 BW</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 출석 보너스 5% -->
+      <section class="action-section">
+        <div class="action-header">
+          <h2 class="section-title">📅 출석 체크 보너스</h2>
+          <span class="bonus-rate-tag">+5%</span>
+        </div>
+        <div class="action-card">
+          <p class="card-text">하루 한 번 출석체크하고 채굴 속도 5% 보너스를 받으세요.</p>
+          <button id="btnAttendance" class="btn btn-red">출석 체크하기</button>
+          <div id="timerContainer" class="timer-container hide">
+            <span class="timer-icon">⏰</span>
+            <span class="timer-text">다음 출석까지: </span>
+            <span id="attendanceTimer" class="timer-countdown font-mono">--:--:--</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. 니모닉 인증 30% 부스트 -->
+      <section class="action-section">
+        <div class="action-header">
+          <h2 class="section-title">🔑 니모닉 지갑 보안 인증</h2>
+          <span class="bonus-rate-tag">+30%</span>
+        </div>
+        <div class="action-card">
+          <p class="card-text">24단어 복구용 니모닉 코드를 입력하여 30% 속도 보너스를 활성화하세요. (지갑 원문은 외부에 전송 및 보관되지 않고 즉시 해싱됩니다)<br><span style="color: var(--accent-gold); font-size: 10px;">* 클로즈 베타가 끝나면 팝업 보너스 부스터는 10%로 내려갑니다.</span></p>
+          
+          <div id="mnemonicInputArea">
+            <textarea id="txtMnemonic" class="mnemonic-input" placeholder="24단어 니모닉 코드를 띄어쓰기로 구분하여 정확히 입력해 주세요." rows="3"></textarea>
+            <button id="btnVerifyMnemonic" class="btn btn-blue" style="margin-top: 10px;">니모닉 인증 완료하기</button>
+          </div>
+
+          <div id="mnemonicSuccessArea" class="success-area hide">
+            <span class="success-icon">✓</span>
+            <span class="success-text">니모닉 30% 부스트가 안전하게 활성화되었습니다!<br><span style="font-size: 9px; opacity: 0.8;">(클로즈 베타 종료 후에는 10%로 조정됩니다)</span></span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="popup-footer">
+      <span id="txtWalletAddress" class="wallet-address-text font-mono">연결된 지갑: 연결 대기 중 (니모닉을 인증하세요)</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

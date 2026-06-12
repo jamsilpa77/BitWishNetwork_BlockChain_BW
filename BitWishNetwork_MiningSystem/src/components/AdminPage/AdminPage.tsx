@@ -249,6 +249,274 @@ const AdminPage: React.FC = () => {
         }
     }, [referralData]);
 
+    // --- [어드민 페이지 전체 로그인 및 커뮤니티 토큰 상태] ---
+    const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
+        return sessionStorage.getItem('bw_admin_authenticated') === 'true';
+    });
+    const [adminEmail, setAdminEmail] = useState('salmani1@naver.com');
+    const [adminPassword, setAdminPassword] = useState('');
+    const [adminLoginError, setAdminLoginError] = useState('');
+
+    const [communityToken, setCommunityToken] = useState<string | null>(() => localStorage.getItem('bw_community_access_token'));
+    const [communityUser, setCommunityUser] = useState<any>(() => {
+        const saved = localStorage.getItem('bw_community_user');
+        return saved ? JSON.parse(saved) : null;
+    });
+    
+    // 공지사항 CRUD 상태
+    const [noticeList, setNoticeList] = useState<any[]>([]);
+    const [noticePage, setNoticePage] = useState(1);
+    const [noticeTotalPages, setNoticeTotalPages] = useState(1);
+    const [noticeLoading, setNoticeLoading] = useState(false);
+    
+    const [noticeTitle, setNoticeTitle] = useState('');
+    const [noticeContent, setNoticeContent] = useState('');
+    const [noticeImageBase64, setNoticeImageBase64] = useState('');
+    const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
+    const [selectedNoticeIds, setSelectedNoticeIds] = useState<string[]>([]);
+    
+    // 금칙어 상태
+    const [bannedWordsList, setBannedWordsList] = useState<any[]>([]);
+    const [newBannedWord, setNewBannedWord] = useState('');
+    const [bannedWordLoading, setBannedWordLoading] = useState(false);
+
+    // 통합 어드민 로그인 핸들러 (커뮤니티 어드민 인증 연동)
+    const handleAdminLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAdminLoginError('');
+
+        if (adminEmail !== 'salmani1@naver.com' || adminPassword !== '@Love-1106@') {
+            setAdminLoginError('접속 권한이 없거나 비밀번호가 일치하지 않습니다.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/community/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: adminEmail, password: adminPassword })
+            });
+            const data = await res.json();
+            if (data.tokens && data.user) {
+                if (data.user.role !== 'ADMIN') {
+                    setAdminLoginError('관리자 권한이 없는 계정입니다.');
+                    return;
+                }
+                localStorage.setItem('bw_community_access_token', data.tokens.accessToken);
+                localStorage.setItem('bw_community_user', JSON.stringify(data.user));
+                setCommunityToken(data.tokens.accessToken);
+                setCommunityUser(data.user);
+                
+                sessionStorage.setItem('bw_admin_authenticated', 'true');
+                setIsAdminLoggedIn(true);
+                setAdminPassword('');
+            } else {
+                setAdminLoginError(data.error || '로그인에 실패했습니다.');
+            }
+        } catch (err) {
+            setAdminLoginError('서버 통신 오류가 발생했습니다.');
+        }
+    };
+
+    // 통합 어드민 로그아웃 핸들러
+    const handleAdminLogout = () => {
+        localStorage.removeItem('bw_community_access_token');
+        localStorage.removeItem('bw_community_user');
+        sessionStorage.removeItem('bw_admin_authenticated');
+        setCommunityToken(null);
+        setCommunityUser(null);
+        setIsAdminLoggedIn(false);
+    };
+
+    // 공지사항 패치
+    const fetchAdminNotices = async (page = 1) => {
+        if (!communityToken) return;
+        setNoticeLoading(true);
+        try {
+            const res = await fetch(`/api/community/admin/notices?page=${page}`, {
+                headers: { 'Authorization': `Bearer ${communityToken}` }
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                setNoticeList(data.data.notices || []);
+                setNoticeTotalPages(data.data.totalPages || 1);
+                setNoticePage(data.data.currentPage || 1);
+            }
+        } catch (e) {
+            console.error('공지 조회 실패:', e);
+        } finally {
+            setNoticeLoading(false);
+        }
+    };
+
+    // 이미지 파일 Base64 변환 핸들러
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setNoticeImageBase64(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // 공지사항 등록 / 수정 핸들러
+    const handleSaveNotice = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!communityToken || !communityUser) return;
+        if (!noticeTitle.trim() || !noticeContent.trim()) {
+            alert('제목과 내용을 모두 입력해 주세요.');
+            return;
+        }
+
+        try {
+            const isEdit = !!editingNoticeId;
+            const url = isEdit ? `/api/community/admin/notices/${editingNoticeId}` : '/api/community/admin/notices';
+            const method = isEdit ? 'PUT' : 'POST';
+            
+            const bodyData: any = {
+                title: noticeTitle.trim(),
+                content: noticeContent.trim(),
+                image: noticeImageBase64,
+            };
+            if (!isEdit) {
+                bodyData.authorId = communityUser.id;
+            }
+
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${communityToken}`
+                },
+                body: JSON.stringify(bodyData)
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(isEdit ? '공지사항이 수정되었습니다.' : '공지사항이 등록되었습니다.');
+                // 폼 리셋
+                setNoticeTitle('');
+                setNoticeContent('');
+                setNoticeImageBase64('');
+                setEditingNoticeId(null);
+                fetchAdminNotices(noticePage);
+            } else {
+                alert(data.error || '공지 저장 실패');
+            }
+        } catch (err) {
+            alert('서버 통신 실패');
+        }
+    };
+
+    // 수정 대상 공지 선택 로드
+    const handleEditSelectNotice = (notice: any) => {
+        setEditingNoticeId(notice.id);
+        setNoticeTitle(notice.title);
+        setNoticeContent(notice.content);
+        setNoticeImageBase64(notice.image || '');
+    };
+
+    // 공지사항 선택삭제 (일괄 삭제)
+    const handleDeleteSelectedNotices = async () => {
+        if (!communityToken || selectedNoticeIds.length === 0) return;
+        if (!window.confirm(`선택한 ${selectedNoticeIds.length}개의 공지사항을 정말로 삭제하시겠습니까?`)) return;
+
+        try {
+            const res = await fetch('/api/community/admin/notices/delete-multiple', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${communityToken}`
+                },
+                body: JSON.stringify({ ids: selectedNoticeIds })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('삭제되었습니다.');
+                setSelectedNoticeIds([]);
+                fetchAdminNotices(1);
+            } else {
+                alert(data.error || '삭제 실패');
+            }
+        } catch (err) {
+            alert('서버 통신 실패');
+        }
+    };
+
+    // 금칙어 패치
+    const fetchBannedWordsList = async () => {
+        if (!communityToken) return;
+        setBannedWordLoading(true);
+        try {
+            const res = await fetch('/api/community/admin/banned-words', {
+                headers: { 'Authorization': `Bearer ${communityToken}` }
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                setBannedWordsList(data.data || []);
+            }
+        } catch (e) {
+            console.error('금칙어 조회 실패:', e);
+        } finally {
+            setBannedWordLoading(false);
+        }
+    };
+
+    // 금칙어 추가 핸들러
+    const handleAddBannedWord = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!communityToken || !newBannedWord.trim()) return;
+
+        try {
+            const res = await fetch('/api/community/admin/banned-words', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${communityToken}`
+                },
+                body: JSON.stringify({ word: newBannedWord.trim() })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setNewBannedWord('');
+                fetchBannedWordsList();
+            } else {
+                alert(data.error || '금칙어 추가 실패');
+            }
+        } catch (err) {
+            alert('서버 통신 실패');
+        }
+    };
+
+    // 금칙어 개별 삭제
+    const handleDeleteBannedWord = async (id: string) => {
+        if (!communityToken) return;
+        if (!window.confirm('정말 삭제하시겠습니까?')) return;
+
+        try {
+            const res = await fetch(`/api/community/admin/banned-words/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${communityToken}` }
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchBannedWordsList();
+            } else {
+                alert(data.error || '금칙어 삭제 실패');
+            }
+        } catch (err) {
+            alert('서버 통신 실패');
+        }
+    };
+
+    // 커뮤니티 탭 진입 시 데이터 자동 조회
+    React.useEffect(() => {
+        if (activeTab === 'communityAdmin' && communityToken) {
+            fetchAdminNotices(1);
+            fetchBannedWordsList();
+        }
+    }, [activeTab, communityToken]);
+
     React.useEffect(() => {
         const timer = setInterval(() => {
             setReferralData((prev: any) => {
@@ -286,10 +554,13 @@ const AdminPage: React.FC = () => {
     }, [referralData === null]);
 
 
-    // 탭 변경 시 전체 통계 로딩
+    // 탭 변경 시 전체 통계 로딩 및 가입자 목록 조회 통합
     React.useEffect(() => {
         if (activeTab === 'rewardStatus') {
             fetchTotalRewards();
+            if (!referralData) {
+                fetchAllReferrals();
+            }
         }
     }, [activeTab]);
 
@@ -496,12 +767,6 @@ const AdminPage: React.FC = () => {
         }
     };
 
-    // 탭 변경 감지 및 자동 데이터 로딩
-    React.useEffect(() => {
-        if (activeTab === 'referral' && !referralData) {
-            fetchAllReferrals();
-        }
-    }, [activeTab]);
 
     // 유틸리티 함수: 날짜 포맷팅 (년, 월, 일, 시, 분, 초)
     const formatDateTime = (isoString: string): string => {
@@ -532,6 +797,116 @@ const AdminPage: React.FC = () => {
         return statusMap[status] || status || '알 수 없음';
     };
 
+    // 로그인되지 않은 상태일 경우 로그인 UI 출력 (접속 아이디/비밀번호 차단막)
+    if (!isAdminLoggedIn) {
+        return (
+            <div className="admin-login-overlay" style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '100vh',
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                fontFamily: "'Inter', sans-serif",
+                color: '#f8fafc',
+                padding: '20px',
+                boxSizing: 'border-box'
+            }}>
+                <div className="admin-login-card" style={{
+                    width: '100%',
+                    maxWidth: '420px',
+                    background: 'rgba(30, 41, 59, 0.7)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '16px',
+                    padding: '40px 30px',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5)',
+                    boxSizing: 'border-box'
+                }}>
+                    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                        <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>🛡️</span>
+                        <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px 0', letterSpacing: '-0.025em' }}>BitWish 시스템 어드민</h2>
+                        <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0 }}>최고 관리자 계정으로 로그인이 필요합니다.</p>
+                    </div>
+                    <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px' }}>이메일 아이디</label>
+                            <input 
+                                type="email" 
+                                value={adminEmail} 
+                                onChange={e => setAdminEmail(e.target.value)} 
+                                required 
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    background: 'rgba(15, 23, 42, 0.6)',
+                                    color: '#f8fafc',
+                                    fontSize: '14px',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s',
+                                    boxSizing: 'border-box'
+                                }} 
+                            />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px' }}>비밀번호</label>
+                            <input 
+                                type="password" 
+                                value={adminPassword} 
+                                onChange={e => setAdminPassword(e.target.value)} 
+                                required 
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    background: 'rgba(15, 23, 42, 0.6)',
+                                    color: '#f8fafc',
+                                    fontSize: '14px',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s',
+                                    boxSizing: 'border-box'
+                                }} 
+                            />
+                        </div>
+                        {adminLoginError && (
+                            <div style={{
+                                color: '#f87171',
+                                fontSize: '13px',
+                                padding: '10px 12px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                borderRadius: '6px'
+                            }}>
+                                ⚠️ {adminLoginError}
+                            </div>
+                        )}
+                        <button 
+                            type="submit" 
+                            style={{
+                                padding: '14px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                                color: '#0f172a',
+                                fontWeight: 'bold',
+                                fontSize: '15px',
+                                cursor: 'pointer',
+                                transition: 'opacity 0.2s',
+                                marginTop: '8px'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                        >
+                            로그인 완료
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="admin-page">
             {/* 헤더 */}
@@ -541,9 +916,14 @@ const AdminPage: React.FC = () => {
                         <span className="admin-icon">⚙️</span>
                         BitWish Network 관리자 페이지
                     </h1>
-                    <button className="logout-button" onClick={() => window.location.href = '/'}>
-                        🏠 홈으로
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button className="logout-button" onClick={() => window.location.href = '/'}>
+                            🏠 홈으로
+                        </button>
+                        <button className="logout-button" style={{ backgroundColor: '#ef4444' }} onClick={handleAdminLogout}>
+                            🔒 로그아웃
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -574,32 +954,27 @@ const AdminPage: React.FC = () => {
                     📅 출석 보너스
                 </button>
                 <button
-                    className={`admin-tab ${activeTab === 'referral' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('referral')}
-                >
-                    🎁 가입자 목록
-                </button>
-                <button
                     className={`admin-tab ${activeTab === 'rewardStatus' ? 'active' : ''}`}
                     onClick={() => setActiveTab('rewardStatus')}
                 >
                     💰 추천 보상 현황
                 </button>
                 <button
-                    className={`admin-tab ${activeTab === 'partner' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('partner')}
+                    className={`admin-tab ${activeTab === 'communityAdmin' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('communityAdmin')}
                 >
-                    🏪 가맹점 관리
+                    💬 BW 커뮤니티 관리
                 </button>
                 <div className="admin-tab-dropdown-wrapper">
                     <button
-                        className={`admin-tab ${activeTab === 'kyc' || activeTab === 'halving' ? 'active' : ''}`}
+                        className={`admin-tab ${activeTab === 'kyc' || activeTab === 'halving' || activeTab === 'partner' ? 'active' : ''}`}
                         onClick={() => setActiveTab('kyc')}
                     >
                         🆔 KYC 관리 ▾
                     </button>
                     <div className="admin-dropdown-menu">
                         <button onClick={() => setActiveTab('kyc')}>KYC 신청 목록</button>
+                        <button onClick={() => setActiveTab('partner')}>🏪 가맹점 관리</button>
                         <button onClick={() => setActiveTab('halving')}>⏰ 반감기 관리</button>
                     </div>
                 </div>
@@ -1108,133 +1483,8 @@ const AdminPage: React.FC = () => {
                     </div>
                 )}
 
-                {activeTab === 'referral' && (
-                    <div className="admin-panel">
-                        <h2>🎁 가입자 목록 관리</h2>
-                        <div className="test-section">
-                            <p className="warning-text">⚠️ 가입자 현황 조회</p>
-
-                            <div className="search-box">
-                                <input
-                                    type="text"
-                                    placeholder="지갑 주소 입력"
-                                    className="admin-input"
-                                    value={referralSearchAddress}
-                                    onChange={(e) => setReferralSearchAddress(e.target.value)}
-                                    disabled={referralLoading}
-                                />
-                                <button
-                                    className="admin-button primary search-button-fixed"
-                                    onClick={handleSearchReferral}
-                                    disabled={referralLoading || isRefreshing}
-                                >
-                                    {referralLoading && !isRefreshing ? '검색 중...' : '주소 검색'}
-                                </button>
-                                {/* [작업 1 개정] 진짜 데이터 기반 지능형 새로고침 적용 */}
-                                <button
-                                    className="admin-button secondary refresh-icon-button"
-                                    onClick={handleSmartRefresh}
-                                    title="목록 새로고침"
-                                    disabled={referralLoading || isRefreshing}
-                                >
-                                    {isRefreshing ? '...' : '🔄'}
-                                </button>
-                            </div>
-
-
-                            {referralError && (
-                                <div className="error-message">{referralError}</div>
-                            )}
-
-                            {referralData && (
-                                <div className={`attendance-result-box ${isRefreshing ? 'refreshing' : ''}`}>
-                                    <h3>✅ 가입자 정보 확인</h3>
-                                    <div className="attendance-summary">
-                                        <div className="summary-item">
-                                            <span className="summary-label">전체 가입자 총 채굴량:</span>
-                                            <span className="summary-value active">
-                                                {parseFloat(realTimeTotal.toString()).toFixed(8)} BW
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {referralData.records && referralData.records.length > 0 ? (
-                                        <div className="attendance-table-container">
-                                            <h4>
-                                                {isSearchMode && referralSearchAddress.trim()
-                                                    ? `가입자: ${referralSearchAddress} 전체 검색 결과`
-                                                    : '전체 가입자 목록'
-                                                }
-                                            </h4>
-                                            <table className="attendance-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>가입자 지갑 주소</th>
-                                                        <th>{isSearchMode ? '채굴 일자' : '가입 일자'}</th>
-                                                        <th>일 채굴량</th>
-                                                        <th>KYC 상태</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {referralData.records.map((record: any, index: number) => (
-                                                        <tr key={index}>
-                                                            <td className="wallet-cell">
-                                                                {isSearchMode && record.referrerAddress
-                                                                    ? record.referrerAddress
-                                                                    : record.referredAddress
-                                                                }
-                                                            </td>
-                                                            <td>
-                                                                {isSearchMode && record.dateRange
-                                                                    ? record.dateRange
-                                                                    : formatDateTime(record.joinedDate)
-                                                                }
-                                                            </td>
-                                                            <td
-                                                                className="hoverable-amount"
-                                                                title={formatPrecise(record.dailyMiningAmount)}
-                                                            >
-                                                                {formatShort(record.dailyMiningAmount)} BW
-                                                            </td>
-                                                            <td>
-                                                                <span className={`kyc-status-${record.kycStatus.toLowerCase()}`}>
-                                                                    {getKycStatusText(record.kycStatus)}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                                <tfoot>
-                                                    <tr className="total-row">
-                                                        <td colSpan={3} style={{ textAlign: 'right', paddingRight: '20px' }}>
-                                                            <strong>총 합산 금액</strong>
-                                                        </td>
-                                                        <td className="total-amount">
-                                                            <strong
-                                                                className="hoverable-amount"
-                                                                title={formatPrecise(referralData.monthlyTotal)}
-                                                            >
-                                                                {formatShort(referralData.monthlyTotal)} BW
-                                                            </strong>
-                                                        </td>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
-                                        </div>
-                                    ) : (
-                                        <div className="no-data-message">
-                                            <p className="no-data-icon">📭</p>
-                                            <p className="no-data-text">추천 가입자가 없습니다</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
                 {activeTab === 'rewardStatus' && (
-                    <div className="admin-panel">
+                    <div className="admin-panel animate-fade-in">
                         <h2>💎 보상 현황 상태</h2>
 
                         <div className="test-section">
@@ -1343,6 +1593,301 @@ const AdminPage: React.FC = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* [가입자 목록 통합 영역] */}
+                        <div className="test-section" style={{ marginTop: '30px' }}>
+                            <h3>🎁 전체 가입자 목록 및 검색</h3>
+                            
+                            <div className="search-box">
+                                <input
+                                    type="text"
+                                    placeholder="지갑 주소 입력"
+                                    className="admin-input"
+                                    value={referralSearchAddress}
+                                    onChange={(e) => setReferralSearchAddress(e.target.value)}
+                                    disabled={referralLoading}
+                                />
+                                <button
+                                    className="admin-button primary search-button-fixed"
+                                    onClick={handleSearchReferral}
+                                    disabled={referralLoading || isRefreshing}
+                                >
+                                    {referralLoading && !isRefreshing ? '검색 중...' : '주소 검색'}
+                                </button>
+                                <button
+                                    className="admin-button secondary refresh-icon-button"
+                                    onClick={handleSmartRefresh}
+                                    title="목록 새로고침"
+                                    disabled={referralLoading || isRefreshing}
+                                >
+                                    {isRefreshing ? '...' : '🔄'}
+                                </button>
+                            </div>
+
+                            {referralError && (
+                                <div className="error-message">{referralError}</div>
+                            )}
+
+                            {referralData && (
+                                <div className={`attendance-result-box ${isRefreshing ? 'refreshing' : ''}`} style={{ marginTop: '20px' }}>
+                                    <h3>✅ 가입자 정보 확인</h3>
+                                    <div className="attendance-summary">
+                                        <div className="summary-item">
+                                            <span className="summary-label">전체 가입자 총 채굴량:</span>
+                                            <span className="summary-value active">
+                                                {parseFloat(realTimeTotal.toString()).toFixed(8)} BW
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {referralData.records && referralData.records.length > 0 ? (
+                                        <div className="attendance-table-container">
+                                            <h4>
+                                                {isSearchMode && referralSearchAddress.trim()
+                                                    ? `가입자: ${referralSearchAddress} 전체 검색 결과`
+                                                    : '전체 가입자 목록'
+                                                }
+                                            </h4>
+                                            <table className="attendance-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>가입자 지갑 주소</th>
+                                                        <th>{isSearchMode ? '채굴 일자' : '가입 일자'}</th>
+                                                        <th>일 채굴량</th>
+                                                        <th>KYC 상태</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {referralData.records.map((record: any, index: number) => (
+                                                        <tr key={index}>
+                                                            <td className="wallet-cell">
+                                                                {isSearchMode && record.referrerAddress
+                                                                    ? record.referrerAddress
+                                                                    : record.referredAddress
+                                                                }
+                                                            </td>
+                                                            <td>
+                                                                {isSearchMode && record.dateRange
+                                                                    ? record.dateRange
+                                                                    : formatDateTime(record.joinedDate)
+                                                                }
+                                                            </td>
+                                                            <td
+                                                                className="hoverable-amount"
+                                                                title={formatPrecise(record.dailyMiningAmount)}
+                                                            >
+                                                                {formatShort(record.dailyMiningAmount)} BW
+                                                            </td>
+                                                            <td>
+                                                                <span className={`kyc-status-${record.kycStatus.toLowerCase()}`}>
+                                                                    {getKycStatusText(record.kycStatus)}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr className="total-row">
+                                                        <td colSpan={3} style={{ textAlign: 'right', paddingRight: '20px' }}>
+                                                            <strong>총 합산 금액</strong>
+                                                        </td>
+                                                        <td className="total-amount">
+                                                            <strong
+                                                                className="hoverable-amount"
+                                                                title={formatPrecise(referralData.monthlyTotal)}
+                                                            >
+                                                                {formatShort(referralData.monthlyTotal)} BW
+                                                            </strong>
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                        <div className="no-data-message">
+                                            <p className="no-data-icon">📭</p>
+                                            <p className="no-data-text">추천 가입자가 없습니다</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'communityAdmin' && (
+                    <div className="admin-panel animate-fade-in">
+                        <h2>💬 BW 커뮤니티 통합 관리도구</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <div>
+                                <span>접속 계정: <strong>{communityUser?.nickname} ({communityUser?.email})</strong></span>
+                            </div>
+                        </div>
+
+                                <div className="admin-system-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px' }}>
+                                    {/* 공지 관리 섹션 */}
+                                    <div className="admin-system-card">
+                                        <h3>📢 커뮤니티 공지사항 관리</h3>
+                                        
+                                        {/* 공지 작성 및 수정 폼 */}
+                                        <form onSubmit={handleSaveNotice} style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
+                                            <h4 style={{ marginTop: 0 }}>{editingNoticeId ? '✏️ 공지사항 수정' : '✏️ 새 공지사항 작성'}</h4>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <div>
+                                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>공지 제목</label>
+                                                    <input type="text" value={noticeTitle} onChange={e => setNoticeTitle(e.target.value)} required className="admin-input" style={{ width: '100%' }} />
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>공지 내용</label>
+                                                    <textarea value={noticeContent} onChange={e => setNoticeContent(e.target.value)} required className="admin-input" style={{ width: '100%', minHeight: '120px', resize: 'vertical' }} rows={4} />
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>이미지 첨부 (옵션 - Base64 자동변환)</label>
+                                                    <input type="file" accept="image/*" onChange={handleImageChange} className="admin-input" style={{ width: '100%' }} />
+                                                    {noticeImageBase64 && (
+                                                        <div style={{ marginTop: '10px' }}>
+                                                            <img src={noticeImageBase64} alt="Preview" style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                                                            <button type="button" onClick={() => setNoticeImageBase64('')} className="admin-button danger" style={{ marginLeft: '10px', padding: '4px 8px', fontSize: '11px' }}>삭제</button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                                    <button type="submit" className="admin-button primary" style={{ flex: 1 }}>{editingNoticeId ? '수정 완료' : '등록 완료'}</button>
+                                                    {editingNoticeId && (
+                                                        <button type="button" onClick={() => {
+                                                            setEditingNoticeId(null);
+                                                            setNoticeTitle('');
+                                                            setNoticeContent('');
+                                                            setNoticeImageBase64('');
+                                                        }} className="admin-button secondary">취소</button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </form>
+
+                                        {/* 공지 목록 */}
+                                        <h4>공지 목록 {noticeLoading && <span style={{ fontSize: '12px', color: '#64748b' }}>(로딩중...)</span>}</h4>
+                                        
+                                        {noticeList.length > 0 ? (
+                                            <>
+                                                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <button onClick={handleDeleteSelectedNotices} disabled={selectedNoticeIds.length === 0} className="admin-button danger" style={{ padding: '8px 16px', fontSize: '12px' }}>
+                                                        🗑️ 선택 삭제 ({selectedNoticeIds.length}개 선택됨)
+                                                    </button>
+                                                    <div>
+                                                        <input 
+                                                            type="checkbox" 
+                                                            id="selectAllNotices"
+                                                            checked={selectedNoticeIds.length === noticeList.length && noticeList.length > 0}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedNoticeIds(noticeList.map(n => n.id));
+                                                                } else {
+                                                                    setSelectedNoticeIds([]);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <label htmlFor="selectAllNotices" style={{ marginLeft: '6px', fontSize: '13px', cursor: 'pointer' }}>전체 선택</label>
+                                                    </div>
+                                                </div>
+                                                <table className="admin-system-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                    <thead>
+                                                        <tr style={{ background: '#f1f5f9' }}>
+                                                            <th style={{ width: '40px', padding: '8px', textAlign: 'center' }}>선택</th>
+                                                            <th style={{ padding: '8px', textAlign: 'left' }}>제목</th>
+                                                            <th style={{ width: '100px', padding: '8px', textAlign: 'left' }}>작성자</th>
+                                                            <th style={{ width: '120px', padding: '8px', textAlign: 'center' }}>등록일</th>
+                                                            <th style={{ width: '100px', padding: '8px', textAlign: 'center' }}>동작</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {noticeList.map((notice, idx) => (
+                                                            <tr key={notice.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                                <td style={{ padding: '8px', textAlign: 'center' }}>
+                                                                    <input 
+                                                                        type="checkbox"
+                                                                        checked={selectedNoticeIds.includes(notice.id)}
+                                                                        onChange={(e) => {
+                                                                            if (e.target.checked) {
+                                                                                setSelectedNoticeIds([...selectedNoticeIds, notice.id]);
+                                                                            } else {
+                                                                                setSelectedNoticeIds(selectedNoticeIds.filter(id => id !== notice.id));
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </td>
+                                                                <td style={{ padding: '8px', fontSize: '13px' }}>
+                                                                    <div style={{ fontWeight: 'bold' }}>{notice.title}</div>
+                                                                    {notice.image && <span style={{ fontSize: '11px', color: '#3b82f6', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>🖼️ 이미지 포함</span>}
+                                                                </td>
+                                                                <td style={{ padding: '8px', fontSize: '13px' }}>{notice.author.nickname}</td>
+                                                                <td style={{ padding: '8px', fontSize: '12px', textAlign: 'center', color: '#64748b' }}>
+                                                                    {new Date(notice.createdAt).toLocaleDateString()}
+                                                                </td>
+                                                                <td style={{ padding: '8px', textAlign: 'center' }}>
+                                                                    <button onClick={() => handleEditSelectNotice(notice)} className="admin-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}>수정</button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+
+                                                {/* 페이징 네비게이션 */}
+                                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
+                                                    <button onClick={() => fetchAdminNotices(noticePage - 1)} disabled={noticePage === 1} className="admin-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>이전</button>
+                                                    <span style={{ fontSize: '13px' }}>{noticePage} / {noticeTotalPages} 페이지</span>
+                                                    <button onClick={() => fetchAdminNotices(noticePage + 1)} disabled={noticePage === noticeTotalPages} className="admin-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>다음</button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="no-data-message" style={{ padding: '30px' }}>등록된 공지사항이 없습니다.</div>
+                                        )}
+                                    </div>
+
+                                    {/* 금칙어 관리 섹션 */}
+                                    <div className="admin-system-card">
+                                        <h3>🚫 실시간 글쓰기 금칙어 관리</h3>
+                                        <p style={{ fontSize: '12px', color: '#64748b', margin: '-10px 0 20px 0' }}>
+                                            여기에 등록된 단어는 커뮤니티 내 모든 게시글 및 댓글 작성 시 즉각 필터링되어 차단 처리됩니다.
+                                        </p>
+                                        
+                                        <form onSubmit={handleAddBannedWord} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                                            <input 
+                                                type="text" 
+                                                value={newBannedWord} 
+                                                onChange={e => setNewBannedWord(e.target.value)} 
+                                                placeholder="추가할 금칙어 입력" 
+                                                required 
+                                                className="admin-input" 
+                                                style={{ flex: 1 }} 
+                                            />
+                                            <button type="submit" className="admin-button primary" style={{ padding: '10px 20px' }}>추가</button>
+                                        </form>
+
+                                        <h4>등록된 금칙어 ({bannedWordsList.length}개) {bannedWordLoading && <span style={{ fontSize: '12px', color: '#64748b' }}>(로딩중...)</span>}</h4>
+                                        
+                                        <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '15px', minHeight: '200px', maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0' }}>
+                                            {bannedWordsList.length > 0 ? (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                    {bannedWordsList.map(bw => (
+                                                        <div key={bw._id} style={{ display: 'flex', alignItems: 'center', background: '#fee2e2', color: '#991b1b', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', border: '1px solid #fca5a5' }}>
+                                                            <strong>{bw.word}</strong>
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => handleDeleteBannedWord(bw._id)} 
+                                                                style={{ border: 'none', background: 'transparent', color: '#b91c1c', marginLeft: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="no-data-message" style={{ padding: '30px', color: '#64748b' }}>등록된 금칙어가 없습니다.</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                     </div>
                 )}
 

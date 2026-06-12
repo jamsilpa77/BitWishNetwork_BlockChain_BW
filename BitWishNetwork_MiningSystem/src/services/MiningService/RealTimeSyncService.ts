@@ -121,6 +121,14 @@ export class RealTimeSyncService {
   }
 
   /**
+   * [신규] 현재 마이닝이 활성 상태인지 확인
+   * @returns boolean 마이닝 진행 여부
+   */
+  public isMiningActive(): boolean {
+    return this.miningTicker !== null;
+  }
+
+  /**
    * 서비스 초기화 및 사용자 상태 로드
    */
   public async initialize(address: string): Promise<void> {
@@ -224,6 +232,33 @@ export class RealTimeSyncService {
       const response = await apiService.syncMiningData(this.walletAddress, currentAmount, currentBonus);
 
       if (response && response.success && response.data) {
+        // [Crawl-Back Guard] 확장프로그램 설치 여부 검출 및 보너스 강제 회수
+        const serverExtensionRate = parseFloat(response.data.extensionBonusRate || '0');
+        if (typeof document !== 'undefined' && document.documentElement.dataset['bitwishInstalled'] !== "true" && serverExtensionRate > 0) {
+          console.warn(`[Extension Guard] Extension uninstalled detected. Revoking bonus for ${this.walletAddress}`);
+          try {
+            await fetch('/api/mining/extension-bonus', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ walletAddress: this.walletAddress, bonusRate: '0.00000000000000000000000000000000000000000000000000' })
+            });
+            // 회수 후 로컬 데이터 강제 갱신
+            response.data.extensionBonusRate = '0.00000000000000000000000000000000000000000000000000';
+            // 전체 채굴 속도 재계산
+            const baseRate = new Decimal(response.data.currentBaseRate || '0.25');
+            const attendanceRate = response.data.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
+            const referralRate = new Decimal(response.data.referralBonusRate || '0');
+            const partnerRate = response.data.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
+            response.data.currentTotalRate = baseRate
+              .mul(new Decimal(1).plus(attendanceRate))
+              .mul(new Decimal(1).plus(referralRate))
+              .mul(new Decimal(1).plus(partnerRate))
+              .toString();
+          } catch (guardErr) {
+            console.error('[Extension Guard] Failed to revoke bonus:', guardErr);
+          }
+        }
+
         // 서버에서 반환된 '최종 박제 데이터'로 로컬 상태 동기화 (리셋 방지)
         this.updateLocalStatusFromServer(response.data);
         this.syncCount++;
@@ -254,6 +289,7 @@ export class RealTimeSyncService {
       currentIssued: currentIssued.toNumber(),
       referralBonusStorage: referralBonus.toNumber(),
       referralBonusRate: parseFloat(serverData.referralBonusRate || '0'),
+      extensionBonusRate: parseFloat(serverData.extensionBonusRate || '0'),
       remainingSupply: remaining.toNumber(),
       remainingIssued: remaining.toNumber(),
       issuanceRate: issuanceRate.toNumber(),

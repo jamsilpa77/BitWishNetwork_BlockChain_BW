@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
-import { BWCommunityUser, BWCommunityPost, BWCommunityComment, BWCommunityReaction } from '../models/bwCommunityModels';
+import { BWCommunityUser, BWCommunityPost, BWCommunityComment, BWCommunityReaction, BWBannedWord } from '../models/bwCommunityModels';
 
 const router = express.Router();
 
@@ -40,13 +40,27 @@ router.post('/auth/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         // 특정 관리자 이메일 하드코딩 식별 (운영 환경에서는 환경변수 처리 권장)
-        const role = email === 'admin@bitwish.network' ? 'ADMIN' : 'USER';
+        const role = (email === 'admin@bitwish.network' || email === 'salmani1@naver.com') ? 'ADMIN' : 'USER';
 
         const user = new BWCommunityUser({ email, password: hashedPassword, nickname, role });
         await user.save();
 
         const accessToken = jwt.sign({ id: user._id, email: user.email, role: user.role, nickname: user.nickname }, JWT_SECRET);
         return res.status(201).json({ success: true, tokens: { accessToken }, user: { id: user._id, email: user.email, nickname: user.nickname, role: user.role } });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// 닉네임 중복 확인 API
+router.get('/auth/check-nickname/:nickname', async (req, res) => {
+    try {
+        const { nickname } = req.params;
+        if (!nickname || nickname.trim().length === 0) {
+            return res.status(400).json({ error: '닉네임을 입력해주세요.' });
+        }
+        const existing = await BWCommunityUser.findOne({ nickname: nickname.trim() });
+        return res.json({ success: true, available: !existing });
     } catch (err: any) {
         return res.status(500).json({ error: err.message });
     }
@@ -125,8 +139,38 @@ router.get('/posts', async (req, res) => {
     }
 });
 
-// 신규 게시글 작성
-router.post('/posts', async (req, res) => {
+// ==============================================
+// 금칙어 필터링 미들웨어 (게시글/댓글 작성 시점에만 적용)
+// ==============================================
+const checkBannedWords = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+        const bannedWords = await BWBannedWord.find({}).lean();
+        if (bannedWords.length === 0) return next();
+
+        // 금칙어 정규식 패턴 생성 (대소문자 무시)
+        const pattern = new RegExp(
+            bannedWords.map((bw: any) => bw.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+            'gi'
+        );
+
+        const textToCheck = `${req.body.title || ''} ${req.body.content || ''}`;
+        const found = textToCheck.match(pattern);
+
+        if (found) {
+            return res.status(400).json({
+                success: false,
+                error: '금칙어가 포함되어 있습니다.',
+                bannedWordsFound: [...new Set(found.map((w: string) => w.toLowerCase()))]
+            });
+        }
+        next();
+    } catch (err) {
+        next();
+    }
+};
+
+// 신규 게시글 작성 (금칙어 필터링 미들웨어 적용)
+router.post('/posts', checkBannedWords, async (req, res) => {
     try {
         const { title, content, category, authorId } = req.body;
         if (!title || !content || !category || !authorId) return res.status(400).json({ error: 'Missing required fields' });
@@ -140,6 +184,61 @@ router.post('/posts', async (req, res) => {
         await post.save();
 
         return res.status(201).json({ success: true, data: post });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// 게시글 수정 (작성자 본인만 허용)
+router.put('/posts/:id', checkBannedWords, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, content, authorId } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: '유효하지 않은 게시글 ID입니다.' });
+        if (!authorId) return res.status(400).json({ error: '작성자 정보가 필요합니다.' });
+
+        const post = await BWCommunityPost.findById(id);
+        if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+
+        // 작성자 본인 확인
+        if (post.authorId.toString() !== authorId) {
+            return res.status(403).json({ error: '본인이 작성한 게시글만 수정할 수 있습니다.' });
+        }
+
+        if (title) post.title = title;
+        if (content) post.content = content;
+        await post.save();
+
+        return res.json({ success: true, data: post });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// 게시글 삭제 (작성자 본인만 허용)
+router.delete('/posts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { authorId } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: '유효하지 않은 게시글 ID입니다.' });
+        if (!authorId) return res.status(400).json({ error: '작성자 정보가 필요합니다.' });
+
+        const post = await BWCommunityPost.findById(id);
+        if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+
+        // 작성자 본인 확인
+        if (post.authorId.toString() !== authorId) {
+            return res.status(403).json({ error: '본인이 작성한 게시글만 삭제할 수 있습니다.' });
+        }
+
+        // 게시글에 달린 댓글, 리액션도 함께 삭제
+        await BWCommunityComment.deleteMany({ postId: id });
+        await BWCommunityReaction.deleteMany({ postId: id });
+        await BWCommunityPost.findByIdAndDelete(id);
+
+        return res.json({ success: true, message: '게시글이 삭제되었습니다.' });
     } catch (err: any) {
         return res.status(500).json({ error: err.message });
     }
@@ -199,7 +298,7 @@ router.get('/posts/:id', async (req, res) => {
 // 3. 댓글 및 리액션 로직
 // ==============================================
 
-router.post('/comments', async (req, res) => {
+router.post('/comments', checkBannedWords, async (req, res) => {
     try {
         const { content, postId, userId, parentId } = req.body;
         if (!content || !postId || !userId) return res.status(400).json({ error: 'Missing fields' });
@@ -288,6 +387,194 @@ router.post('/admin/notice', verifyCommunityAdmin, async (req, res) => {
         const notice = new BWCommunityPost({ title, content, category: 'NOTICE', isNotice: true, authorId: new mongoose.Types.ObjectId(authorId) });
         await notice.save();
         return res.json({ success: true, data: notice });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================
+// 5. 금칙어 관리 API (관리자 전용)
+// ==============================================
+
+// 금칙어 목록 조회
+router.get('/admin/banned-words', verifyCommunityAdmin, async (req, res) => {
+    try {
+        const words = await BWBannedWord.find({}).sort({ createdAt: -1 }).lean();
+        return res.json({ success: true, data: words });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// 금칙어 추가
+router.post('/admin/banned-words', verifyCommunityAdmin, async (req, res) => {
+    try {
+        const { word } = req.body;
+        if (!word || word.trim().length === 0) return res.status(400).json({ error: '금칙어를 입력해주세요.' });
+
+        const existing = await BWBannedWord.findOne({ word: word.trim() });
+        if (existing) return res.status(400).json({ error: '이미 등록된 금칙어입니다.' });
+
+        const bannedWord = new BWBannedWord({ word: word.trim() });
+        await bannedWord.save();
+        return res.status(201).json({ success: true, data: bannedWord });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// 금칙어 삭제
+router.delete('/admin/banned-words/:id', verifyCommunityAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: '유효하지 않은 ID입니다.' });
+
+        await BWBannedWord.findByIdAndDelete(id);
+        return res.json({ success: true, message: '금칙어가 삭제되었습니다.' });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// ==============================================
+// 6. 공지사항 관리 API (관리자 전용)
+// ==============================================
+
+// 공지사항 목록 조회 (10개 단위 페이징)
+router.get('/admin/notices', verifyCommunityAdmin, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        const totalNotices = await BWCommunityPost.countDocuments({ isNotice: true });
+        const notices = await BWCommunityPost.find({ isNotice: true })
+            .populate('authorId', 'nickname')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        const formatted = notices.map((post: any) => ({
+            id: post._id,
+            title: post.title,
+            content: post.content,
+            category: post.category,
+            views: post.views,
+            likeCount: post.likeCount,
+            dislikeCount: post.dislikeCount,
+            heartCount: post.heartCount,
+            funnyCount: post.funnyCount,
+            hotScore: post.hotScore,
+            isNotice: post.isNotice,
+            image: post.image || '',
+            createdAt: post.createdAt,
+            author: post.authorId ? { id: post.authorId._id, nickname: post.authorId.nickname } : { id: null, nickname: 'Unknown' }
+        }));
+
+        return res.json({
+            success: true,
+            data: {
+                notices: formatted,
+                totalPages: Math.ceil(totalNotices / limit),
+                currentPage: page,
+                totalNotices
+            }
+        });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// 공지사항 단일 조회
+router.get('/admin/notices/:id', verifyCommunityAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: '유효하지 않은 공지 ID입니다.' });
+
+        const notice = await BWCommunityPost.findById(id).populate('authorId', 'nickname').lean() as any;
+        if (!notice || !notice.isNotice) return res.status(404).json({ error: '공지사항을 찾을 수 없습니다.' });
+
+        return res.json({
+            success: true,
+            data: {
+                id: notice._id,
+                title: notice.title,
+                content: notice.content,
+                category: notice.category,
+                views: notice.views,
+                image: notice.image || '',
+                createdAt: notice.createdAt,
+                author: notice.authorId ? { id: notice.authorId._id, nickname: notice.authorId.nickname } : { id: null, nickname: 'Unknown' }
+            }
+        });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// 공지사항 등록
+router.post('/admin/notices', verifyCommunityAdmin, async (req, res) => {
+    try {
+        const { title, content, image, authorId } = req.body;
+        if (!title || !content || !authorId) {
+            return res.status(400).json({ error: '필수 항목이 누락되었습니다.' });
+        }
+
+        const notice = new BWCommunityPost({
+            title,
+            content,
+            category: 'NOTICE',
+            isNotice: true,
+            image: image || '',
+            authorId: new mongoose.Types.ObjectId(authorId)
+        });
+
+        await notice.save();
+        return res.status(201).json({ success: true, data: notice });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// 공지사항 수정
+router.put('/admin/notices/:id', verifyCommunityAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, content, image } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: '유효하지 않은 공지 ID입니다.' });
+
+        const notice = await BWCommunityPost.findById(id);
+        if (!notice || !notice.isNotice) return res.status(404).json({ error: '공지사항을 찾을 수 없습니다.' });
+
+        if (title) notice.title = title;
+        if (content) notice.content = content;
+        if (image !== undefined) notice.image = image;
+
+        await notice.save();
+        return res.json({ success: true, data: notice });
+    } catch (err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// 공지사항 일괄 삭제
+router.post('/admin/notices/delete-multiple', verifyCommunityAdmin, async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: '삭제할 공지 ID 목록이 유효하지 않습니다.' });
+        }
+
+        const objectIds = ids.map(id => new mongoose.Types.ObjectId(id));
+        
+        // 해당 공지사항들에 달린 댓글 및 리액션 함께 일괄 삭제
+        await BWCommunityComment.deleteMany({ postId: { $in: objectIds } });
+        await BWCommunityReaction.deleteMany({ postId: { $in: objectIds } });
+        const result = await BWCommunityPost.deleteMany({ _id: { $in: objectIds }, isNotice: true });
+
+        return res.json({ success: true, message: `${result.deletedCount}개의 공지사항이 삭제되었습니다.` });
     } catch (err: any) {
         return res.status(500).json({ error: err.message });
     }

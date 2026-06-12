@@ -31,7 +31,7 @@ router.post('/auth/register', async (req, res) => {
         if (existing) return res.status(400).json({ error: 'Email or Nickname already exists' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const role = email === 'admin@bitwish.network' ? 'ADMIN' : 'USER';
+        const role = (email === 'admin@bitwish.network' || email === 'salmani1@naver.com') ? 'ADMIN' : 'USER';
         const user = new CommunityUser({ email, password: hashedPassword, nickname, role });
         await user.save();
 

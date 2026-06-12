@@ -66,7 +66,16 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [nickname, setNickname] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
+    const [nicknameChecking, setNicknameChecking] = useState(false);
+    const [nicknameError, setNicknameError] = useState('');
     const [authError, setAuthError] = useState('');
+
+    // 게시글 수정 관련 상태
+    const [isEditing, setIsEditing] = useState(false);
+    const [editTitle, setEditTitle] = useState('');
+    const [editContent, setEditContent] = useState('');
 
     const [writeTitle, setWriteTitle] = useState('');
     const [writeContent, setWriteContent] = useState('');
@@ -130,9 +139,48 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
         }
     };
 
+    // 닉네임 중복확인 핸들러
+    const handleCheckNickname = async () => {
+        if (!nickname || nickname.trim().length === 0) return;
+        setNicknameChecking(true);
+        setNicknameAvailable(null);
+        setNicknameError('');
+        try {
+            const res = await communityFetch(`/auth/check-nickname/${encodeURIComponent(nickname.trim())}`);
+            if (res.error) {
+                setNicknameError(res.error);
+                setNicknameAvailable(null);
+            } else {
+                setNicknameAvailable(res.available === true);
+                if (res.available !== true) {
+                    setNicknameError('이미 사용 중인 닉네임입니다.');
+                }
+            }
+        } catch (err: any) {
+            console.error('Check nickname error:', err);
+            setNicknameError(`서버 통신 오류가 발생했습니다. (${err.message || err})`);
+            setNicknameAvailable(null);
+        } finally {
+            setNicknameChecking(false);
+        }
+    };
+
     const handleAuthSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setAuthError('');
+
+        // 회원가입 시 비밀번호 확인 검증
+        if (authMode === 'register') {
+            if (password !== confirmPassword) {
+                setAuthError('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+            if (nicknameAvailable !== true) {
+                setAuthError('닉네임 중복확인을 먼저 진행해주세요.');
+                return;
+            }
+        }
+
         try {
             const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
             const body = authMode === 'login' ? { email, password } : { email, password, nickname };
@@ -146,6 +194,9 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                 localStorage.setItem('bw_community_user', JSON.stringify(res.user));
                 setToken(res.tokens.accessToken);
                 setCurrentUser(res.user);
+                setConfirmPassword('');
+                setNicknameAvailable(null);
+                setNicknameError('');
                 setCurrentView('list');
             } else {
                 setAuthError(res.error || 'Authentication failed');
@@ -264,6 +315,51 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
             }
         } catch (err) {
             console.error('Failed to apply reaction', err);
+        }
+    };
+
+    // 게시글 수정 핸들러
+    const handleEditPost = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedPost || !currentUser) return;
+        try {
+            const res = await communityFetch(`/posts/${selectedPost.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    title: editTitle,
+                    content: editContent,
+                    authorId: currentUser.id
+                })
+            });
+            if (res.success) {
+                setIsEditing(false);
+                fetchPostDetail(selectedPost.id);
+            } else {
+                alert(res.error || '수정에 실패했습니다.');
+            }
+        } catch (err) {
+            alert('수정 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 게시글 삭제 핸들러
+    const handleDeletePost = async () => {
+        if (!selectedPost || !currentUser) return;
+        if (!window.confirm('정말로 이 게시글을 삭제하시겠습니까?')) return;
+        try {
+            const res = await communityFetch(`/posts/${selectedPost.id}`, {
+                method: 'DELETE',
+                body: JSON.stringify({ authorId: currentUser.id })
+            });
+            if (res.success) {
+                alert('게시글이 삭제되었습니다.');
+                setCurrentView('list');
+                fetchPostList();
+            } else {
+                alert(res.error || '삭제에 실패했습니다.');
+            }
+        } catch (err) {
+            alert('삭제 중 오류가 발생했습니다.');
         }
     };
 
@@ -617,7 +713,28 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
 
                     {currentView === 'detail' && selectedPost && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            <div><button onClick={() => setCurrentView('list')} className="bw-btn bw-btn-neutral">⬅️ 목록보기</button></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <button onClick={() => setCurrentView('list')} className="bw-btn bw-btn-neutral">⬅️ 목록보기</button>
+                                {currentUser && selectedPost.author && String(currentUser.id) === String(selectedPost.author.id) && (
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button onClick={() => { setIsEditing(!isEditing); setEditTitle(selectedPost.title); setEditContent(selectedPost.content); }} className="bw-btn bw-btn-neutral" style={{ fontSize: '13px' }}>✏️ 수정</button>
+                                        <button onClick={handleDeletePost} className="bw-btn" style={{ fontSize: '13px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>🗑️ 삭제</button>
+                                    </div>
+                                )}
+                            </div>
+                            {isEditing ? (
+                                <div style={{ padding: '32px', borderRadius: '20px', backgroundColor: 'var(--bw-bg-card)', border: '1px solid var(--bw-border-color)', boxShadow: 'var(--bw-glass-shadow)' }}>
+                                    <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '24px' }}>✏️ 게시글 수정</h3>
+                                    <form onSubmit={handleEditPost} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="bw-input" style={{ width: '100%', padding: '14px', boxSizing: 'border-box' }} required />
+                                        <textarea rows={12} value={editContent} onChange={(e) => setEditContent(e.target.value)} className="bw-input" style={{ width: '100%', padding: '16px', boxSizing: 'border-box', resize: 'vertical' }} required />
+                                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                            <button type="button" onClick={() => setIsEditing(false)} className="bw-btn bw-btn-neutral">취소</button>
+                                            <button type="submit" className="bw-btn bw-btn-primary">수정 완료</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            ) : (
                             <div style={{ padding: '32px', borderRadius: '20px', backgroundColor: 'var(--bw-bg-card)', border: '1px solid var(--bw-border-color)', boxShadow: 'var(--bw-glass-shadow)' }}>
                                 <div style={{ borderBottom: '1px solid var(--bw-border-color)', paddingBottom: '24px', marginBottom: '24px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -637,6 +754,7 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                     <button onClick={() => handleReaction('DISLIKE')} className="bw-btn bw-btn-neutral bw-reaction-btn" style={{ padding: '12px 24px', fontSize: '16px' }}>👎 {selectedPost.dislikeCount}</button>
                                 </div>
                             </div>
+                            )}
                             <div style={{ padding: '32px', borderRadius: '20px', backgroundColor: 'var(--bw-bg-card)', border: '1px solid var(--bw-border-color)' }}>
                                 <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '24px' }}>💬 댓글 ({comments.length})</h3>
                                 <form onSubmit={(e) => handleCreateComment(e, null)} style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
@@ -677,7 +795,10 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                     {currentView === 'write' && (
                         <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%', padding: '40px', borderRadius: '24px', backgroundColor: 'var(--bw-bg-card)', border: '1px solid var(--bw-border-color)', boxShadow: 'var(--bw-glass-shadow)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                                <h2 style={{ fontSize: '24px', fontWeight: 800, margin: 0 }}>✏️ 새 글 작성</h2>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <button onClick={() => setCurrentView('list')} className="bw-btn bw-btn-neutral" style={{ padding: '8px 16px' }}>⬅️ 이전으로</button>
+                                    <h2 style={{ fontSize: '24px', fontWeight: 800, margin: 0 }}>✏️ 새 글 작성</h2>
+                                </div>
                                 <button onClick={() => setCurrentView('list')} className="bw-btn bw-btn-neutral">취소</button>
                             </div>
                             <form onSubmit={handleCreatePost} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -704,6 +825,7 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
 
                     {currentView === 'auth' && (
                         <div style={{ maxWidth: '440px', margin: '60px auto 0 auto', width: '100%' }}>
+                            <button onClick={() => setCurrentView('list')} className="bw-btn bw-btn-neutral" style={{ marginBottom: '16px' }}>⬅️ 이전으로</button>
                             <div style={{ padding: '40px', borderRadius: '24px', backgroundColor: 'var(--bw-bg-card)', border: '1px solid var(--bw-border-color)', boxShadow: 'var(--bw-glass-shadow)' }}>
                                 <h2 style={{ textAlign: 'center', fontSize: '24px', fontWeight: 800, marginBottom: '32px' }}>{getTranslation(lang, 'title')} 시작하기</h2>
 
@@ -720,8 +842,8 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                 </div>
 
                                 <div style={{ display: 'flex', marginBottom: '24px', backgroundColor: 'var(--bw-input-bg)', borderRadius: '12px', padding: '4px' }}>
-                                    <button onClick={() => { setAuthMode('login'); setAuthError(''); }} className="bw-btn" style={{ flex: 1, backgroundColor: authMode === 'login' ? 'var(--bw-bg-primary)' : 'transparent', color: authMode === 'login' ? 'var(--bw-text-primary)' : 'var(--bw-text-secondary)', boxShadow: authMode === 'login' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>로그인</button>
-                                    <button onClick={() => { setAuthMode('register'); setAuthError(''); }} className="bw-btn" style={{ flex: 1, backgroundColor: authMode === 'register' ? 'var(--bw-bg-primary)' : 'transparent', color: authMode === 'register' ? 'var(--bw-text-primary)' : 'var(--bw-text-secondary)', boxShadow: authMode === 'register' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>이메일 가입</button>
+                                    <button onClick={() => { setAuthMode('login'); setAuthError(''); setConfirmPassword(''); setNicknameAvailable(null); setNicknameError(''); }} className="bw-btn" style={{ flex: 1, backgroundColor: authMode === 'login' ? 'var(--bw-bg-primary)' : 'transparent', color: authMode === 'login' ? 'var(--bw-text-primary)' : 'var(--bw-text-secondary)', boxShadow: authMode === 'login' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>로그인</button>
+                                    <button onClick={() => { setAuthMode('register'); setAuthError(''); setConfirmPassword(''); setNickname(''); setNicknameAvailable(null); setNicknameError(''); }} className="bw-btn" style={{ flex: 1, backgroundColor: authMode === 'register' ? 'var(--bw-bg-primary)' : 'transparent', color: authMode === 'register' ? 'var(--bw-text-primary)' : 'var(--bw-text-secondary)', boxShadow: authMode === 'register' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>이메일 가입</button>
                                 </div>
 
                                 {authError && <div style={{ padding: '16px', marginBottom: '24px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '12px', fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>{authError}</div>}
@@ -736,10 +858,29 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bw-input" style={{ width: '100%', boxSizing: 'border-box' }} />
                                     </div>
                                     {authMode === 'register' && (
-                                        <div style={{ animation: 'fade-in 0.3s ease' }}>
-                                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600 }}>닉네임</label>
-                                            <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} required className="bw-input" style={{ width: '100%', boxSizing: 'border-box' }} />
+                                        <>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600 }}>비밀번호 확인</label>
+                                            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="bw-input" style={{ width: '100%', boxSizing: 'border-box', borderColor: confirmPassword && password !== confirmPassword ? '#ef4444' : undefined }} />
+                                            {confirmPassword && password !== confirmPassword && (
+                                                <span style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px', display: 'block' }}>비밀번호가 일치하지 않습니다.</span>
+                                            )}
+                                            {confirmPassword && password === confirmPassword && (
+                                                <span style={{ fontSize: '12px', color: '#22c55e', marginTop: '4px', display: 'block' }}>✓ 비밀번호가 일치합니다.</span>
+                                            )}
                                         </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600 }}>닉네임</label>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <input type="text" value={nickname} onChange={(e) => { setNickname(e.target.value); setNicknameAvailable(null); setNicknameError(''); }} required className="bw-input" style={{ flex: 1, boxSizing: 'border-box' }} />
+                                                <button type="button" onClick={handleCheckNickname} disabled={nicknameChecking || !nickname.trim()} className="bw-btn bw-btn-neutral" style={{ whiteSpace: 'nowrap', padding: '10px 16px', fontSize: '13px' }}>
+                                                    {nicknameChecking ? '확인중...' : '중복확인'}
+                                                </button>
+                                            </div>
+                                            {nicknameAvailable === true && <span style={{ fontSize: '12px', color: '#22c55e', marginTop: '4px', display: 'block' }}>✓ 사용 가능한 닉네임입니다.</span>}
+                                            {nicknameError && <span style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px', display: 'block' }}>✗ {nicknameError}</span>}
+                                        </div>
+                                        </>
                                     )}
                                     <button type="submit" className="bw-btn bw-btn-primary" style={{ padding: '14px', marginTop: '16px' }}>
                                         {authMode === 'login' ? '로그인 완료' : '회원가입 완료'}

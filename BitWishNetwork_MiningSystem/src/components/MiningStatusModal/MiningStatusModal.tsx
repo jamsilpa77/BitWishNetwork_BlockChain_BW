@@ -165,15 +165,11 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
                     const isAttendanceActive = userData.miningState?.isAttendanceActive || false;
                     const attendanceBonusRateVal = isAttendanceActive ? new Decimal(5.0) : new Decimal(0.0);
 
-                    // 서버에서 이미 계산된 최종 보너스 및 보상률을 반영
+                    // 서버에서 이미 계산된 최종 보상률을 반영
                     const finalBaseRate = new Decimal(userData.miningState?.currentTotalRate || '0.25');
-                    const dailyMaxOrigin = new Decimal(6.0);
 
-                    // 일일 최대 보상률도 동일한 배율(multiplier) 적용을 위해 서버 보너스율 기반 계산
-                    const multiplier = new Decimal(1).plus(new Decimal(userData.miningState?.referralBonusRate || '0'))
-                        .plus(isAttendanceActive ? 0.05 : 0)
-                        .plus(userData.miningState?.partnerStatus === 'REGISTERED' ? 0.25 : 0);
-                    const finalDailyMaxRate = dailyMaxOrigin.mul(multiplier);
+                    // 일일 최대 보상률도 시간당 보상률의 24배로 단순화/통합 적용 (니모닉 30% 보너스 등 모든 보너스 배율 반영)
+                    const finalDailyMaxRate = finalBaseRate.mul(24);
 
                     // [수복] 추천 보너스 데이터 주소 교정 (miningState가 아닌 user 객체에서 추출)
                     const userProfile = userData.user || {};
@@ -338,19 +334,14 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
 
     const handleCheckInSuccess = (bonusRate: number) => {
         // 출석 체크 성공 시 즉시 반영
-        const base = new Decimal(0.25);
-        const dailyMax = new Decimal(6.0);
-
-        // 기존 추천 보너스 비율 유지
-        const currentReferralRate = userStats.referralBonusRate.div(100); // 0.06
+        // 곱 연산(Multiplicative) 정책에 따라 기존 보상률에 (1 + attendanceRate) 적용
         const newAttendanceRate = new Decimal(bonusRate); // 0.05
-
-        const totalMultiplier = new Decimal(1).plus(currentReferralRate).plus(newAttendanceRate);
+        const newBaseRate = userStats.baseRate.mul(new Decimal(1).plus(newAttendanceRate));
 
         setUserStats(prev => ({
             ...prev,
-            baseRate: base.mul(totalMultiplier),
-            dailyMaxRate: dailyMax.mul(totalMultiplier),
+            baseRate: newBaseRate,
+            dailyMaxRate: newBaseRate.mul(24),
             attendanceBonusRate: new Decimal(bonusRate * 100),
             isAttendanceActive: true
         }));
@@ -550,8 +541,8 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
                         onClick={handleStartMining}
                         disabled={isMining}
                     >
-                        <span className="button-icon">⚡</span>
-                        {getTranslation('buttons.start')}
+                        <span className="button-icon">{isMining ? '🔄' : '⚡'}</span>
+                        {isMining ? getTranslation('buttons.miningInProgress') || '채굴 진행중' : getTranslation('buttons.start')}
                     </button>
                     <button className="footer-btn wallet">
                         <span className="button-icon">🔑</span>

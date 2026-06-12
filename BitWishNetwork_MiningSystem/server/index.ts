@@ -18,6 +18,9 @@ import kycRoutes from './routes/kyc';
 import rankingRoutes from './routes/ranking';
 import transactionRoutes from './routes/transaction';
 import { SettlementWorker } from '../src/server/cron/SettlementWorker';
+import bcrypt from 'bcryptjs';
+import { BWCommunityUser } from './models/bwCommunityModels';
+import { CommunityUser } from './models/CommunityUser';
 
 import { BitWishBlockchain } from '../../BitWishNetwork_BlockChain/src/engine/BitWishBlockchain';
 import User from './models/User';
@@ -434,10 +437,50 @@ app.get('*', (req, res, next) => {
     });
 });
 
+// 어드민 기본 계정 시드 함수
+async function seedAdminUser() {
+    try {
+        const adminEmail = 'salmani1@naver.com';
+        const rawPassword = '@Love-1106@';
+        const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
+        // 1. BWCommunityUser 어드민 계정 시드
+        const existingBWAdmin = await BWCommunityUser.findOne({ email: adminEmail });
+        if (!existingBWAdmin) {
+            const adminUser = new BWCommunityUser({
+                email: adminEmail,
+                password: hashedPassword,
+                nickname: '관리자',
+                role: 'ADMIN'
+            });
+            await adminUser.save();
+            console.log(`[SEED] BWCommunityUser 어드민 계정(${adminEmail}) 생성 성공!`);
+        }
+
+        // 2. CommunityUser 어드민 계정 시드
+        const existingCommAdmin = await CommunityUser.findOne({ email: adminEmail });
+        if (!existingCommAdmin) {
+            const adminUser = new CommunityUser({
+                email: adminEmail,
+                password: hashedPassword,
+                nickname: '관리자',
+                role: 'ADMIN'
+            });
+            await adminUser.save();
+            console.log(`[SEED] CommunityUser 어드민 계정(${adminEmail}) 생성 성공!`);
+        }
+    } catch (err) {
+        console.error('[SEED] 어드민 계정 생성 실패:', err);
+    }
+}
+
 // MongoDB Connection
 mongoose.connect(MONGODB_URI)
-    .then(() => {
+    .then(async () => {
         console.log('✅ Connected to MongoDB Hybrid Storage');
+
+        // 관리자 기본 계정 시드 실행
+        await seedAdminUser();
 
         // Start Server
         // [보안] 프로덕션에서는 127.0.0.1에만 바인딩하여 외부에서 5001 포트 직접 접근 원천 차단

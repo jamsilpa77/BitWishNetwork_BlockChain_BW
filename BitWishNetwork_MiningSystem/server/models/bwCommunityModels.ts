@@ -21,6 +21,7 @@ const BWCommunityPostSchema = new mongoose.Schema({
     funnyCount: { type: Number, default: 0 },
     hotScore: { type: Number, default: 0 }, // 핫 게시물 실시간 알고리즘 점수
     isNotice: { type: Boolean, default: false },
+    image: { type: String, default: '' },
     authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'BWCommunityUser', required: true }
 }, { timestamps: true });
 
@@ -47,3 +48,10 @@ export const BWCommunityUser = mongoose.models.BWCommunityUser || mongoose.model
 export const BWCommunityPost = mongoose.models.BWCommunityPost || mongoose.model('BWCommunityPost', BWCommunityPostSchema);
 export const BWCommunityComment = mongoose.models.BWCommunityComment || mongoose.model('BWCommunityComment', BWCommunityCommentSchema);
 export const BWCommunityReaction = mongoose.models.BWCommunityReaction || mongoose.model('BWCommunityReaction', BWCommunityReactionSchema);
+
+// 5. 금칙어 스키마 (관리자가 등록한 금칙어 목록 — 게시글/댓글 작성 시 실시간 필터링)
+const BWBannedWordSchema = new mongoose.Schema({
+    word: { type: String, required: true, unique: true },
+}, { timestamps: true });
+
+export const BWBannedWord = mongoose.models.BWBannedWord || mongoose.model('BWBannedWord', BWBannedWordSchema);

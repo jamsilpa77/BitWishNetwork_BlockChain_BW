@@ -2,6 +2,8 @@ import MiningState from '../models/MiningState';
 import User from '../models/User';
 import express from 'express';
 import { miningController } from '../controllers/MiningController';
+import * as bip39 from 'bip39';
+import * as crypto from 'crypto';
 
 const router = express.Router();
 
@@ -308,6 +310,99 @@ router.get('/block-transactions/:walletAddress', async (req, res) => {
     } catch (error) {
         console.error('[블록 트랜잭션 조회 에러]:', error);
         return res.status(500).json({ success: false, message: '서버 오류 발생' });
+    }
+});
+
+// 크롬 확장프로그램 보너스 업데이트 API
+router.post('/extension-bonus', async (req, res) => {
+    try {
+        const { walletAddress, bonusRate } = req.body;
+        if (!walletAddress) {
+            return res.status(400).json({ success: false, message: '지갑 주소가 필요합니다.' });
+        }
+
+        const Decimal = require('decimal.js');
+        Decimal.set({ precision: 50 });
+
+        const state = await MiningState.findOne({
+            walletAddress: { $regex: new RegExp("^" + walletAddress + "$", "i") }
+        });
+
+        if (!state) {
+            return res.status(404).json({ success: false, message: '마이닝 상태를 찾을 수 없습니다.' });
+        }
+
+        state.extensionBonusRate = bonusRate || '0.00000000000000000000000000000000000000000000000000';
+
+        // 채굴률 즉시 업데이트
+        const baseRate = new Decimal(state.currentBaseRate || '0.25');
+        const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
+        const referralRate = new Decimal(state.referralBonusRate || '0');
+        const partnerRate = state.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
+        const extensionRate = new Decimal(state.extensionBonusRate);
+
+        state.currentTotalRate = baseRate
+            .mul(new Decimal(1).plus(attendanceRate))
+            .mul(new Decimal(1).plus(referralRate))
+            .mul(new Decimal(1).plus(partnerRate))
+            .mul(new Decimal(1).plus(extensionRate))
+            .toString();
+
+        await state.save();
+
+        console.log(`[Extension Bonus] Updated for ${walletAddress}: rate=${state.extensionBonusRate}, totalRate=${state.currentTotalRate}`);
+
+        return res.json({
+            success: true,
+            extensionBonusRate: state.extensionBonusRate,
+            currentTotalRate: state.currentTotalRate
+        });
+    } catch (error: any) {
+        console.error('Extension bonus update error:', error);
+        return res.status(500).json({ success: false, message: '서버 오류: ' + error.message });
+    }
+});
+
+// 크롬 확장프로그램 니모닉 검증 API
+router.post('/verify-mnemonic', async (req, res) => {
+    try {
+        const { walletAddress, mnemonic } = req.body;
+        if (!mnemonic) {
+            return res.status(400).json({ success: false, message: '니모닉 코드가 필요합니다.' });
+        }
+
+        const phrase = mnemonic.trim().split(/\s+/).join(' ');
+
+        // 1. 니모닉 유효성 검사
+        if (!bip39.validateMnemonic(phrase)) {
+            return res.status(400).json({ success: false, message: '유효하지 않은 니모닉 코드입니다.' });
+        }
+
+        // 2. 시드 및 주소 파생 (WalletService.ts 규칙)
+        const seed = await bip39.mnemonicToSeed(phrase);
+        const hash = crypto.createHash('sha256').update(seed).digest('hex');
+        const addressBody = hash.substring(0, 40).toUpperCase();
+        const derivedAddress = `BW${addressBody}`;
+
+        // 3. 지갑 주소 대조 (요청에 지갑 주소가 제공된 경우에만 검증)
+        if (walletAddress && derivedAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+            return res.status(400).json({ success: false, message: '입력된 니모닉이 현재 지갑 주소와 일치하지 않습니다.' });
+        }
+
+        // 4. 지갑 주소가 실제 등록된 유저인지 검증
+        const state = await MiningState.findOne({ walletAddress: new RegExp('^' + derivedAddress + '$', 'i') });
+        if (!state) {
+            return res.status(400).json({ success: false, message: '존재하지 않는 지갑입니다. 먼저 홈페이지에서 지갑을 생성해 주세요.' });
+        }
+
+        return res.json({
+            success: true,
+            message: '니모닉 인증에 성공하였습니다.',
+            walletAddress: derivedAddress
+        });
+    } catch (error: any) {
+        console.error('[Mnemonic Verify Error]:', error);
+        return res.status(500).json({ success: false, message: '서버 오류: ' + error.message });
     }
 });
 
