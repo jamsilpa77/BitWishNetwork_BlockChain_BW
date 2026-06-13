@@ -19,6 +19,7 @@ interface Post {
     funnyCount: number;
     hotScore: number;
     isNotice: boolean;
+    images?: string[];
     createdAt: string;
     authorId: number;
     author: {
@@ -80,6 +81,8 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
     const [writeTitle, setWriteTitle] = useState('');
     const [writeContent, setWriteContent] = useState('');
     const [writeCategory, setWriteCategory] = useState('HUMOR');
+    const [writeImagesBase64, setWriteImagesBase64] = useState<string[]>([]);
+    const [editImagesBase64, setEditImagesBase64] = useState<string[]>([]);
 
     const [commentText, setCommentText] = useState('');
     const [replyText, setReplyText] = useState('');
@@ -218,6 +221,52 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
         setCurrentView('list');
     };
 
+    const handleWriteImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const fileArray = Array.from(files);
+        if (writeImagesBase64.length + fileArray.length > 10) {
+            alert('이미지는 최대 10개까지 업로드할 수 있습니다.');
+            e.target.value = '';
+            return;
+        }
+
+        const validFiles: File[] = [];
+        for (const file of fileArray) {
+            if (file.size > 2 * 1024 * 1024) {
+                alert(`[${file.name}] 파일 크기가 2MB를 초과하여 제외되었습니다.`);
+            } else {
+                validFiles.push(file);
+            }
+        }
+
+        if (validFiles.length === 0) {
+            e.target.value = '';
+            return;
+        }
+
+        let loadedCount = 0;
+        const tempBase64s: string[] = [];
+
+        validFiles.forEach((file) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                tempBase64s.push(reader.result as string);
+                loadedCount++;
+                if (loadedCount === validFiles.length) {
+                    setWriteImagesBase64(prev => [...prev, ...tempBase64s]);
+                    e.target.value = '';
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleRemoveWriteImage = (index: number) => {
+        setWriteImagesBase64(prev => prev.filter((_, i) => i !== index));
+    };
+
     const handleCreatePost = async (e: React.FormEvent) => {
         // --- [신규 수복] 비로그인 유저 진입 차단 다국어 경고 가드 ---
         const showLoginAlert = () => {
@@ -246,12 +295,14 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                     title: writeTitle,
                     content: writeContent,
                     category: writeCategory,
+                    images: writeImagesBase64,
                     authorId: currentUser.id
                 })
             });
             if (res.success) {
                 setWriteTitle('');
                 setWriteContent('');
+                setWriteImagesBase64([]);
                 fetchPostList();
                 setCurrentView('list');
             }
@@ -328,11 +379,13 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                 body: JSON.stringify({
                     title: editTitle,
                     content: editContent,
+                    images: editImagesBase64,
                     authorId: currentUser.id
                 })
             });
             if (res.success) {
                 setIsEditing(false);
+                setEditImagesBase64([]);
                 fetchPostDetail(selectedPost.id);
             } else {
                 alert(res.error || '수정에 실패했습니다.');
@@ -695,9 +748,14 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                                 flexShrink: 0,
                                                 display: 'flex',
                                                 justifyContent: 'center',
-                                                alignItems: 'center'
+                                                alignItems: 'center',
+                                                overflow: 'hidden'
                                             }}>
-                                                <span style={{ opacity: 0.3, fontSize: '24px' }}>🖼️</span>
+                                                {post.images && post.images.length > 0 ? (
+                                                    <img src={post.images[0]} alt="Thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    <span style={{ opacity: 0.3, fontSize: '24px' }}>🖼️</span>
+                                                )}
                                             </div>
                                         </div>
                                     ))
@@ -717,7 +775,7 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                 <button onClick={() => setCurrentView('list')} className="bw-btn bw-btn-neutral">⬅️ 목록보기</button>
                                 {currentUser && selectedPost.author && String(currentUser.id) === String(selectedPost.author.id) && (
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button onClick={() => { setIsEditing(!isEditing); setEditTitle(selectedPost.title); setEditContent(selectedPost.content); }} className="bw-btn bw-btn-neutral" style={{ fontSize: '13px' }}>✏️ 수정</button>
+                                        <button onClick={() => { setIsEditing(!isEditing); setEditTitle(selectedPost.title); setEditContent(selectedPost.content); setEditImagesBase64(selectedPost.images || []); }} className="bw-btn bw-btn-neutral" style={{ fontSize: '13px' }}>✏️ 수정</button>
                                         <button onClick={handleDeletePost} className="bw-btn" style={{ fontSize: '13px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>🗑️ 삭제</button>
                                     </div>
                                 )}
@@ -728,8 +786,75 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                     <form onSubmit={handleEditPost} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                         <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="bw-input" style={{ width: '100%', padding: '14px', boxSizing: 'border-box' }} required />
                                         <textarea rows={12} value={editContent} onChange={(e) => setEditContent(e.target.value)} className="bw-input" style={{ width: '100%', padding: '16px', boxSizing: 'border-box', resize: 'vertical' }} required />
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>이미지 수정 (옵션 - 최대 10개, 개당 2MB 이하)</label>
+                                            <input type="file" accept="image/*" multiple onChange={(e) => {
+                                                const files = e.target.files;
+                                                if (!files || files.length === 0) return;
+                                                const fileArray = Array.from(files);
+                                                if (editImagesBase64.length + fileArray.length > 10) {
+                                                    alert('이미지는 최대 10개까지 업로드할 수 있습니다.');
+                                                    e.target.value = '';
+                                                    return;
+                                                }
+                                                const validFiles: File[] = [];
+                                                for (const file of fileArray) {
+                                                    if (file.size > 2 * 1024 * 1024) {
+                                                        alert(`[${file.name}] 파일 크기가 2MB를 초과하여 제외되었습니다.`);
+                                                    } else {
+                                                        validFiles.push(file);
+                                                    }
+                                                }
+                                                let loadedCount = 0;
+                                                const tempBase64s: string[] = [];
+                                                validFiles.forEach((file) => {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => {
+                                                        tempBase64s.push(reader.result as string);
+                                                        loadedCount++;
+                                                        if (loadedCount === validFiles.length) {
+                                                            setEditImagesBase64(prev => [...prev, ...tempBase64s]);
+                                                            e.target.value = '';
+                                                        }
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                });
+                                            }} className="bw-input" style={{ width: '100%', boxSizing: 'border-box' }} />
+                                            {editImagesBase64 && editImagesBase64.length > 0 && (
+                                                <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px' }}>
+                                                    {editImagesBase64.map((imgSrc, idx) => (
+                                                        <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '8px', border: '1px solid var(--bw-border-color)', overflow: 'hidden' }}>
+                                                            <img src={imgSrc} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => setEditImagesBase64(prev => prev.filter((_, i) => i !== idx))} 
+                                                                style={{ 
+                                                                    position: 'absolute', 
+                                                                    top: '2px', 
+                                                                    right: '2px', 
+                                                                    background: 'rgba(239, 68, 68, 0.9)', 
+                                                                    color: 'white', 
+                                                                    border: 'none', 
+                                                                    borderRadius: '50%', 
+                                                                    width: '18px', 
+                                                                    height: '18px', 
+                                                                    fontSize: '10px', 
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    padding: 0
+                                                                }}
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                                            <button type="button" onClick={() => setIsEditing(false)} className="bw-btn bw-btn-neutral">취소</button>
+                                            <button type="button" onClick={() => { setIsEditing(false); setEditImagesBase64([]); }} className="bw-btn bw-btn-neutral">취소</button>
                                             <button type="submit" className="bw-btn bw-btn-primary">수정 완료</button>
                                         </div>
                                     </form>
@@ -747,6 +872,25 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                     </div>
                                 </div>
                                 <div style={{ fontSize: '16px', lineHeight: 1.8, minHeight: '200px', whiteSpace: 'pre-wrap' }}>{selectedPost.content}</div>
+                                {selectedPost.images && selectedPost.images.length > 0 && (
+                                    <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                                        {selectedPost.images.map((imgSrc, idx) => (
+                                            <img 
+                                                key={idx} 
+                                                src={imgSrc} 
+                                                alt={`Post attachment ${idx + 1}`} 
+                                                style={{ 
+                                                    maxWidth: '100%', 
+                                                    maxHeight: '600px', 
+                                                    borderRadius: '12px', 
+                                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                                    border: '1px solid var(--bw-border-color)',
+                                                    objectFit: 'contain'
+                                                }} 
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                                 <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '40px', paddingTop: '32px', borderTop: '1px solid var(--bw-border-color)' }}>
                                     <button onClick={() => handleReaction('LIKE')} className="bw-btn bw-btn-neutral bw-reaction-btn" style={{ padding: '12px 24px', fontSize: '16px' }}>👍 {selectedPost.likeCount}</button>
                                     <button onClick={() => handleReaction('HEART')} className="bw-btn bw-btn-neutral bw-reaction-btn" style={{ padding: '12px 24px', fontSize: '16px' }}>❤️ {selectedPost.heartCount}</button>
@@ -799,7 +943,7 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                     <button onClick={() => setCurrentView('list')} className="bw-btn bw-btn-neutral" style={{ padding: '8px 16px' }}>⬅️ 이전으로</button>
                                     <h2 style={{ fontSize: '24px', fontWeight: 800, margin: 0 }}>✏️ 새 글 작성</h2>
                                 </div>
-                                <button onClick={() => setCurrentView('list')} className="bw-btn bw-btn-neutral">취소</button>
+                                <button onClick={() => { setCurrentView('list'); setWriteImagesBase64([]); }} className="bw-btn bw-btn-neutral">취소</button>
                             </div>
                             <form onSubmit={handleCreatePost} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                 <div>
@@ -817,6 +961,42 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>내용</label>
                                     <textarea rows={16} value={writeContent} onChange={(e) => setWriteContent(e.target.value)} placeholder="다양한 의견을 나누어 보세요!" required className="bw-input" style={{ width: '100%', padding: '16px', boxSizing: 'border-box', resize: 'vertical' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>이미지 첨부 (옵션 - 최대 10개, 개당 2MB 이하)</label>
+                                    <input type="file" accept="image/*" multiple onChange={handleWriteImagesChange} className="bw-input" style={{ width: '100%', boxSizing: 'border-box' }} />
+                                    {writeImagesBase64 && writeImagesBase64.length > 0 && (
+                                        <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px' }}>
+                                            {writeImagesBase64.map((imgSrc, idx) => (
+                                                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '8px', border: '1px solid var(--bw-border-color)', overflow: 'hidden' }}>
+                                                    <img src={imgSrc} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => handleRemoveWriteImage(idx)} 
+                                                        style={{ 
+                                                            position: 'absolute', 
+                                                            top: '2px', 
+                                                            right: '2px', 
+                                                            background: 'rgba(239, 68, 68, 0.9)', 
+                                                            color: 'white', 
+                                                            border: 'none', 
+                                                            borderRadius: '50%', 
+                                                            width: '18px', 
+                                                            height: '18px', 
+                                                            fontSize: '10px', 
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            padding: 0
+                                                        }}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <button type="submit" className="bw-btn bw-btn-primary" style={{ padding: '16px', fontSize: '16px', marginTop: '16px' }}>작성 완료 및 등록</button>
                             </form>

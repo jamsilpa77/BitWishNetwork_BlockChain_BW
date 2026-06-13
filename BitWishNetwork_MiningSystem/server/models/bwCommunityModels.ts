@@ -21,7 +21,7 @@ const BWCommunityPostSchema = new mongoose.Schema({
     funnyCount: { type: Number, default: 0 },
     hotScore: { type: Number, default: 0 }, // 핫 게시물 실시간 알고리즘 점수
     isNotice: { type: Boolean, default: false },
-    image: { type: String, default: '' },
+    images: { type: [String], default: [] },
     authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'BWCommunityUser', required: true }
 }, { timestamps: true });
 

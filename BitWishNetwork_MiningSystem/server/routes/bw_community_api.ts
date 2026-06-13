@@ -129,6 +129,7 @@ router.get('/posts', async (req, res) => {
             funnyCount: post.funnyCount,
             hotScore: post.hotScore,
             isNotice: post.isNotice,
+            images: post.images || [],
             createdAt: post.createdAt,
             author: post.authorId ? { id: post.authorId._id, nickname: post.authorId.nickname } : { id: null, nickname: 'Unknown' }
         }));
@@ -172,13 +173,29 @@ const checkBannedWords = async (req: express.Request, res: express.Response, nex
 // 신규 게시글 작성 (금칙어 필터링 미들웨어 적용)
 router.post('/posts', checkBannedWords, async (req, res) => {
     try {
-        const { title, content, category, authorId } = req.body;
+        const { title, content, category, images, authorId } = req.body;
         if (!title || !content || !category || !authorId) return res.status(400).json({ error: 'Missing required fields' });
+
+        // 이미지 유효성 검사
+        if (images && Array.isArray(images)) {
+            if (images.length > 10) {
+                return res.status(400).json({ error: '이미지는 최대 10개까지 업로드할 수 있습니다.' });
+            }
+            for (const img of images) {
+                if (typeof img === 'string') {
+                    const sizeInBytes = (img.length * 3) / 4;
+                    if (sizeInBytes > 2 * 1024 * 1024) {
+                        return res.status(400).json({ error: '개당 2MB 이하의 이미지 파일만 업로드할 수 있습니다.' });
+                    }
+                }
+            }
+        }
 
         const post = new BWCommunityPost({
             title,
             content,
             category: category.toUpperCase(),
+            images: images || [],
             authorId: new mongoose.Types.ObjectId(authorId)
         });
         await post.save();
@@ -193,7 +210,7 @@ router.post('/posts', checkBannedWords, async (req, res) => {
 router.put('/posts/:id', checkBannedWords, async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, content, authorId } = req.body;
+        const { title, content, images, authorId } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: '유효하지 않은 게시글 ID입니다.' });
         if (!authorId) return res.status(400).json({ error: '작성자 정보가 필요합니다.' });
@@ -206,8 +223,24 @@ router.put('/posts/:id', checkBannedWords, async (req, res) => {
             return res.status(403).json({ error: '본인이 작성한 게시글만 수정할 수 있습니다.' });
         }
 
+        // 이미지 유효성 검사
+        if (images && Array.isArray(images)) {
+            if (images.length > 10) {
+                return res.status(400).json({ error: '이미지는 최대 10개까지 업로드할 수 있습니다.' });
+            }
+            for (const img of images) {
+                if (typeof img === 'string') {
+                    const sizeInBytes = (img.length * 3) / 4;
+                    if (sizeInBytes > 2 * 1024 * 1024) {
+                        return res.status(400).json({ error: '개당 2MB 이하의 이미지 파일만 업로드할 수 있습니다.' });
+                    }
+                }
+            }
+        }
+
         if (title) post.title = title;
         if (content) post.content = content;
+        if (images !== undefined) post.images = images;
         await post.save();
 
         return res.json({ success: true, data: post });
@@ -284,6 +317,7 @@ router.get('/posts/:id', async (req, res) => {
                 funnyCount: post.funnyCount,
                 hotScore: post.hotScore,
                 isNotice: post.isNotice,
+                images: post.images || [],
                 createdAt: post.createdAt,
                 author: post.authorId ? { id: post.authorId._id, nickname: post.authorId.nickname } : { id: null, nickname: 'Unknown' },
                 comments: formattedComments
@@ -467,7 +501,7 @@ router.get('/admin/notices', verifyCommunityAdmin, async (req, res) => {
             funnyCount: post.funnyCount,
             hotScore: post.hotScore,
             isNotice: post.isNotice,
-            image: post.image || '',
+            images: post.images || [],
             createdAt: post.createdAt,
             author: post.authorId ? { id: post.authorId._id, nickname: post.authorId.nickname } : { id: null, nickname: 'Unknown' }
         }));
@@ -503,7 +537,7 @@ router.get('/admin/notices/:id', verifyCommunityAdmin, async (req, res) => {
                 content: notice.content,
                 category: notice.category,
                 views: notice.views,
-                image: notice.image || '',
+                images: notice.images || [],
                 createdAt: notice.createdAt,
                 author: notice.authorId ? { id: notice.authorId._id, nickname: notice.authorId.nickname } : { id: null, nickname: 'Unknown' }
             }
@@ -516,9 +550,24 @@ router.get('/admin/notices/:id', verifyCommunityAdmin, async (req, res) => {
 // 공지사항 등록
 router.post('/admin/notices', verifyCommunityAdmin, async (req, res) => {
     try {
-        const { title, content, image, authorId } = req.body;
+        const { title, content, images, authorId } = req.body;
         if (!title || !content || !authorId) {
             return res.status(400).json({ error: '필수 항목이 누락되었습니다.' });
+        }
+
+        // 이미지 유효성 검사
+        if (images && Array.isArray(images)) {
+            if (images.length > 10) {
+                return res.status(400).json({ error: '이미지는 최대 10개까지 업로드할 수 있습니다.' });
+            }
+            for (const img of images) {
+                if (typeof img === 'string') {
+                    const sizeInBytes = (img.length * 3) / 4;
+                    if (sizeInBytes > 2 * 1024 * 1024) {
+                        return res.status(400).json({ error: '개당 2MB 이하의 이미지 파일만 업로드할 수 있습니다.' });
+                    }
+                }
+            }
         }
 
         const notice = new BWCommunityPost({
@@ -526,7 +575,7 @@ router.post('/admin/notices', verifyCommunityAdmin, async (req, res) => {
             content,
             category: 'NOTICE',
             isNotice: true,
-            image: image || '',
+            images: images || [],
             authorId: new mongoose.Types.ObjectId(authorId)
         });
 
@@ -541,16 +590,31 @@ router.post('/admin/notices', verifyCommunityAdmin, async (req, res) => {
 router.put('/admin/notices/:id', verifyCommunityAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, content, image } = req.body;
+        const { title, content, images } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ error: '유효하지 않은 공지 ID입니다.' });
 
         const notice = await BWCommunityPost.findById(id);
         if (!notice || !notice.isNotice) return res.status(404).json({ error: '공지사항을 찾을 수 없습니다.' });
 
+        // 이미지 유효성 검사
+        if (images && Array.isArray(images)) {
+            if (images.length > 10) {
+                return res.status(400).json({ error: '이미지는 최대 10개까지 업로드할 수 있습니다.' });
+            }
+            for (const img of images) {
+                if (typeof img === 'string') {
+                    const sizeInBytes = (img.length * 3) / 4;
+                    if (sizeInBytes > 2 * 1024 * 1024) {
+                        return res.status(400).json({ error: '개당 2MB 이하의 이미지 파일만 업로드할 수 있습니다.' });
+                    }
+                }
+            }
+        }
+
         if (title) notice.title = title;
         if (content) notice.content = content;
-        if (image !== undefined) notice.image = image;
+        if (images !== undefined) notice.images = images;
 
         await notice.save();
         return res.json({ success: true, data: notice });

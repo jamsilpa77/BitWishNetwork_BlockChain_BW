@@ -271,7 +271,7 @@ const AdminPage: React.FC = () => {
     
     const [noticeTitle, setNoticeTitle] = useState('');
     const [noticeContent, setNoticeContent] = useState('');
-    const [noticeImageBase64, setNoticeImageBase64] = useState('');
+    const [noticeImagesBase64, setNoticeImagesBase64] = useState<string[]>([]);
     const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
     const [selectedNoticeIds, setSelectedNoticeIds] = useState<string[]>([]);
     
@@ -349,15 +349,56 @@ const AdminPage: React.FC = () => {
         }
     };
 
-    // 이미지 파일 Base64 변환 핸들러
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setNoticeImageBase64(reader.result as string);
-        };
-        reader.readAsDataURL(file);
+    // 이미지 파일들 Base64 변환 핸들러 (다중 이미지 및 용량/개수 제한 검증)
+    const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const fileArray = Array.from(files);
+        
+        // 1. 최대 개수 10개 제한 검증
+        if (noticeImagesBase64.length + fileArray.length > 10) {
+            alert('이미지는 최대 10개까지 업로드할 수 있습니다.');
+            e.target.value = ''; // input 초기화
+            return;
+        }
+
+        const validFiles: File[] = [];
+        for (const file of fileArray) {
+            // 2. 용량 2MB 이하 제한 검증 (2,097,152 bytes)
+            if (file.size > 2 * 1024 * 1024) {
+                alert(`[${file.name}] 파일 크기가 2MB를 초과하여 제외되었습니다.`);
+            } else {
+                validFiles.push(file);
+            }
+        }
+
+        if (validFiles.length === 0) {
+            e.target.value = '';
+            return;
+        }
+
+        // 비동기로 Base64 변환 후 상태에 저장
+        let loadedCount = 0;
+        const tempBase64s: string[] = [];
+
+        validFiles.forEach((file) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                tempBase64s.push(reader.result as string);
+                loadedCount++;
+                if (loadedCount === validFiles.length) {
+                    setNoticeImagesBase64(prev => [...prev, ...tempBase64s]);
+                    e.target.value = ''; // 완료 후 input 비우기
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    // 개별 이미지 삭제 핸들러
+    const handleRemoveImage = (index: number) => {
+        setNoticeImagesBase64(prev => prev.filter((_, i) => i !== index));
     };
 
     // 공지사항 등록 / 수정 핸들러
@@ -377,7 +418,7 @@ const AdminPage: React.FC = () => {
             const bodyData: any = {
                 title: noticeTitle.trim(),
                 content: noticeContent.trim(),
-                image: noticeImageBase64,
+                images: noticeImagesBase64,
             };
             if (!isEdit) {
                 bodyData.authorId = communityUser.id;
@@ -397,7 +438,7 @@ const AdminPage: React.FC = () => {
                 // 폼 리셋
                 setNoticeTitle('');
                 setNoticeContent('');
-                setNoticeImageBase64('');
+                setNoticeImagesBase64([]);
                 setEditingNoticeId(null);
                 fetchAdminNotices(noticePage);
             } else {
@@ -413,7 +454,7 @@ const AdminPage: React.FC = () => {
         setEditingNoticeId(notice.id);
         setNoticeTitle(notice.title);
         setNoticeContent(notice.content);
-        setNoticeImageBase64(notice.image || '');
+        setNoticeImagesBase64(notice.images || []);
     };
 
     // 공지사항 선택삭제 (일괄 삭제)
@@ -1742,12 +1783,38 @@ const AdminPage: React.FC = () => {
                                                     <textarea value={noticeContent} onChange={e => setNoticeContent(e.target.value)} required className="admin-input" style={{ width: '100%', minHeight: '120px', resize: 'vertical' }} rows={4} />
                                                 </div>
                                                 <div>
-                                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>이미지 첨부 (옵션 - Base64 자동변환)</label>
-                                                    <input type="file" accept="image/*" onChange={handleImageChange} className="admin-input" style={{ width: '100%' }} />
-                                                    {noticeImageBase64 && (
-                                                        <div style={{ marginTop: '10px' }}>
-                                                            <img src={noticeImageBase64} alt="Preview" style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
-                                                            <button type="button" onClick={() => setNoticeImageBase64('')} className="admin-button danger" style={{ marginLeft: '10px', padding: '4px 8px', fontSize: '11px' }}>삭제</button>
+                                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>이미지 첨부 (옵션 - 최대 10개, 개당 2MB 이하, Base64 자동변환)</label>
+                                                    <input type="file" accept="image/*" multiple onChange={handleImagesChange} className="admin-input" style={{ width: '100%' }} />
+                                                    {noticeImagesBase64 && noticeImagesBase64.length > 0 && (
+                                                        <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px' }}>
+                                                            {noticeImagesBase64.map((imgSrc, idx) => (
+                                                                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '8px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
+                                                                    <img src={imgSrc} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                    <button 
+                                                                        type="button" 
+                                                                        onClick={() => handleRemoveImage(idx)} 
+                                                                        style={{ 
+                                                                            position: 'absolute', 
+                                                                            top: '2px', 
+                                                                            right: '2px', 
+                                                                            background: 'rgba(239, 68, 68, 0.9)', 
+                                                                            color: 'white', 
+                                                                            border: 'none', 
+                                                                            borderRadius: '50%', 
+                                                                            width: '18px', 
+                                                                            height: '18px', 
+                                                                            fontSize: '10px', 
+                                                                            cursor: 'pointer',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            padding: 0
+                                                                        }}
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                </div>
+                                                            ))}
                                                         </div>
                                                     )}
                                                 </div>
@@ -1758,7 +1825,7 @@ const AdminPage: React.FC = () => {
                                                             setEditingNoticeId(null);
                                                             setNoticeTitle('');
                                                             setNoticeContent('');
-                                                            setNoticeImageBase64('');
+                                                            setNoticeImagesBase64([]);
                                                         }} className="admin-button secondary">취소</button>
                                                     )}
                                                 </div>
@@ -1818,7 +1885,7 @@ const AdminPage: React.FC = () => {
                                                                 </td>
                                                                 <td style={{ padding: '8px', fontSize: '13px' }}>
                                                                     <div style={{ fontWeight: 'bold' }}>{notice.title}</div>
-                                                                    {notice.image && <span style={{ fontSize: '11px', color: '#3b82f6', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>🖼️ 이미지 포함</span>}
+                                                                    {notice.images && notice.images.length > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>🖼️ 이미지 {notice.images.length}개</span>}
                                                                 </td>
                                                                 <td style={{ padding: '8px', fontSize: '13px' }}>{notice.author.nickname}</td>
                                                                 <td style={{ padding: '8px', fontSize: '12px', textAlign: 'center', color: '#64748b' }}>
