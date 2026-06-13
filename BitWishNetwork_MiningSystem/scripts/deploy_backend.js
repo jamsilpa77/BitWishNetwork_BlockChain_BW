@@ -33,6 +33,11 @@ conn.on('ready', async () => {
   try {
     console.log('=== [1] Git Pull 최신 코드 적용 ===');
     const pullRes = await runCommand(conn, 'cd /root/app && git pull origin main');
+
+    console.log('\n=== [Nginx] Nginx 설정 파일 업데이트 및 리로드 ===');
+    await runCommand(conn, 'cp /root/app/nginx_ssl_config /etc/nginx/sites-available/default');
+    await runCommand(conn, 'nginx -t && systemctl reload nginx');
+    console.log('✅ Nginx 설정 리로드 완료!');
     
     console.log('\n=== [2] 프론트엔드 빌드 실행 (빌드가 필요한 경우 수행) ===');
     // 최신 변경 사항에 프론트엔드 코드(src/)가 포함되어 있는지 확인

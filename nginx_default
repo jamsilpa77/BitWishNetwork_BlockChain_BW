@@ -1,6 +1,7 @@
 server {
     listen 80;
     server_name bitwishnetwork.com 141.164.40.101;
+    client_max_body_size 30M;
 
     location / {
         root /var/www/html;

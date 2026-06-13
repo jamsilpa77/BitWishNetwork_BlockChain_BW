@@ -1,12 +1,14 @@
 server {
     listen 80;
     server_name bitwishnetwork.com 141.164.40.101;
+    client_max_body_size 30M;
     return 301 https://bitwishnetwork.com$request_uri;
 }
 
 server {
     listen 443 ssl;
     server_name bitwishnetwork.com;
+    client_max_body_size 30M;
 
     ssl_certificate /etc/letsencrypt/live/bitwishnetwork.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/bitwishnetwork.com/privkey.pem;

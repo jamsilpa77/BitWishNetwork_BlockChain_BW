@@ -176,13 +176,19 @@ router.post('/posts', checkBannedWords, async (req, res) => {
         const { title, content, category, images, authorId } = req.body;
         if (!title || !content || !category || !authorId) return res.status(400).json({ error: 'Missing required fields' });
 
-        // 이미지 유효성 검사
+        // 이미지 유효성 및 안전 검사
         if (images && Array.isArray(images)) {
             if (images.length > 10) {
                 return res.status(400).json({ error: '이미지는 최대 10개까지 업로드할 수 있습니다.' });
             }
+            const allowedImageMimeRegex = /^data:image\/(png|jpeg|jpg|gif|webp);base64,/;
             for (const img of images) {
                 if (typeof img === 'string') {
+                    // 1. 형식 안전 검사 (MIME 타입 및 Base64 헤더)
+                    if (!allowedImageMimeRegex.test(img)) {
+                        return res.status(400).json({ error: '허용되지 않거나 손상된 이미지 형식입니다. (PNG, JPG, JPEG, GIF, WEBP만 허용)' });
+                    }
+                    // 2. 용량 검사 (개당 2MB 이하)
                     const sizeInBytes = (img.length * 3) / 4;
                     if (sizeInBytes > 2 * 1024 * 1024) {
                         return res.status(400).json({ error: '개당 2MB 이하의 이미지 파일만 업로드할 수 있습니다.' });
@@ -223,13 +229,19 @@ router.put('/posts/:id', checkBannedWords, async (req, res) => {
             return res.status(403).json({ error: '본인이 작성한 게시글만 수정할 수 있습니다.' });
         }
 
-        // 이미지 유효성 검사
+        // 이미지 유효성 및 안전 검사
         if (images && Array.isArray(images)) {
             if (images.length > 10) {
                 return res.status(400).json({ error: '이미지는 최대 10개까지 업로드할 수 있습니다.' });
             }
+            const allowedImageMimeRegex = /^data:image\/(png|jpeg|jpg|gif|webp);base64,/;
             for (const img of images) {
                 if (typeof img === 'string') {
+                    // 1. 형식 안전 검사 (MIME 타입 및 Base64 헤더)
+                    if (!allowedImageMimeRegex.test(img)) {
+                        return res.status(400).json({ error: '허용되지 않거나 손상된 이미지 형식입니다. (PNG, JPG, JPEG, GIF, WEBP만 허용)' });
+                    }
+                    // 2. 용량 검사 (개당 2MB 이하)
                     const sizeInBytes = (img.length * 3) / 4;
                     if (sizeInBytes > 2 * 1024 * 1024) {
                         return res.status(400).json({ error: '개당 2MB 이하의 이미지 파일만 업로드할 수 있습니다.' });
@@ -555,13 +567,19 @@ router.post('/admin/notices', verifyCommunityAdmin, async (req, res) => {
             return res.status(400).json({ error: '필수 항목이 누락되었습니다.' });
         }
 
-        // 이미지 유효성 검사
+        // 이미지 유효성 및 안전 검사
         if (images && Array.isArray(images)) {
             if (images.length > 10) {
                 return res.status(400).json({ error: '이미지는 최대 10개까지 업로드할 수 있습니다.' });
             }
+            const allowedImageMimeRegex = /^data:image\/(png|jpeg|jpg|gif|webp);base64,/;
             for (const img of images) {
                 if (typeof img === 'string') {
+                    // 1. 형식 안전 검사 (MIME 타입 및 Base64 헤더)
+                    if (!allowedImageMimeRegex.test(img)) {
+                        return res.status(400).json({ error: '허용되지 않거나 손상된 이미지 형식입니다. (PNG, JPG, JPEG, GIF, WEBP만 허용)' });
+                    }
+                    // 2. 용량 검사 (개당 2MB 이하)
                     const sizeInBytes = (img.length * 3) / 4;
                     if (sizeInBytes > 2 * 1024 * 1024) {
                         return res.status(400).json({ error: '개당 2MB 이하의 이미지 파일만 업로드할 수 있습니다.' });
@@ -597,13 +615,19 @@ router.put('/admin/notices/:id', verifyCommunityAdmin, async (req, res) => {
         const notice = await BWCommunityPost.findById(id);
         if (!notice || !notice.isNotice) return res.status(404).json({ error: '공지사항을 찾을 수 없습니다.' });
 
-        // 이미지 유효성 검사
+        // 이미지 유효성 및 안전 검사
         if (images && Array.isArray(images)) {
             if (images.length > 10) {
                 return res.status(400).json({ error: '이미지는 최대 10개까지 업로드할 수 있습니다.' });
             }
+            const allowedImageMimeRegex = /^data:image\/(png|jpeg|jpg|gif|webp);base64,/;
             for (const img of images) {
                 if (typeof img === 'string') {
+                    // 1. 형식 안전 검사 (MIME 타입 및 Base64 헤더)
+                    if (!allowedImageMimeRegex.test(img)) {
+                        return res.status(400).json({ error: '허용되지 않거나 손상된 이미지 형식입니다. (PNG, JPG, JPEG, GIF, WEBP만 허용)' });
+                    }
+                    // 2. 용량 검사 (개당 2MB 이하)
                     const sizeInBytes = (img.length * 3) / 4;
                     if (sizeInBytes > 2 * 1024 * 1024) {
                         return res.status(400).json({ error: '개당 2MB 이하의 이미지 파일만 업로드할 수 있습니다.' });
