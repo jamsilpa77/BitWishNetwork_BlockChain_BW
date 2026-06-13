@@ -83,6 +83,7 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
     const [writeCategory, setWriteCategory] = useState('HUMOR');
     const [writeImagesBase64, setWriteImagesBase64] = useState<string[]>([]);
     const [editImagesBase64, setEditImagesBase64] = useState<string[]>([]);
+    const [activeZoomImage, setActiveZoomImage] = useState<string | null>(null);
 
     const [commentText, setCommentText] = useState('');
     const [replyText, setReplyText] = useState('');
@@ -879,14 +880,19 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                                                 key={idx} 
                                                 src={imgSrc} 
                                                 alt={`Post attachment ${idx + 1}`} 
+                                                onClick={() => setActiveZoomImage(imgSrc)}
                                                 style={{ 
                                                     maxWidth: '100%', 
                                                     maxHeight: '600px', 
                                                     borderRadius: '12px', 
                                                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                                                     border: '1px solid var(--bw-border-color)',
-                                                    objectFit: 'contain'
+                                                    objectFit: 'contain',
+                                                    cursor: 'zoom-in',
+                                                    transition: 'transform 0.2s'
                                                 }} 
+                                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.01)'}
+                                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                                             />
                                         ))}
                                     </div>
@@ -1071,6 +1077,75 @@ export const BWCommunityWindow: React.FC<BWCommunityWindowProps> = ({ onClose })
                     )}
                 </div>
             </div>
+            
+            {/* 고화질 이미지 클릭 줌 라이트박스 오버레이 모달 */}
+            {activeZoomImage && (
+                <div 
+                    onClick={() => setActiveZoomImage(null)}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                        backdropFilter: 'blur(8px)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 99999,
+                        cursor: 'zoom-out',
+                        animation: 'fadeIn 0.25s ease-out'
+                    }}
+                >
+                    <style>{`
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        @keyframes zoomIn {
+                            from { transform: scale(0.9); }
+                            to { transform: scale(1); }
+                        }
+                    `}</style>
+                    <img 
+                        src={activeZoomImage} 
+                        alt="Zoomed attachment" 
+                        style={{ 
+                            maxWidth: '90%', 
+                            maxHeight: '90%', 
+                            borderRadius: '8px', 
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.7)',
+                            animation: 'zoomIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                            objectFit: 'contain'
+                        }} 
+                    />
+                    <button 
+                        onClick={() => setActiveZoomImage(null)}
+                        style={{
+                            position: 'absolute',
+                            top: '20px',
+                            right: '30px',
+                            background: 'rgba(255, 255, 255, 0.15)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            fontSize: '24px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'}
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
