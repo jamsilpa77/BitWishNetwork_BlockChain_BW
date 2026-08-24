@@ -1659,3 +1659,187 @@
         font-size: 24px;
     }
 }
+
+/* ★ [3단계] BW 블록 익스플로러 스마트폰 반응형 수직 1열 완벽 개편 ★ */
+@media (max-width: 768px) {
+    .explorer-header {
+        padding: 0.8rem 1rem;
+    }
+
+    .header-inner {
+        padding: 0;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .explorer-title-text {
+        font-size: 1.2rem !important;
+        text-align: center;
+        word-break: keep-all;
+    }
+
+    .header-stats {
+        gap: 0.4rem;
+    }
+
+    .network-status {
+        display: none; /* 초소형 모바일 화면에서 숨김 */
+    }
+
+    .explorer-main {
+        padding: 0 0.6rem;
+        margin: 1rem auto;
+    }
+
+    .search-form {
+        flex-direction: column;
+        padding: 0.8rem;
+    }
+
+    .search-button {
+        width: 100%;
+        padding: 0.8rem;
+    }
+
+    /* 통합 경제 센터 2열 -> 모바일 수직 1열 (Column) 전환 */
+    .premium-glass-panel {
+        padding: 1.2rem;
+        border-radius: 18px;
+        margin-bottom: 2rem;
+    }
+
+    .center-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+    }
+
+    .dashboard-title h2 {
+        font-size: 1.2rem;
+        word-break: keep-all;
+        line-height: 1.4;
+    }
+
+    .global-supply-capsule {
+        width: 100%;
+        align-items: flex-start;
+        border-radius: 12px;
+        padding: 0.8rem 1.2rem;
+    }
+
+    .global-supply-capsule span {
+        font-size: 1.2rem;
+    }
+
+    /* 하이브리드 그리드 2열 -> 1열 수직 전환 (3번 이미지 세로 글자 깨짐 근본 해결) */
+    .economic-hybrid-grid {
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .supply-multi-grid {
+        gap: 0.8rem;
+    }
+
+    .s-card {
+        padding: 1rem 1.2rem;
+        border-radius: 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .miner-card-enhanced {
+        padding: 1.2rem !important;
+    }
+
+    .allocation-row, .payout-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+        width: 100%;
+    }
+
+    .sc-label {
+        font-size: 0.95rem;
+        word-break: keep-all;
+        line-height: 1.3;
+    }
+
+    .sc-value {
+        font-size: 1.1rem;
+    }
+
+    .treasury-flow-card {
+        padding: 1.2rem;
+        border-radius: 16px;
+    }
+
+    .fee-split-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .total-accumulated-box {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .neon-gold {
+        font-size: 1.4rem;
+    }
+
+    .center-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1.2rem;
+    }
+
+    .transparency-audit-btn {
+        width: 100%;
+        padding: 0.8rem;
+        text-align: center;
+        border-radius: 12px;
+        font-size: 0.9rem;
+    }
+
+    /* 트랜잭션 및 마이그레이션 테이블 모바일 가로 스크롤 및 카드 정리 */
+    .migration-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+    }
+
+    .migration-live-table {
+        min-width: 550px;
+    }
+
+    .tx-receipt-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.8rem;
+    }
+
+    .tx-flow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .tx-action-area {
+        width: 100%;
+        justify-content: space-between;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding-top: 0.6rem;
+    }
+}

@@ -10,26 +10,79 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
-    backdrop-filter: blur(2px);
+    z-index: 10020;
+    backdrop-filter: blur(8px);
 }
 
 /* 모달 본체 */
 .mining-status-modal {
     background: white;
-    border-radius: 15px;
-    padding: 20px;
+    border-radius: 20px;
+    padding: 24px;
     width: 600px;
     max-width: 95%;
-    max-height: 90vh;
+    max-height: 88vh;
     overflow-y: auto;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
     font-family: 'Noto Sans KR', sans-serif;
     position: relative;
+}
+
+/* 반응형 - 모바일 수직 1열 정렬 및 버튼 최적화 */
+@media (max-width: 768px) {
+    .mining-status-modal {
+        padding: 16px;
+        width: 95%;
+        max-height: 88vh;
+    }
+
+    .top-buttons-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .grid-button {
+        padding: 10px 4px;
+        min-height: 44px;
+    }
+
+    .button-text {
+        font-size: 0.75rem;
+    }
+
+    .status-columns-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .status-column.left {
+        border-right: none;
+        border-bottom: 1px dashed #E0B0FF;
+        padding-right: 0;
+        padding-bottom: 15px;
+    }
+
+    .status-column.right {
+        padding-left: 0;
+    }
+
+    .reward-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .footer-buttons {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .footer-btn {
+        min-height: 44px;
+    }
 }
 
 /* 헤더 */

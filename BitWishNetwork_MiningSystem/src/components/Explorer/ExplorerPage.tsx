@@ -262,12 +262,12 @@ const ExplorerPage: React.FC = () => {
     return (
         <div className={`explorer-container ${darkMode ? 'dark-mode' : ''}`}>
             <header className="explorer-header">
-                <div className="header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div className="header-left" style={{ flex: 1 }}>
-                        {/* 레이아웃 균형을 위한 빈 공간 */}
-                    </div>
-                    <h1 style={{ flex: 0, whiteSpace: 'nowrap', textAlign: 'center' }}>{t('explorer.title')}</h1>
-                    <div className="header-stats" style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem' }}>
+                <div className="header-inner">
+                    <button className="back-button mobile-only" onClick={() => window.location.href = '/'}>
+                        🏠 HOME
+                    </button>
+                    <h1 className="explorer-title-text">{t('explorer.title')}</h1>
+                    <div className="header-stats">
                         <button
                             className={`mode-toggle-btn ${isTestnet ? 'testnet' : 'mainnet'}`}
                             onClick={() => setIsTestnet(!isTestnet)}
@@ -301,7 +301,7 @@ const ExplorerPage: React.FC = () => {
                                 <div className="center-header">
                                     <div className="dashboard-title">
                                         <span className="neon-icon">💎</span>
-                                        <h2>{currentLang === 'ko' ? '빗위시 통합 경제 센터' : 'BitWish Unified Economic Center'}</h2>
+                                        <h2 className="keep-all-text">{currentLang === 'ko' ? '빗위시 통합 경제 센터' : 'BitWish Unified Economic Center'}</h2>
                                     </div>
                                     <div className="global-supply-capsule">
                                         <label>{t('explorer.totalCirculating')}</label>
@@ -317,21 +317,21 @@ const ExplorerPage: React.FC = () => {
                                         <div className="supply-multi-grid">
                                             <div className="s-card miner-card-enhanced">
                                                 <div className="allocation-row">
-                                                    <div className="sc-label">⛏️ {t('explorer.minerAllocation')}</div>
-                                                    <div className="sc-value">{parseFloat(migrationStats.remainingPool).toLocaleString()} <small>BW</small></div>
+                                                    <div className="sc-label keep-all-text">⛏️ {t('explorer.minerAllocation')}</div>
+                                                    <div className="sc-value">13,650,000,000 <small>BW</small></div>
                                                 </div>
                                                 <div className="allocation-divider"></div>
                                                 <div className="payout-row">
-                                                    <div className="sc-label">💰 {t('explorer.minerPayoutStatus')} ({((parseFloat(migrationStats.totalPaid) / 13650000000) * 100).toFixed(4)}%)</div>
+                                                    <div className="sc-label keep-all-text">💰 {t('explorer.minerPayoutStatus')} ({((parseFloat(migrationStats.totalPaid) / 13650000000) * 100).toFixed(4)}%)</div>
                                                     <div className="sc-value payout-gold">{parseFloat(migrationStats.totalPaid).toLocaleString()} <small>BW</small></div>
                                                 </div>
                                             </div>
                                             <div className="s-card">
-                                                <div className="sc-label">🤝 {t('explorer.partnerAllocation')}</div>
+                                                <div className="sc-label keep-all-text">🤝 {t('explorer.partnerAllocation')}</div>
                                                 <div className="sc-value">3,150,000,000 <small>BW</small></div>
                                             </div>
                                             <div className="s-card highlight">
-                                                <div className="sc-label">🏢 {t('explorer.foundationAllocation')}</div>
+                                                <div className="sc-label keep-all-text">🏢 {t('explorer.foundationAllocation')}</div>
                                                 <div className="sc-value highlight-gold">4,200,000,000 <small>BW</small></div>
                                             </div>
                                         </div>
@@ -359,17 +359,17 @@ const ExplorerPage: React.FC = () => {
                                                 </div>
                                                 <div className="fee-split-row">
                                                     <div className="fee-split-item">
-                                                        <span className="split-label">{currentLang === 'ko' ? '생태계 기금 (60%)' : 'Ecosystem Fund (60%)'}</span>
+                                                        <span className="split-label keep-all-text">{currentLang === 'ko' ? '생태계 기금 (60%)' : 'Ecosystem Fund (60%)'}</span>
                                                         <span className="split-value">{parseFloat(fundStats.ecosystemFund).toFixed(8)} <small>BW</small></span>
                                                     </div>
                                                     <div className="fee-split-item">
-                                                        <span className="split-label">{currentLang === 'ko' ? '재단 운영비 (40%)' : 'Foundation (40%)'}</span>
+                                                        <span className="split-label keep-all-text">{currentLang === 'ko' ? '재단 운영비 (40%)' : 'Foundation (40%)'}</span>
                                                         <span className="split-value">{parseFloat(fundStats.foundationFund).toFixed(8)} <small>BW</small></span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="total-accumulated-box">
-                                                <label>{t('explorer.totalFees')}</label>
+                                                <label className="keep-all-text">{t('explorer.totalFees')}</label>
                                                 <span className="neon-gold">{parseFloat(fundStats.blockCreationFee).toFixed(8)} <small>BW</small></span>
                                             </div>
                                         </div>
@@ -380,7 +380,7 @@ const ExplorerPage: React.FC = () => {
                                     <div className="f-stats">
                                         <span>👥 {t('explorer.createdWallets')}: <strong>{globalStats.totalUsers}</strong></span>
                                     </div>
-                                    <button className="transparency-audit-btn">
+                                    <button className="transparency-audit-btn keep-all-text">
                                         🛡️ {t('explorer.fundTransparencyAudit') || (currentLang === 'ko' ? '기금 지갑 투명성 감사' : 'Fund Transparency Audit')}
                                     </button>
                                 </div>

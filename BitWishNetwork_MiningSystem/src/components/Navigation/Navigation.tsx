@@ -263,57 +263,89 @@ const Navigation: React.FC = () => {
         </button>
       </div>
 
-      {/* 모바일 메뉴 */}
+      {/* 모바일 수직 드로어 오버레이 & 메뉴 */}
+      {isMobileMenuOpen && (
+        <div className="mobile-menu-backdrop" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
       <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
+        <div className="mobile-menu-header">
+          <span className="mobile-menu-title">BW Network Menu</span>
+          <button className="mobile-menu-close" onClick={() => setIsMobileMenuOpen(false)}>✕</button>
+        </div>
         <div className="mobile-menu-content">
+          {/* 모바일 퀵 지갑 세션 */}
+          <div className="mobile-quick-section">
+            <span className="mobile-section-label">💼 지갑 서비스</span>
+            <div className="mobile-quick-buttons">
+              <button className="mobile-action-btn primary" onClick={() => { handleCreateWallet(); setIsMobileMenuOpen(false); }}>
+                ➕ 지갑 생성
+              </button>
+              <button className="mobile-action-btn secondary" onClick={() => { handleMyWallet(); setIsMobileMenuOpen(false); }}>
+                👛 나의 지갑
+              </button>
+            </div>
+          </div>
+
+          <div className="mobile-menu-divider" />
+
+          {/* 메인 네비게이션 버튼 목록 */}
+          <span className="mobile-section-label">📌 주요 서비스</span>
           <button
             className="mobile-nav-button"
             onClick={() => handleNavigationClick('/')}
           >
-            {getTranslation('navigation.home')}
-          </button>
-          <button
-            className="mobile-nav-button"
-            onClick={() => handleNavigationClick('/mainnet')}
-          >
-            {getTranslation('navigation.mainnet')}
+            🏠 {getTranslation('navigation.home')}
           </button>
           <button
             className="mobile-nav-button"
             onClick={() => handleNavigationClick('/explorer')}
           >
-            {getTranslation('navigation.explorer')}
+            🔍 {getTranslation('navigation.explorer')}
           </button>
           <button
             className="mobile-nav-button"
             onClick={() => handleNavigationClick('/community')}
           >
-            {getTranslation('navigation.community')}
+            💬 {getTranslation('navigation.community')}
           </button>
           <button
             className="mobile-nav-button"
             onClick={() => handleNavigationClick('/dashboard')}
           >
-            {getTranslation('navigation.dashboard')}
+            📊 {getTranslation('navigation.dashboard')}
           </button>
           <button
             className="mobile-nav-button"
-            onClick={() => handleNavigationClick('/whitepaper')}
+            onClick={() => {
+              const win = window.open('/roadmap', 'BW_ROADMAP_WINDOW', 'width=1280,height=850,scrollbars=yes,resizable=yes');
+              if (win) win.focus();
+              setIsMobileMenuOpen(false);
+            }}
           >
-            {getTranslation('navigation.whitepaper')}
-          </button>
-          <button
-            className="mobile-nav-button"
-            onClick={() => handleNavigationClick('/roadmap')}
-          >
-            {getTranslation('navigation.roadmap')}
+            🗺️ {getTranslation('navigation.roadmap')}
           </button>
           <button
             className="mobile-nav-button"
             onClick={() => handleNavigationClick('/node')}
           >
-            {getTranslation('navigation.node')}
+            ⚡ {getTranslation('navigation.node')}
           </button>
+
+          <div className="mobile-menu-divider" />
+
+          {/* 모바일 다국어 & 테마 유틸리티 */}
+          <span className="mobile-section-label">🌐 설정 및 유틸리티</span>
+          <div className="mobile-utility-row">
+            <div className="mobile-lang-group">
+              <button className={`lang-chip ${currentLanguage === 'ko' ? 'active' : ''}`} onClick={() => handleLanguageChange('ko')}>KO</button>
+              <button className={`lang-chip ${currentLanguage === 'en' ? 'active' : ''}`} onClick={() => handleLanguageChange('en')}>EN</button>
+              <button className={`lang-chip ${currentLanguage === 'ja' ? 'active' : ''}`} onClick={() => handleLanguageChange('ja')}>JA</button>
+              <button className={`lang-chip ${currentLanguage === 'zh' ? 'active' : ''}`} onClick={() => handleLanguageChange('zh')}>ZH</button>
+            </div>
+            <button className="mobile-theme-btn" onClick={toggleDarkMode}>
+              {isDarkMode ? '🌙 다크 모드' : '☀️ 라이트 모드'}
+            </button>
+          </div>
         </div>
       </div>
     </nav>

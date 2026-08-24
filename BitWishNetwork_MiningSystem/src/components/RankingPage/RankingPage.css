@@ -668,10 +668,28 @@
     }
 }
 
-/* Responsive */
+/* Responsive (데스크톱 PC 뷰 100% 원본 유지, 스마트폰 768px 이하 전용 최적화) */
 @media (max-width: 768px) {
+    .ranking-container {
+        padding-top: 15px;
+    }
+
     .ranking-title {
-        font-size: 2rem;
+        font-size: 1.6rem !important;
+    }
+
+    .ranking-subtitle {
+        font-size: 0.9rem !important;
+    }
+
+    .top-rankers-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .premium-card {
+        padding: 16px 10px;
+        min-height: auto !important;
     }
 
     .status-cards-grid {
@@ -681,7 +699,23 @@
     .my-rank-card {
         flex-direction: column;
         text-align: center;
-        gap: 15px;
+        gap: 12px;
+        padding: 18px;
+    }
+
+    .ranking-list-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ranking-table {
+        min-width: 500px;
+    }
+}
+
+@media (max-width: 480px) {
+    .top-rankers-grid {
+        grid-template-columns: 1fr;
     }
 }
 

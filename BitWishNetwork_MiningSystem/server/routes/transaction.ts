@@ -1,7 +1,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { Transaction } from '../models/Transaction';
-// import { bwChainCore } from '../index'; // Optional: if we want to use the local core
+import { bwChainCore } from '../index'; // Optional: if we want to use the local core
 import axios from 'axios';
 
 const router = express.Router();

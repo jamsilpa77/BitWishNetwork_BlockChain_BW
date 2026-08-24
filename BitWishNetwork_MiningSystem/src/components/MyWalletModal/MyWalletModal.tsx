@@ -336,9 +336,9 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
             className="my-wallet-modal-overlay"
             onMouseDownCapture={onFocus}
             style={{
-                pointerEvents: (isKYCModalOpen || transferModal.isOpen || messageModal.isOpen) ? 'auto' : 'none',
-                backgroundColor: 'transparent',
-                backdropFilter: 'none',
+                pointerEvents: (isKYCModalOpen || transferModal.isOpen || messageModal.isOpen) ? 'auto' : 'auto',
+                backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                backdropFilter: 'blur(6px)',
                 zIndex: isActive ? 10100 : 10000
             }}
         >
@@ -349,7 +349,10 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                     if (onFocus) onFocus();
                 }}
                 onMouseDownCapture={onFocus}
-                style={{
+                style={typeof window !== 'undefined' && window.innerWidth <= 768 ? {
+                    pointerEvents: 'auto',
+                    zIndex: isActive ? 10100 : 10002
+                } : {
                     position: 'fixed',
                     left: `${position.x}px`,
                     top: `${position.y}px`,

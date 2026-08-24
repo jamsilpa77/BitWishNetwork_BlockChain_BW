@@ -1168,12 +1168,12 @@
   }
 }
 
-/* 모바일 768px 반응형: 상하 2단 배열 */
+/* 모바일 768px 반응형: 상하 2단 배열 (데스크톱 PC 뷰 100% 원본 보존) */
 @media (max-width: 768px) {
   .ledger-glass-container.dual-ledger {
     flex-direction: column;
-    padding: 30px 20px;
-    gap: 30px;
+    padding: 24px 16px;
+    gap: 20px;
   }
 
   .ledger-side {
@@ -1212,7 +1212,19 @@
   }
 
   .ledger-value-integer {
-    font-size: 2rem;
+    font-size: 1.8rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.8rem;
+  }
+
+  .action-button {
+    width: 100%;
+    max-width: 100%;
+    min-height: 46px;
   }
 }
 
