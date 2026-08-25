@@ -368,7 +368,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                 <div className="wallet-header" style={{ cursor: 'grab', userSelect: 'none' }}>
                     <div className="header-top-row">
                         <div className="header-left-group">
-                            <button className="back-button" onClick={onClose}>←</button>
+                            <button className="back-button mobile-wallet-close-btn" onClick={onClose} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem' }}>✕ {getTranslation('common.close') || '닫기'}</button>
                             <h2 className="header-title">{getTranslation('wallet.dashboard.title')}</h2>
                         </div>
                         <div className="header-right-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
@@ -433,6 +433,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                 }}
                                 onClick={() => {
                                     if (onOpenMining) {
+                                        onClose(); // 지갑 모달 닫기
                                         onOpenMining(walletAddress);
                                     } else {
                                         alert(getTranslation('wallet.dashboard.messages.miningNotConnected'));
@@ -955,17 +956,9 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="wallet-footer">
-                    <button className="close-modal-btn" onClick={() => {
-                        if (viewMode === 'otpSetup') {
-                            setViewMode('dashboard');
-                        } else if (activeTab === 'overview') {
-                            onClose();
-                        } else {
-                            setActiveTab('overview');
-                        }
-                    }}>
-                        {getTranslation('wallet.dashboard.footer.close')}
+                <div className="wallet-footer" style={{ position: 'sticky', bottom: 0, background: 'rgba(255, 255, 255, 0.95)', padding: '12px', borderTop: '1px solid #e5e7eb', zIndex: 50, display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                    <button className="close-modal-btn" style={{ width: '100%', maxWidth: '300px', padding: '12px 24px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }} onClick={onClose}>
+                        ✕ {getTranslation('wallet.dashboard.footer.close') || '지갑 닫기'}
                     </button>
                 </div>
             </div>
