@@ -213,14 +213,14 @@ router.get('/attendance/:walletAddress', async (req, res) => {
 // GET /api/admin/referral/all (전체 조회 - [Step 1] 필터링 전면 해제)
 router.get('/referral/all', async (req, res) => {
     try {
-        // [Step 1] 날짜 필터링(year, month)을 무시하고 전체 12명 가입자를 MiningState 기준으로 조회
+        // [1단계 수복] 회원가입 테이블(User)을 기준으로 정식 회원 목록을 조회하여 유령 레코드 노출 영구 차단
         const pipeline: any[] = [
             {
                 $lookup: {
-                    from: "users",
+                    from: "miningstates",
                     localField: "walletAddress",
                     foreignField: "walletAddress",
-                    as: "userInfo"
+                    as: "miningInfo"
                 }
             },
             {
@@ -234,14 +234,14 @@ router.get('/referral/all', async (req, res) => {
             {
                 $project: {
                     walletAddress: 1,
-                    isMining: 1,
-                    accumulatedReward: 1,
-                    lastSyncTime: 1,
-                    currentTotalRate: 1, // [추가] 정밀한 채굴률 반영
-                    updatedAt: 1,        // [추가] 예비용 시간 데이터
-                    joinedDate: { $arrayElemAt: ["$userInfo.createdAt", 0] },
-                    kycStatus: { $arrayElemAt: ["$userInfo.isKycVerified", 0] },
-                    referrerCode: { $arrayElemAt: ["$userInfo.referrerCode", 0] },
+                    joinedDate: "$createdAt",
+                    kycStatus: "$isKycVerified",
+                    referrerCode: "$referrerCode",
+                    isMining: { $arrayElemAt: ["$miningInfo.isMining", 0] },
+                    accumulatedReward: { $arrayElemAt: ["$miningInfo.accumulatedReward", 0] },
+                    lastSyncTime: { $arrayElemAt: ["$miningInfo.lastSyncTime", 0] },
+                    currentTotalRate: { $arrayElemAt: ["$miningInfo.currentTotalRate", 0] },
+                    updatedAt: { $arrayElemAt: ["$miningInfo.updatedAt", 0] },
                     settledAmount: {
                         $sum: {
                             $map: {
@@ -256,7 +256,7 @@ router.get('/referral/all', async (req, res) => {
             { $sort: { joinedDate: -1 } }
         ];
 
-        const results = await MiningState.aggregate(pipeline);
+        const results = await User.aggregate(pipeline);
 
         const now = new Date();
         const recordsWithRealTime = results.map(record => {

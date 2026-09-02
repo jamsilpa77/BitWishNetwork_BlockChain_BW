@@ -127,4 +127,43 @@ export class BlockMiningService {
             return 31; // 기본 제네시스 1 + 추천 보상 30
         }
     }
+
+    /**
+     * [5단계 수복] 정식 지갑 유저의 DB 누적 채굴량(정수 1 BW)과 물리 블록 1대1 동적 대조 및 자가 수복 엔진
+     * 유저 수(17개/21개/N개)에 상관없이 DB를 동적 조회하여 부족한 블록을 즉시 매핑하고 잔여 소수점을 안전 보존합니다.
+     * @param walletAddress 정식 가입 지갑 주소
+     */
+    public static async auditAndSyncUserBlocks(walletAddress: string): Promise<{ createdBlocks: number; currentThreshold: string }> {
+        try {
+            const miningDb = mongoose.connection.useDb('bitwish_mining');
+            const stateColl = miningDb.collection('miningstates');
+            const state = await stateColl.findOne({ walletAddress: new RegExp('^' + walletAddress + '$', 'i') });
+
+            if (!state) return { createdBlocks: 0, currentThreshold: '0' };
+
+            const accumulated = new Decimal(state.accumulatedReward || '0');
+            const lastThreshold = new Decimal(state.lastBlockRewardThreshold || '0');
+            const nextThreshold = lastThreshold.plus(1);
+
+            if (accumulated.gte(nextThreshold)) {
+                const blocksToCreate = accumulated.minus(lastThreshold).floor().toNumber();
+                if (blocksToCreate > 0) {
+                    console.log(`⛏️ [5단계 1대1 수복] ${walletAddress}: 누적 ${accumulated.toFixed(4)} BW → +${blocksToCreate}개 물리 블록 정밀 매핑`);
+                    for (let i = 0; i < blocksToCreate; i++) {
+                        await this.onMiningBlock(walletAddress);
+                    }
+                    const newThreshold = lastThreshold.plus(blocksToCreate).toString();
+                    await stateColl.updateOne(
+                        { _id: state._id },
+                        { $set: { lastBlockRewardThreshold: newThreshold } }
+                    );
+                    return { createdBlocks: blocksToCreate, currentThreshold: newThreshold };
+                }
+            }
+            return { createdBlocks: 0, currentThreshold: lastThreshold.toString() };
+        } catch (err) {
+            console.error(`❌ [5단계 1대1 대조 에러] ${walletAddress}:`, err);
+            return { createdBlocks: 0, currentThreshold: '0' };
+        }
+    }
 }

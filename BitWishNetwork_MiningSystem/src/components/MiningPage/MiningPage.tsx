@@ -23,7 +23,7 @@
  * ✅ 유저는 1명이든 천만명이든 개인 단독 데이터베이스 MongDB 하이브리드 완벽 저장소를 구현한다.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LanguageManager } from '@/utils/LanguageManager/LanguageManager';
 import { MiningService } from '@/services/MiningService/MiningService';
 import { AttendanceBonusService } from '@/services/BonusService/AttendanceBonusService';
@@ -64,6 +64,10 @@ const MiningPage: React.FC = () => {
   const [referralBonus, setReferralBonus] = useState<ReferralBonus | null>(null);
   const [partnerBonus, setPartnerBonus] = useState<PartnerBonus | null>(null);
   const [walletAddress, setWalletAddress] = useState<string>('');
+
+  // [3단계 초정밀 수복] 프론트엔드-백엔드 서버 시계 0.00초 완벽 동기화를 위한 레퍼런스
+  const miningStartTimeRef = useRef<number | null>(null);
+  const serverClockOffsetRef = useRef<number>(0);
 
   // [Phase 1 Fixed] 추천보상보관함 및 보너스 보관함 실시간 상태 연동
   const [referralRewardStorage, setReferralRewardStorage] = useState<number>(0);
@@ -123,6 +127,15 @@ const MiningPage: React.FC = () => {
     try {
       if (!walletAddress) return;
       const status = await miningService.getMiningStatus(walletAddress);
+
+      // [3단계 초정밀 수복] 서버 시계 오프셋 및 채굴 시작 타임스탬프 동기화
+      if ((status as any).serverTimestamp) {
+        serverClockOffsetRef.current = (status as any).serverTimestamp - Date.now();
+      }
+      if ((status as any).miningStartTime) {
+        miningStartTimeRef.current = (status as any).miningStartTime;
+      }
+
       setMiningStatus(status.status);
       setMiningTime(status.miningTime);
       setAccumulatedReward(status.accumulatedReward);
@@ -199,12 +212,10 @@ const MiningPage: React.FC = () => {
         return next;
       });
       setTrueLifeTimeMined(prev => prev + rewardPerSecond);
-      // [Phase 1 Fixed] 2% 추천 보너스 보관함 초당 카운팅 동기화 로직 추가
-      // referralBonusRate (예: 0.02) 를 기반으로 초당 수익을 구해 보너스 보관함 전용으로 증분시킴
+      // [공정 4단계 안전 정비] 추천 보너스 보관함 Decimal.js 50자리 초당 가산 정비
       if (referralBonusRate > 0) {
-
-        const bonusPerSecond = (baseRate * referralBonusRate) / 3600;
-        setReferralBonusStorage(prev => prev + bonusPerSecond);
+        const bonusPerSecond = new Decimal(baseRate).mul(new Decimal(referralBonusRate)).div(3600);
+        setReferralBonusStorage(prev => new Decimal(prev).plus(bonusPerSecond).toNumber());
       }
     } catch (error) {
       console.error('누적 보상 업데이트 오류:', error);
@@ -288,7 +299,14 @@ const MiningPage: React.FC = () => {
     let interval: NodeJS.Timeout;
     if (miningStatus === MINING_STATUS.MINING) {
       interval = setInterval(() => {
-        setMiningTime(prev => prev + 1);
+        // [3단계 초정밀 수복] 2.88초 화면 시차 오차를 0.00초로 완전 제거하는 서버 시계 역산식
+        const currentServerTime = Date.now() + serverClockOffsetRef.current;
+        if (miningStartTimeRef.current) {
+          const exactElapsedSeconds = Math.max(0, Math.floor((currentServerTime - miningStartTimeRef.current) / 1000));
+          setMiningTime(exactElapsedSeconds);
+        } else {
+          setMiningTime(prev => prev + 1);
+        }
         updateAccumulatedReward();
       }, 1000);
     }

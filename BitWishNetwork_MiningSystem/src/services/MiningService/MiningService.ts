@@ -68,7 +68,10 @@ export class MiningService {
   public async getMiningStatus(walletAddress: string): Promise<{
     status: MiningStatus;
     miningTime: number;
+    miningStartTime?: number | null;
+    serverTimestamp?: number;
     accumulatedReward: number;
+    trueLifeTimeMined?: number;
     currentRate: number;
     isAttendanceActive: boolean;
     referralBonusStorage: number;
@@ -93,18 +96,21 @@ export class MiningService {
           status = MINING_STATUS.MINING;
         }
 
-        // 마이닝 시간 계산
+        // 마이닝 시간 계산 (서버 정밀 타임스탬프 기준)
         let miningTime = 0;
-        if (state.isMining && state.miningStartTime) {
-          const startTime = new Date(state.miningStartTime).getTime();
-          const now = new Date().getTime();
-          miningTime = Math.floor((now - startTime) / 1000);
+        const serverTimestamp = data.serverTimestamp || Date.now();
+        const startTime = (state.isMining && state.miningStartTime) ? new Date(state.miningStartTime).getTime() : null;
+        if (startTime) {
+          miningTime = Math.max(0, Math.floor((serverTimestamp - startTime) / 1000));
         }
 
         return {
           status,
           miningTime,
+          miningStartTime: startTime,
+          serverTimestamp,
           accumulatedReward: parseFloat(state.accumulatedReward || '0'),
+          trueLifeTimeMined: parseFloat(state.trueLifeTimeMined || state.accumulatedReward || '0'),
           currentRate: parseFloat(state.currentTotalRate || '0.25'),
           isAttendanceActive: state.isAttendanceActive || false,
           referralBonusStorage: user ? parseFloat(user.referralBonusStorage || '0') : 0,
@@ -117,7 +123,10 @@ export class MiningService {
       return {
         status: MINING_STATUS.STOPPED,
         miningTime: 0,
+        miningStartTime: null,
+        serverTimestamp: Date.now(),
         accumulatedReward: 0,
+        trueLifeTimeMined: 0,
         currentRate: 0.25,
         isAttendanceActive: false,
         referralBonusStorage: 0,
@@ -130,7 +139,10 @@ export class MiningService {
       return {
         status: MINING_STATUS.STOPPED,
         miningTime: 0,
+        miningStartTime: null,
+        serverTimestamp: Date.now(),
         accumulatedReward: 0,
+        trueLifeTimeMined: 0,
         currentRate: 0.25,
         isAttendanceActive: false,
         referralBonusStorage: 0,

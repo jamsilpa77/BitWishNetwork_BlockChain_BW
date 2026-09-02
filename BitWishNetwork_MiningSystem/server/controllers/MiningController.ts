@@ -141,6 +141,7 @@ export class MiningController {
 
             res.status(200).json({
                 success: true,
+                serverTimestamp: Date.now(),
                 data: successState,
                 totalBlockCount: totalBlockCount,
                 distributedFee: distributedFee
@@ -545,6 +546,7 @@ export class MiningController {
 
             res.status(200).json({
                 success: true,
+                serverTimestamp: Date.now(),
                 user: user ? {
                     ...user.toObject(),
                     referralBonusStorage: bonusRecord?.referralBonusStorage || '0',
