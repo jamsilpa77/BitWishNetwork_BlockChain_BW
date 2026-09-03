@@ -11,13 +11,12 @@ import mongoose from 'mongoose';
 import Decimal from 'decimal.js';
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// CommonJS 및 ts-node 호환 환경 설정
+const scriptDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
 
-dotenv.config({ path: path.join(__dirname, '../.env') });
-dotenv.config();
+dotenv.config({ path: path.join(scriptDir, '../.env') });
+dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 Decimal.set({ precision: 50 });
 
