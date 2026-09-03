@@ -567,6 +567,40 @@ export class MiningController {
     }
 
     /**
+     * [공정 3단계] 월별 정산 이력 전용 조회 API (/api/mining/history/:walletAddress)
+     */
+    public async getMiningHistory(req: Request, res: Response): Promise<void> {
+        try {
+            const { walletAddress } = req.params;
+
+            const miningHistory = await MonthlySettlement.find({
+                walletAddress: new RegExp('^' + walletAddress + '$', 'i')
+            }).sort({ year: -1, month: -1, settledAt: -1 });
+
+            const formattedHistory = miningHistory.map((item: any) => ({
+                id: item._id,
+                walletAddress: item.walletAddress,
+                year: item.year,
+                month: item.month,
+                minedAmount: new Decimal(item.minedAmount || '0').toFixed(50),
+                bonusAmount: new Decimal(item.bonusAmount || '0').toFixed(50),
+                totalAmount: new Decimal(item.totalAmount || '0').toFixed(50),
+                settledAt: item.settledAt,
+                migrationStatus: item.migrationStatus,
+                migrationDate: item.migrationDate
+            }));
+
+            res.status(200).json({
+                success: true,
+                history: formattedHistory
+            });
+        } catch (error) {
+            console.error('Get mining history error:', error);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    }
+
+    /**
      * 보상 계산 내부 로직 (Private)
      * 시간 차이(초) * 초당 채굴률
      */

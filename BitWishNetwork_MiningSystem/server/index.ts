@@ -17,7 +17,7 @@ import statsRoutes from './routes/stats';
 import kycRoutes from './routes/kyc';
 import rankingRoutes from './routes/ranking';
 import transactionRoutes from './routes/transaction';
-import { SettlementWorker } from '../src/server/cron/SettlementWorker';
+import { SettlementWorker } from './cron/SettlementWorker';
 import bcrypt from 'bcryptjs';
 import { BWCommunityUser } from './models/bwCommunityModels';
 import { CommunityUser } from './models/CommunityUser';

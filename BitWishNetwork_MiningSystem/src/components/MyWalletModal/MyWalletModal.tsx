@@ -681,33 +681,26 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                                         {(() => {
                                                             const settledDate = new Date(item.settledAt);
 
-                                                            // [버그 수정 3] 아직 KYC 승인을 받지 않은 사용자라면 디데이 타이머를 숨기고 단순 빨간색 잠금 상태만 표시합니다.
-                                                            if (!walletData.isKycVerified) {
+                                                            // 1. KYC 미승인 회원 또는 WAITING_KYC 레코드 -> 'KYC 대기' 배지 표출
+                                                            if (!walletData.isKycVerified || item.migrationStatus === 'WAITING_KYC') {
                                                                 return (
-                                                                    <span style={{ fontSize: '11px', backgroundColor: '#FEF2F2', color: '#B91C1C', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
-                                                                        {getTranslation('wallet.dashboard.miningTable.statusLocked') || 'LOCKED'}
+                                                                    <span style={{ fontSize: '11px', backgroundColor: '#FEF3C7', color: '#92400E', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                                                        {getTranslation('wallet.dashboard.miningTable.statusWaitingKyc') || 'KYC 대기'}
                                                                     </span>
                                                                 );
                                                             }
 
-                                                            // KYC 승인을 완료한 유저만 카운트다운 타이머가 계산되어 돌아갑니다.
+                                                            // 2. KYC 승인 회원의 15일 타임락 D-day 카운트다운 타이머 계산
                                                             const baseDate = (walletData as any).kycVerifiedDate ? new Date((walletData as any).kycVerifiedDate) : settledDate;
                                                             const unlockDate = new Date(baseDate.getTime() + (15 * 24 * 60 * 60 * 1000));
                                                             const now = currentTime;
                                                             const diff = unlockDate.getTime() - now.getTime();
 
+                                                            // 3. 15일 경과 또는 UNLOCKED/MIGRATED 상태 -> 초록색 '잠금 해제' 배지 표출
                                                             if (diff <= 0 || item.migrationStatus === 'UNLOCKED' || item.migrationStatus === 'MIGRATED') {
                                                                 return (
                                                                     <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
                                                                         {getTranslation('wallet.dashboard.miningTable.statusUnlocked') || '잠금 해제'}
-                                                                    </span>
-                                                                );
-                                                            }
-
-                                                            if (item.migrationStatus === 'WAITING_KYC') {
-                                                                return (
-                                                                    <span style={{ fontSize: '11px', backgroundColor: '#FEF3C7', color: '#92400E', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
-                                                                        {getTranslation('wallet.dashboard.miningTable.statusWaitingKyc') || 'KYC 대기'}
                                                                     </span>
                                                                 );
                                                             }

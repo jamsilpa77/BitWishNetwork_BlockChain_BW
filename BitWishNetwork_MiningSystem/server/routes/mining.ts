@@ -16,6 +16,9 @@ router.post('/stop', (req, res) => miningController.stopMining(req, res));
 // 마이닝 데이터 동기화 (30초 주기)
 router.post('/sync', (req, res) => miningController.syncMiningData(req, res));
 
+// [공정 3단계] 월별 정산 이력 조회 API
+router.get('/history/:walletAddress', (req, res) => miningController.getMiningHistory(req, res));
+
 // 사용자 상태 조회 (초기 접속 시)
 // 사용자 상태 조회 (초기 접속 시) - [실시간 시간 및 KYC 날짜 무결성 보정 패치]
 router.get('/status/:walletAddress', async (req, res) => {

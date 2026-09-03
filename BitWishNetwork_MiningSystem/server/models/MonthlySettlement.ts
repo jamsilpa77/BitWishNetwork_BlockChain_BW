@@ -23,8 +23,10 @@ export interface IMonthlySettlement extends Document {
 
     settledAt: Date;              // 정산 확정 일시 (매월 말일 23:59:59)
 
-    migrationStatus: 'LOCKED' | 'UNLOCKED' | 'MIGRATED'; // 마이그레이션 상태
+    migrationStatus: 'LOCKED' | 'UNLOCKED' | 'MIGRATED' | 'WAITING_KYC'; // 마이그레이션 상태
     migrationDate: Date | null;   // 마이그레이션(전환) 완료일
+    createdAt?: Date;             // 생성 일시
+    updatedAt?: Date;             // 수정 일시
 }
 
 const MonthlySettlementSchema: Schema = new Schema({
