@@ -74,40 +74,12 @@ async function runHealMonthlySettlements() {
         const joinYear = createdAt.getFullYear();
         const joinMonth = createdAt.getMonth() + 1; // 1~12
 
-        // 수복 대상 정산 월 목록 결정 (6, 7, 8월)
-        const targetMonths: { year: number; month: number; settledAt: Date }[] = [];
-
-        // 6월 정산 (6월 이전 가입자)
-        if (joinYear < 2026 || (joinYear === 2026 && joinMonth <= 6)) {
-            targetMonths.push({
-                year: 2026,
-                month: 6,
-                settledAt: new Date('2026-06-30T23:59:59.000Z')
-            });
-        }
-
-        // 7월 정산 (7월 이전 가입자)
-        if (joinYear < 2026 || (joinYear === 2026 && joinMonth <= 7)) {
-            targetMonths.push({
-                year: 2026,
-                month: 7,
-                settledAt: new Date('2026-07-31T23:59:59.000Z')
-            });
-        }
-
-        // 8월 정산 (8월 이전 가입자)
-        if (joinYear < 2026 || (joinYear === 2026 && joinMonth <= 8)) {
-            targetMonths.push({
-                year: 2026,
-                month: 8,
-                settledAt: new Date('2026-08-31T23:59:59.000Z')
-            });
-        }
-
-        if (targetMonths.length === 0) {
-            console.log(`[HealScript] 유저 ${walletAddress}: 신규 회원 (과거 정산 대상 없음)`);
-            continue;
-        }
+        // 수복 대상 정산 월 목록 결정 (모든 기존 회원의 6, 7, 8월 정산 레코드 일괄 생성)
+        const targetMonths: { year: number; month: number; settledAt: Date }[] = [
+            { year: 2026, month: 6, settledAt: new Date('2026-06-30T23:59:59.000Z') },
+            { year: 2026, month: 7, settledAt: new Date('2026-07-31T23:59:59.000Z') },
+            { year: 2026, month: 8, settledAt: new Date('2026-08-31T23:59:59.000Z') }
+        ];
 
         // 정산 금액 산출 (기존 누적량 및 정밀 분할)
         const currentAccumulated = new Decimal(miningState?.accumulatedReward || '0');
