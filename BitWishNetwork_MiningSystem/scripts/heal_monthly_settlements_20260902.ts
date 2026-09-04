@@ -61,18 +61,22 @@ async function runHealMonthlySettlements() {
     console.log(`[HealScript] 총 회원 수: ${users.length}명 전수 조사를 시작합니다.`);
 
     let totalCreatedCount = 0;
+    let totalVerifiedCount = 0;
 
     for (const user of users) {
         const walletAddress = user.walletAddress;
+        if (!walletAddress) continue;
+
         const isKycApproved = Boolean(user.isKycVerified || user.kycApplication?.status === 'APPROVED');
         const migrationStatus = isKycApproved ? 'LOCKED' : 'WAITING_KYC';
 
-        const miningState = await MiningState.findOne({ walletAddress });
+        // 대소문자 구애 없는 지갑 주소 정밀 검색
+        const miningState = await MiningState.findOne({ 
+            walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i') 
+        });
         
         // 가입 일시 및 채굴 시작일 파악
         const createdAt = user.createdAt ? new Date(user.createdAt) : new Date('2026-05-01');
-        const joinYear = createdAt.getFullYear();
-        const joinMonth = createdAt.getMonth() + 1; // 1~12
 
         // 수복 대상 정산 월 목록 결정 (모든 기존 회원의 6, 7, 8월 정산 레코드 일괄 생성)
         const targetMonths: { year: number; month: number; settledAt: Date }[] = [
@@ -88,7 +92,7 @@ async function runHealMonthlySettlements() {
         // 월별 정산금액 (누적 정산금이 있는 경우 균등 분할, 기본값 보유)
         const perMonthAmount = currentAccumulated.gt(0) 
             ? currentAccumulated.div(monthsCount)
-            : new Decimal('180.00000000000000000000000000000000000000000000000000'); // 기본 기준 채굴량 fallback
+            : new Decimal('180.00000000000000000000000000000000000000000000000000');
 
         for (const target of targetMonths) {
             const minedAmount = perMonthAmount.toFixed(50);
@@ -96,7 +100,7 @@ async function runHealMonthlySettlements() {
             const totalAmount = minedAmount;
 
             const existingRecord = await MonthlySettlement.findOne({
-                walletAddress,
+                walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i'),
                 year: target.year,
                 month: target.month
             });
@@ -113,8 +117,9 @@ async function runHealMonthlySettlements() {
                     migrationStatus
                 });
                 totalCreatedCount++;
-                console.log(`[HealScript] ✅ 생성 완료: ${walletAddress} (${target.year}-${target.month}) -> ${migrationStatus}`);
+                console.log(`[HealScript] ✅ 신규 생성 완료: ${walletAddress} (${target.year}-${target.month}) -> ${migrationStatus}`);
             } else {
+                totalVerifiedCount++;
                 // 기존 레코드가 있는 경우 KYC 승인 상태에 따라 status 보정
                 if (existingRecord.migrationStatus !== migrationStatus && existingRecord.migrationStatus !== 'UNLOCKED' && existingRecord.migrationStatus !== 'MIGRATED') {
                     existingRecord.migrationStatus = migrationStatus;
@@ -125,7 +130,7 @@ async function runHealMonthlySettlements() {
         }
     }
 
-    console.log(`[HealScript] 🎉 6·7·8월 소급 수복 공정 완료! 총 ${totalCreatedCount}개 월별 정산 레코드가 수복되었습니다.`);
+    console.log(`[HealScript] 🎉 6·7·8월 소급 수복 공정 완료! (신규 생성: ${totalCreatedCount}개, 기존 검증/보정: ${totalVerifiedCount}개, 총 검증: ${totalCreatedCount + totalVerifiedCount}개)`);
     await mongoose.disconnect();
 }
 
