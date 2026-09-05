@@ -60,7 +60,7 @@ export class SettlementWorker {
             let unlockedCount = 0;
 
             for (const record of lockedRecords) {
-                const user = await User.findOne({ walletAddress: record.walletAddress });
+                const user = await User.findOne({ walletAddress: new RegExp('^' + record.walletAddress.trim() + '$', 'i') });
                 if (!user) continue;
 
                 const isKycApproved = Boolean(user.isKycVerified || user.kycApplication?.status === 'APPROVED');
@@ -109,8 +109,12 @@ export class SettlementWorker {
                 const isKycApproved = Boolean(user.isKycVerified || user.kycApplication?.status === 'APPROVED');
                 const migrationStatus = isKycApproved ? 'LOCKED' : 'WAITING_KYC';
 
-                const miningState = await MiningState.findOne({ walletAddress });
-                const bonusRecord = await BonusRecord.findOne({ walletAddress });
+                const miningState = await MiningState.findOne({ 
+                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i') 
+                });
+                const bonusRecord = await BonusRecord.findOne({ 
+                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i') 
+                });
 
                 if (!miningState) continue;
 
@@ -126,7 +130,7 @@ export class SettlementWorker {
 
                 // 1. MonthlySettlement 영구 장부에 정산 레코드 생성/업데이트
                 await MonthlySettlement.findOneAndUpdate(
-                    { walletAddress, year: targetYear, month: targetMonth },
+                    { walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i'), year: targetYear, month: targetMonth },
                     {
                         minedAmount: minedAmountStr,
                         bonusAmount: bonusAmountStr,

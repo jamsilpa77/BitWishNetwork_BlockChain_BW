@@ -36,8 +36,12 @@ export class SettlementWorker {
                 const walletAddress = user.walletAddress;
 
                 // 2. 현재 채굴 상태 및 보너스 기록 조회
-                const miningState = await MiningState.findOne({ walletAddress });
-                const bonusRecord = await BonusRecord.findOne({ walletAddress });
+                const miningState = await MiningState.findOne({ 
+                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i') 
+                });
+                const bonusRecord = await BonusRecord.findOne({ 
+                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i') 
+                });
 
                 if (!miningState) continue;
 
@@ -50,7 +54,7 @@ export class SettlementWorker {
 
                 // 4. 영구 원장(MonthlySettlement)에 기록
                 await MonthlySettlement.findOneAndUpdate(
-                    { walletAddress, year: targetYear, month: targetMonth },
+                    { walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i'), year: targetYear, month: targetMonth },
                     {
                         minedAmount: currentMined.toString(),
                         bonusAmount: currentBonus.toString(),
