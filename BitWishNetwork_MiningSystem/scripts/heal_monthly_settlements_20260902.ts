@@ -75,29 +75,70 @@ async function runHealMonthlySettlements() {
             walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i') 
         });
         
-        // 가입 일시 및 채굴 시작일 파악
-        const createdAt = user.createdAt ? new Date(user.createdAt) : new Date('2026-05-01');
+        // 유저 가입일시 및 채굴 시작일 정밀 파악
+        const userCreatedAt = user.createdAt 
+            ? new Date(user.createdAt) 
+            : (miningState?.miningStartTime ? new Date(miningState.miningStartTime) : new Date('2025-12-01'));
 
-        // 수복 대상 정산 월 목록 결정 (모든 기존 회원의 6, 7, 8월 정산 레코드 일괄 생성)
-        const targetMonths: { year: number; month: number; settledAt: Date }[] = [
-            { year: 2026, month: 6, settledAt: new Date('2026-06-30T23:59:59.000Z') },
-            { year: 2026, month: 7, settledAt: new Date('2026-07-31T23:59:59.000Z') },
-            { year: 2026, month: 8, settledAt: new Date('2026-08-31T23:59:59.000Z') }
+        // 2026년 6, 7, 8월 각 월별 정산 정의
+        const allMonths = [
+            { year: 2026, month: 6, start: new Date('2026-06-01T00:00:00.000Z'), end: new Date('2026-06-30T23:59:59.000Z') },
+            { year: 2026, month: 7, start: new Date('2026-07-01T00:00:00.000Z'), end: new Date('2026-07-31T23:59:59.000Z') },
+            { year: 2026, month: 8, start: new Date('2026-08-01T00:00:00.000Z'), end: new Date('2026-08-31T23:59:59.000Z') }
         ];
 
-        // 정산 금액 산출 (기존 누적량 및 정밀 분할)
+        // 규칙 1: 회원의 가입일보다 말일이 같거나 뒤인 월만 정산 대상으로 동적 선정 (가입 전 달은 100% 정산 제외!)
+        const activeTargetMonths = allMonths.filter(m => userCreatedAt <= m.end);
+
+        // 규칙 2: 가입 전 달에 잘못 생성되어 있던 기존 정산 레코드가 있다면 무조건 청소(Delete/Purge)
+        const invalidMonths = allMonths.filter(m => userCreatedAt > m.end);
+        for (const inv of invalidMonths) {
+            const deleted = await MonthlySettlement.deleteMany({
+                walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i'),
+                year: inv.year,
+                month: inv.month
+            });
+            if (deleted.deletedCount > 0) {
+                console.log(`[HealScript] 🧹 가입 전 잘못 생성된 레코드 청소 완료: ${walletAddress} (${inv.year}-${inv.month}) [${deleted.deletedCount}건 삭제]`);
+            }
+        }
+
         const currentAccumulated = new Decimal(miningState?.accumulatedReward || '0');
-        const monthsCount = new Decimal(targetMonths.length);
 
-        // 월별 정산금액 (누적 정산금이 있는 경우 균등 분할, 기본값 보유)
-        const perMonthAmount = currentAccumulated.gt(0) 
-            ? currentAccumulated.div(monthsCount)
-            : new Decimal('180.00000000000000000000000000000000000000000000000000');
+        // 규칙 3: 채굴량이 0인 미채굴자(13명)는 가짜 데이터 180 BW를 주지 않고 스킵하며, 기존에 오적재된 가짜 데이터 청소
+        if (currentAccumulated.isZero()) {
+            const fakeDeleted = await MonthlySettlement.deleteMany({
+                walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i'),
+                year: { $in: [2026] },
+                month: { $in: [6, 7, 8] }
+            });
+            if (fakeDeleted.deletedCount > 0) {
+                console.log(`[HealScript] 🧹 미채굴자 가짜 데이터 청소 완료: ${walletAddress} [${fakeDeleted.deletedCount}건 삭제]`);
+            }
+            continue;
+        }
 
-        for (const target of targetMonths) {
-            const minedAmount = perMonthAmount.toFixed(50);
-            const bonusAmount = '0.00000000000000000000000000000000000000000000000000';
-            const totalAmount = minedAmount;
+        // 각 대상 월별 실질 채굴 활성 초 수(Seconds) 산출
+        let totalActiveSeconds = new Decimal(0);
+        const monthSecondsList = activeTargetMonths.map(m => {
+            const actStart = userCreatedAt > m.start ? userCreatedAt : m.start;
+            const actEnd = m.end;
+            const diffMs = actEnd.getTime() - actStart.getTime();
+            const sec = new Decimal(Math.max(0, diffMs / 1000));
+            totalActiveSeconds = totalActiveSeconds.plus(sec);
+            return { ...m, activeSeconds: sec, settledAt: m.end };
+        });
+
+        // 월별 비례 배분(Pro-rata) 및 장부 생성
+        for (const target of monthSecondsList) {
+            const weight = totalActiveSeconds.gt(0) 
+                ? target.activeSeconds.div(totalActiveSeconds) 
+                : new Decimal(0);
+
+            const monthMinedAmount = currentAccumulated.mul(weight);
+            const minedAmountStr = monthMinedAmount.toFixed(50);
+            const bonusAmountStr = '0.00000000000000000000000000000000000000000000000000';
+            const totalAmountStr = minedAmountStr;
 
             const existingRecord = await MonthlySettlement.findOne({
                 walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i'),
@@ -110,27 +151,27 @@ async function runHealMonthlySettlements() {
                     walletAddress,
                     year: target.year,
                     month: target.month,
-                    minedAmount,
-                    bonusAmount,
-                    totalAmount,
+                    minedAmount: minedAmountStr,
+                    bonusAmount: bonusAmountStr,
+                    totalAmount: totalAmountStr,
                     settledAt: target.settledAt,
                     migrationStatus
                 });
                 totalCreatedCount++;
-                console.log(`[HealScript] ✅ 신규 생성 완료: ${walletAddress} (${target.year}-${target.month}) -> ${migrationStatus}`);
+                console.log(`[HealScript] ✅ 정밀 소급 생성 완료: ${walletAddress} (${target.year}-${target.month}) [Pro-rata: ${(weight.toNumber() * 100).toFixed(2)}%] -> ${migrationStatus}`);
             } else {
                 totalVerifiedCount++;
-                // 기존 레코드가 있는 경우 KYC 승인 상태에 따라 status 보정
-                if (existingRecord.migrationStatus !== migrationStatus && existingRecord.migrationStatus !== 'UNLOCKED' && existingRecord.migrationStatus !== 'MIGRATED') {
-                    existingRecord.migrationStatus = migrationStatus;
-                    await existingRecord.save();
-                    console.log(`[HealScript] 🔄 상태 보정: ${walletAddress} (${target.year}-${target.month}) -> ${migrationStatus}`);
-                }
+                existingRecord.minedAmount = minedAmountStr;
+                existingRecord.bonusAmount = bonusAmountStr;
+                existingRecord.totalAmount = totalAmountStr;
+                existingRecord.migrationStatus = migrationStatus;
+                await existingRecord.save();
+                console.log(`[HealScript] 🔄 정밀 소급 갱신 완료: ${walletAddress} (${target.year}-${target.month}) [Pro-rata: ${(weight.toNumber() * 100).toFixed(2)}%] -> ${migrationStatus}`);
             }
         }
     }
 
-    console.log(`[HealScript] 🎉 6·7·8월 소급 수복 공정 완료! (신규 생성: ${totalCreatedCount}개, 기존 검증/보정: ${totalVerifiedCount}개, 총 검증: ${totalCreatedCount + totalVerifiedCount}개)`);
+    console.log(`[HealScript] 🎉 유저 가입일 기반 무결점 소급 수복 공정 완료! (신규 생성: ${totalCreatedCount}개, 정밀 보정/검증: ${totalVerifiedCount}개)`);
     await mongoose.disconnect();
 }
 
