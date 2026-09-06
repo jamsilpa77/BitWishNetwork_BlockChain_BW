@@ -336,9 +336,9 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
             className="my-wallet-modal-overlay"
             onMouseDownCapture={onFocus}
             style={{
-                pointerEvents: (isKYCModalOpen || transferModal.isOpen || messageModal.isOpen) ? 'auto' : 'auto',
-                backgroundColor: 'rgba(0, 0, 0, 0.65)',
-                backdropFilter: 'blur(6px)',
+                pointerEvents: (isKYCModalOpen || transferModal.isOpen || messageModal.isOpen) ? 'auto' : 'none',
+                backgroundColor: (isKYCModalOpen || transferModal.isOpen || messageModal.isOpen) ? 'rgba(0, 0, 0, 0.65)' : 'transparent',
+                backdropFilter: (isKYCModalOpen || transferModal.isOpen || messageModal.isOpen) ? 'blur(6px)' : 'none',
                 zIndex: isActive ? 10100 : 10000
             }}
         >
@@ -433,7 +433,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                 }}
                                 onClick={() => {
                                     if (onOpenMining) {
-                                        onClose(); // 지갑 모달 닫기
+                                        // onClose() 파기 구문 제거하여 지갑 모달을 파기하지 않고 뒤에 유지
                                         onOpenMining(walletAddress);
                                     } else {
                                         alert(getTranslation('wallet.dashboard.messages.miningNotConnected'));
@@ -672,7 +672,10 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                             (walletData as any).miningHistory.map((item: any, idx: number) => (
                                                 <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
                                                     <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: '500', color: '#111827' }}>
-                                                        {new Date(item.settledAt).toLocaleString(currentLanguage === 'ko' ? 'ko-KR' : currentLanguage === 'ja' ? 'ja-JP' : currentLanguage === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\//g, '.')}
+                                                        {/* DB의 정산 연도(year)와 월(month) 기반 윤년/평년 동적 말일 계산(28/29/30/31일) 표출 */}
+                                                        {item.year && item.month 
+                                                            ? `${item.year}.${String(item.month).padStart(2, '0')}.${String(new Date(item.year, item.month, 0).getDate()).padStart(2, '0')}` 
+                                                            : (new Date(item.settledAt).toISOString().split('T')[0] || '').replace(/-/g, '.')}
                                                     </td>
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{precisionCalculator.formatForUI(item.minedAmount)} BW</td>
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{precisionCalculator.formatForUI(item.bonusAmount)} BW</td>

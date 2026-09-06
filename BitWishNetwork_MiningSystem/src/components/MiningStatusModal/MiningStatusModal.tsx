@@ -17,6 +17,7 @@ interface MiningStatusModalProps {
     onClose: () => void;
     currentLanguage: string;
     onOpenReferralModal?: () => void;
+    onOpenWallet?: () => void;
     walletAddress: string;
     isActive?: boolean;
     onFocus?: () => void;
@@ -39,6 +40,7 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
     onClose,
     currentLanguage,
     onOpenReferralModal,
+    onOpenWallet,
     walletAddress,
     isActive,
     onFocus
@@ -544,7 +546,7 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
                         <span className="button-icon">{isMining ? '🔄' : '⚡'}</span>
                         {isMining ? getTranslation('buttons.miningInProgress') || '채굴 진행중' : getTranslation('buttons.start')}
                     </button>
-                    <button className="footer-btn wallet">
+                    <button className="footer-btn wallet" onClick={onOpenWallet}>
                         <span className="button-icon">🔑</span>
                         {getTranslation('buttons.myWallet')}
                     </button>

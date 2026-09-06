@@ -444,6 +444,7 @@ const HomePage: React.FC = () => {
             // @ts-ignore
             if (walletService.checkAuthSession()) {
                 setIsMyWalletModalOpen(true);
+                handleFocus('wallet');
             } else {
                 // 2. 세션 만료 시 인증 모달 오픈
                 setIsWalletAuthModalOpen(true);
@@ -924,6 +925,10 @@ const HomePage: React.FC = () => {
                     onOpenReferralModal={() => {
                         setIsReferralModalOpen(true);
                         handleFocus('referral');
+                    }}
+                    onOpenWallet={() => {
+                        handleMyWallet();
+                        handleFocus('wallet');
                     }}
                     isActive={activeModal === 'mining'}
                     onFocus={() => handleFocus('mining')}
