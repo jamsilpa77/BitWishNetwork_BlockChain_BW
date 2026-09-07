@@ -71,13 +71,13 @@ async function runHealMonthlySettlements() {
         const migrationStatus = isKycApproved ? 'LOCKED' : 'WAITING_KYC';
 
         // 대소문자 구애 없는 지갑 주소 정밀 검색
-        const miningState = await MiningState.findOne({ 
-            walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i') 
+        const miningState = await MiningState.findOne({
+            walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i')
         });
-        
+
         // 유저 가입일시 및 채굴 시작일 정밀 파악
-        const userCreatedAt = user.createdAt 
-            ? new Date(user.createdAt) 
+        const userCreatedAt = user.createdAt
+            ? new Date(user.createdAt)
             : (miningState?.miningStartTime ? new Date(miningState.miningStartTime) : new Date('2025-12-01'));
 
         // 2026년 6, 7, 8월 각 월별 정산 정의
@@ -131,8 +131,8 @@ async function runHealMonthlySettlements() {
 
         // 월별 비례 배분(Pro-rata) 및 장부 생성
         for (const target of monthSecondsList) {
-            const weight = totalActiveSeconds.gt(0) 
-                ? target.activeSeconds.div(totalActiveSeconds) 
+            const weight = totalActiveSeconds.gt(0)
+                ? target.activeSeconds.div(totalActiveSeconds)
                 : new Decimal(0);
 
             const monthMinedAmount = currentAccumulated.mul(weight);

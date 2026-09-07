@@ -109,11 +109,11 @@ export class SettlementWorker {
                 const isKycApproved = Boolean(user.isKycVerified || user.kycApplication?.status === 'APPROVED');
                 const migrationStatus = isKycApproved ? 'LOCKED' : 'WAITING_KYC';
 
-                const miningState = await MiningState.findOne({ 
-                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i') 
+                const miningState = await MiningState.findOne({
+                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i')
                 });
-                const bonusRecord = await BonusRecord.findOne({ 
-                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i') 
+                const bonusRecord = await BonusRecord.findOne({
+                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i')
                 });
 
                 if (!miningState) continue;

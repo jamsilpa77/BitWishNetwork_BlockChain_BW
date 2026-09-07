@@ -672,7 +672,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                             (walletData as any).miningHistory.map((item: any, idx: number) => (
                                                 <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
                                                     <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: '500', color: '#111827' }}>
-                                                        {/* DB의 정산 연도(year)와 월(month) 기반 윤년/평년 동적 말일 계산(28/29/30/31일) 표출 */}
+                                                        {/* DB의 item.year와 item.month를 참조하여 KST 기준 시차 왜곡 없는 정순 포맷 표출 */}
                                                         {item.year && item.month 
                                                             ? `${item.year}.${String(item.month).padStart(2, '0')}.${String(new Date(item.year, item.month, 0).getDate()).padStart(2, '0')}` 
                                                             : (new Date(item.settledAt).toISOString().split('T')[0] || '').replace(/-/g, '.')}

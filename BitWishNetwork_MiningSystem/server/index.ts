@@ -25,6 +25,8 @@ import { CommunityUser } from './models/CommunityUser';
 import { BitWishBlockchain } from '../../BitWishNetwork_BlockChain/src/engine/BitWishBlockchain';
 import User from './models/User';
 import MiningState from './models/MiningState';
+import MonthlySettlement from './models/MonthlySettlement';
+import BonusRecord from './models/BonusRecord';
 import { BlockMiningService } from './services/BlockMiningService';
 import Decimal from 'decimal.js';
 
@@ -238,6 +240,148 @@ async function autoHealBlockTransactions() {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// [정산 수복 엔진] 서버 부팅 시 과거 누락 MonthlySettlement 원장 자동 소급 수복
+// ─────────────────────────────────────────────────────────────────────────────
+// 안전 수칙:
+//   1. MonthlySettlement { walletAddress, year, month } 유니크 인덱스로 중복 삽입 자동 방지 (멱등성 100%)
+//   2. 유저 가입일(user.createdAt) 기준 → 가입 전 달은 100% 정산 생성 제외
+//   3. UTC+9(KST) 기준으로 연월 및 말일 산출
+//   4. 현재 누적 채굴량을 가입 이후 전체 기간 대비 해당 월 활동 기간 비율(Pro-rata)로 소급 배분
+// ─────────────────────────────────────────────────────────────────────────────
+async function autoHealMonthlySettlements() {
+    try {
+        console.log('🛠️ [정산 수복 엔진] 과거 누락 월별 정산 원장 소급 수복 시작...');
+
+        const now = new Date();
+        // KST 기준 현재 연월 산출 (UTC + 9시간)
+        const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+        const currentYear = kstNow.getUTCFullYear();
+        const currentMonth = kstNow.getUTCMonth() + 1; // 1~12
+
+        // 서비스 시작 기준월 (2026년 6월 이전 데이터는 소급 대상 아님)
+        const SERVICE_START_YEAR = 2026;
+        const SERVICE_START_MONTH = 6;
+
+        const users = await User.find({});
+        let healedCount = 0;
+        let skippedCount = 0;
+
+        for (const user of users) {
+            const walletAddress = user.walletAddress;
+            if (!walletAddress) continue;
+
+            // [핵심 수복] 대소문자 비구분 RegExp 쿼리 (대소문자 불일치 정산 누락 차단)
+            const walletRegex = new RegExp('^' + walletAddress.trim() + '$', 'i');
+
+            const miningState = await MiningState.findOne({ walletAddress: walletRegex });
+            if (!miningState) {
+                skippedCount++;
+                continue;
+            }
+
+            const bonusRecord = await BonusRecord.findOne({ walletAddress: walletRegex });
+
+            // KYC 상태 판별 (SettlementWorker와 동일 로직)
+            const isKycApproved = Boolean(
+                (user as any).isKycVerified || (user as any).kycApplication?.status === 'APPROVED'
+            );
+            const migrationStatus = isKycApproved ? 'LOCKED' : 'WAITING_KYC';
+
+            // 유저 가입일 산출
+            const userCreatedAtRaw = (user as any).createdAt
+                ? new Date((user as any).createdAt)
+                : (miningState.miningStartTime
+                    ? new Date(miningState.miningStartTime)
+                    : new Date('2026-06-01T00:00:00.000Z'));
+
+            // 전체 활성 기간(초) 계산 — Pro-rata 비율 분모
+            const totalActiveSeconds = Math.max(
+                1,
+                (now.getTime() - userCreatedAtRaw.getTime()) / 1000
+            );
+
+            // 현재 누적 채굴량 및 추천 보너스
+            const currentMined = new Decimal(miningState.accumulatedReward || '0');
+            const currentBonus = new Decimal((bonusRecord as any)?.referralBonusStorage || '0');
+
+            // 서비스 시작월부터 직전월까지 전수 검사
+            let checkYear = SERVICE_START_YEAR;
+            let checkMonth = SERVICE_START_MONTH;
+
+            while (
+                checkYear < currentYear ||
+                (checkYear === currentYear && checkMonth < currentMonth)
+            ) {
+                // 해당 월 말일 23:59:59 KST = UTC 당일 14:59:59
+                const lastDayOfMonth = new Date(checkYear, checkMonth, 0).getDate(); // 해당 월의 정확한 말일 (30 또는 31)
+                const monthLastDayUTC = new Date(
+                    Date.UTC(checkYear, checkMonth - 1, lastDayOfMonth, 14, 59, 59, 999)
+                );
+                // 해당 월 1일 00:00:00 KST = UTC 전날 15:00:00
+                const monthFirstDayUTC = new Date(
+                    Date.UTC(checkYear, checkMonth - 1, 1, 15, 0, 0, 0)
+                );
+
+                // 가입일이 해당 월 말일보다 늦으면 소급 정산 절대 제외 (가입 전 달 생성 금지)
+                if (userCreatedAtRaw <= monthLastDayUTC) {
+                    // 이미 해당 월 레코드가 존재하면 스킵 (유니크 인덱스 보호, 멱등성 보장)
+                    const existing = await MonthlySettlement.findOne({
+                        walletAddress: walletRegex,
+                        year: checkYear,
+                        month: checkMonth
+                    });
+
+                    if (!existing) {
+                        // 해당 월 내 실제 활동 시작점 (가입일 vs 월 시작일 중 늦은 것)
+                        const actStart = userCreatedAtRaw > monthFirstDayUTC
+                            ? userCreatedAtRaw
+                            : monthFirstDayUTC;
+                        const actEnd = monthLastDayUTC;
+
+                        // 해당 월 활동 시간(초)
+                        const monthActiveSeconds = Math.max(
+                            0,
+                            (actEnd.getTime() - actStart.getTime()) / 1000
+                        );
+
+                        // Pro-rata 비율로 채굴량 배분
+                        const weight = new Decimal(monthActiveSeconds).div(totalActiveSeconds);
+                        const monthMinedAmount = currentMined.mul(weight);
+                        const monthBonusAmount = currentBonus.mul(weight);
+                        const monthTotalAmount = monthMinedAmount.plus(monthBonusAmount);
+
+                        await MonthlySettlement.create({
+                            walletAddress,
+                            year: checkYear,
+                            month: checkMonth,
+                            minedAmount: monthMinedAmount.toFixed(50),
+                            bonusAmount: monthBonusAmount.toFixed(50),
+                            totalAmount: monthTotalAmount.toFixed(50),
+                            settledAt: monthLastDayUTC,
+                            migrationStatus
+                        });
+
+                        console.log(
+                            `[정산 수복 엔진] ✅ ${walletAddress} → ${checkYear}-${String(checkMonth).padStart(2, '0')} 소급 수복 완료` +
+                            ` | 채굴: ${monthMinedAmount.toFixed(8)} BW | 상태: ${migrationStatus}`
+                        );
+                        healedCount++;
+                    }
+                }
+
+                // 다음 달로 이동
+                checkMonth++;
+                if (checkMonth > 12) { checkMonth = 1; checkYear++; }
+            }
+        }
+
+        console.log(`✅ [정산 수복 엔진] 소급 수복 완료! 신규 생성: ${healedCount}건 | 스킵(MiningState 없음): ${skippedCount}건`);
+    } catch (err) {
+        console.error('❌ [정산 수복 엔진 에러] 소급 수복 중 예외 발생:', err);
+    }
+}
+
 // [2단계 수복 완율] 서버 구동 시 코어 엔진 및 백엔드 무인 서비스 안전 점화 (runOneTimeCleanup 0원 초기화 위험 코드 핀포인트 소거 완율)
 bwChainCore.initialize().then(async () => {
     console.log("🚀 [Phase 4 융합] 백엔드 내부에 블록체인 코어 엔진 무결점 대기 완료");
@@ -248,6 +392,10 @@ bwChainCore.initialize().then(async () => {
 
     // [수복 엔진] 블록 트랜잭션 및 추천인 보상 장부 자동 수복
     await autoHealBlockTransactions();
+
+    // [정산 수복 엔진] 서버 부팅 시 과거 누락 월별 정산 원장 자동 소급 수복 (완전 무인 자동화)
+    // 멱등성 100% 보장: 이미 존재하는 레코드는 MongoDB 유니크 인덱스가 방어하여 중복 생성 없음
+    await autoHealMonthlySettlements();
 
     // 데이터 복원 및 블록 일괄 수복 엔진 최초 1회 실행 (100% 원형 보존)
     await autoRestoreMiningStates();
