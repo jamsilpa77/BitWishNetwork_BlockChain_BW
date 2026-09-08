@@ -370,15 +370,15 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
                 }}
                 onMouseDownCapture={onFocus} // 내부 모든 클릭 감지
                 style={{
-                    position: 'fixed',
-                    left: `${position.x}px`,
-                    top: `${position.y}px`,
+                    position: (typeof window !== 'undefined' && window.innerWidth <= 768) ? 'relative' : 'fixed',
+                    left: (typeof window !== 'undefined' && window.innerWidth <= 768) ? 'auto' : `${position.x}px`,
+                    top: (typeof window !== 'undefined' && window.innerWidth <= 768) ? 'auto' : `${position.y}px`,
                     pointerEvents: 'auto',
                     cursor: isDragging ? 'grabbing' : 'default',
                     zIndex: isActive ? 10100 : 10003, // 포커스 시 격상
                     boxShadow: isActive ? '0 20px 50px rgba(0,0,0,0.4)' : '0 10px 30px rgba(0,0,0,0.2)',
                     transition: 'box-shadow 0.2s ease',
-                    margin: 0
+                    margin: (typeof window !== 'undefined' && window.innerWidth <= 768) ? 'auto' : 0
                 }}
             >
                 <div className="modal-header" style={{ cursor: 'grab', userSelect: 'none' }}>
@@ -546,10 +546,17 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
                         <span className="button-icon">{isMining ? '🔄' : '⚡'}</span>
                         {isMining ? getTranslation('buttons.miningInProgress') || '채굴 진행중' : getTranslation('buttons.start')}
                     </button>
-                    <button className="footer-btn wallet" onClick={onOpenWallet}>
+                    <button
+                        className="footer-btn wallet"
+                        onClick={() => {
+                            onClose(); // 마이닝 모달 닫기
+                            if (onOpenWallet) onOpenWallet(); // 나의 지갑 모달 열기
+                        }}
+                    >
                         <span className="button-icon">🔑</span>
                         {getTranslation('buttons.myWallet')}
                     </button>
+
                     <button className="footer-btn close" onClick={onClose}>
                         <span className="button-icon">❌</span>
                         {getTranslation('buttons.close')}

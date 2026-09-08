@@ -32,13 +32,32 @@
     position: relative;
 }
 
-/* 반응형 - 모바일 수직 1열 정렬 및 버튼 최적화 */
+/* 반응형 - 모바일 스마트폰 화면 정중앙 팝업 수복 및 1열 최적화 */
 @media (max-width: 768px) {
+    .mining-status-modal-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 99999 !important;
+    }
+
     .mining-status-modal {
         padding: 16px;
-        width: 95%;
-        max-height: 88vh;
+        width: 92vw !important;
+        max-height: 88vh !important;
+        margin: auto !important;
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        bottom: auto !important;
     }
+
+
 
     .top-buttons-grid {
         grid-template-columns: repeat(2, 1fr);

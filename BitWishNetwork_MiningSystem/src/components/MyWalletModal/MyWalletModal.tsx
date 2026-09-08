@@ -368,7 +368,6 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                 <div className="wallet-header" style={{ cursor: 'grab', userSelect: 'none' }}>
                     <div className="header-top-row">
                         <div className="header-left-group">
-                            <button className="back-button mobile-wallet-close-btn" onClick={onClose} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.95rem' }}>✕ {getTranslation('common.close') || '닫기'}</button>
                             <h2 className="header-title">{getTranslation('wallet.dashboard.title')}</h2>
                         </div>
                         <div className="header-right-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
@@ -433,7 +432,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                 }}
                                 onClick={() => {
                                     if (onOpenMining) {
-                                        // onClose() 파기 구문 제거하여 지갑 모달을 파기하지 않고 뒤에 유지
+                                        onClose();
                                         onOpenMining(walletAddress);
                                     } else {
                                         alert(getTranslation('wallet.dashboard.messages.miningNotConnected'));
@@ -673,8 +672,8 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                                 <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
                                                     <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: '500', color: '#111827' }}>
                                                         {/* DB의 item.year와 item.month를 참조하여 KST 기준 시차 왜곡 없는 정순 포맷 표출 */}
-                                                        {item.year && item.month 
-                                                            ? `${item.year}.${String(item.month).padStart(2, '0')}.${String(new Date(item.year, item.month, 0).getDate()).padStart(2, '0')}` 
+                                                        {item.year && item.month
+                                                            ? `${item.year}.${String(item.month).padStart(2, '0')}.${String(new Date(item.year, item.month, 0).getDate()).padStart(2, '0')}`
                                                             : (new Date(item.settledAt).toISOString().split('T')[0] || '').replace(/-/g, '.')}
                                                     </td>
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{precisionCalculator.formatForUI(item.minedAmount)} BW</td>
@@ -960,31 +959,33 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
             </div>
 
             {/* [Phase 1] 작고 고급스러운 메시지 창 (Small Premium Message) */}
-            {messageModal.isOpen && (
-                <div className="premium-message-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10250, pointerEvents: 'auto' }}>
-                    <div className="premium-message-box" style={{ width: '320px', backgroundColor: 'white', borderRadius: '16px', padding: '24px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
-                        <div style={{ fontSize: '40px', marginBottom: '15px' }}>
-                            {messageModal.type === 'kycNotPeriod' ? '⚠️' : '🎉'}
+            {
+                messageModal.isOpen && (
+                    <div className="premium-message-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10250, pointerEvents: 'auto' }}>
+                        <div className="premium-message-box" style={{ width: '320px', backgroundColor: 'white', borderRadius: '16px', padding: '24px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+                            <div style={{ fontSize: '40px', marginBottom: '15px' }}>
+                                {messageModal.type === 'kycNotPeriod' ? '⚠️' : '🎉'}
+                            </div>
+                            <p style={{ fontSize: '15px', color: '#1F2937', fontWeight: '600', lineHeight: '1.5', marginBottom: '20px' }}>
+                                {messageModal.type === 'kycNotPeriod'
+                                    ? getTranslation('wallet.dashboard.actions.messages.kycNotPeriod')
+                                    : getTranslation('wallet.dashboard.actions.messages.kycApprovedCongrats')}
+                            </p>
+                            <button
+                                style={{ width: '100%', padding: '12px', backgroundColor: '#111827', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                onClick={() => {
+                                    if (messageModal.type === 'kycCongrats') {
+                                        setViewMode('otpSetup');
+                                    }
+                                    setMessageModal({ isOpen: false, type: '' });
+                                }}
+                            >
+                                {getTranslation('wallet.dashboard.actions.otpSetup.confirm')}
+                            </button>
                         </div>
-                        <p style={{ fontSize: '15px', color: '#1F2937', fontWeight: '600', lineHeight: '1.5', marginBottom: '20px' }}>
-                            {messageModal.type === 'kycNotPeriod'
-                                ? getTranslation('wallet.dashboard.actions.messages.kycNotPeriod')
-                                : getTranslation('wallet.dashboard.actions.messages.kycApprovedCongrats')}
-                        </p>
-                        <button
-                            style={{ width: '100%', padding: '12px', backgroundColor: '#111827', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                            onClick={() => {
-                                if (messageModal.type === 'kycCongrats') {
-                                    setViewMode('otpSetup');
-                                }
-                                setMessageModal({ isOpen: false, type: '' });
-                            }}
-                        >
-                            {getTranslation('wallet.dashboard.actions.otpSetup.confirm')}
-                        </button>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* KYC 신청 엔진 (Step 2 독립 모듈) */}
             <KYCFormModal
@@ -1003,7 +1004,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                 availableBalance={walletData.availableBalance}
                 currentLanguage={currentLanguage}
             />
-        </div>
+        </div >
     );
 };
 
