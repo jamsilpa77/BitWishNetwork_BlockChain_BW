@@ -99,10 +99,10 @@ async function autoRestoreMiningStates() {
 async function autoHealBlockTransactions() {
     try {
         console.log("🛠️ [수복 엔진] 기존 블록체인에서 모든 유저의 블록 트랜잭션 및 추천 보상 장부를 자동 복원합니다...");
-        
+
         const networkDb = mongoose.connection.useDb('bitwish_network');
         const miningDb = mongoose.connection.useDb('bitwish_mining');
-        
+
         // [수정 완료] 하드코딩된 blockHeight > 19 삭제 로직 제거됨
         // 기존에 테스트 블록 정리용이었으나, 실제 채굴 블록까지 매 재시작마다 삭제하여 블록 누락 원인이었음
         console.log(`✅ [수복 엔진] 블록 무결성 검증 통과 - 정상 블록 삭제 방지 활성화`);
@@ -328,24 +328,42 @@ async function autoHealMonthlySettlements() {
                     // 이미 해당 월 레코드가 존재하면 스킵 (유니크 인덱스 보호, 멱등성 보장)
                     const existing = await MonthlySettlement.findOne({
                         walletAddress: walletRegex,
-                        year: checkYear,
-                        month: checkMonth
+                        $or: [
+                            { year: checkYear, month: checkMonth },
+                            { settledAt: { $gte: monthFirstDayUTC, $lte: monthLastDayUTC } }
+                        ]
                     });
 
-                    if (!existing) {
-                        // 해당 월 내 실제 활동 시작점 (가입일 vs 월 시작일 중 늦은 것)
+                    if (existing) {
+                        // 기존 DB에 적재된 레코드의 연/월/타임스탬프가 다르면 KST 말일 자정 기준으로 자동 자가 교정
+                        if (existing.year !== checkYear || existing.month !== checkMonth || existing.settledAt.getTime() !== monthLastDayUTC.getTime()) {
+                            await MonthlySettlement.updateOne(
+                                { _id: existing._id },
+                                {
+                                    $set: {
+                                        year: checkYear,
+                                        month: checkMonth,
+                                        settledAt: monthLastDayUTC
+                                    }
+                                }
+                            );
+                            console.log(
+                                `[정산 수복 엔진] 🔧 ${walletAddress} → ${checkYear}-${String(checkMonth).padStart(2, '0')} 연월 및 타임스탬프 자가 교정 완료`
+                            );
+                            healedCount++;
+                        }
+                    } else {
+                        // 레코드가 존재하지 않는 경우 가입일(userCreatedAt) 검증 후 소급 생성
                         const actStart = userCreatedAtRaw > monthFirstDayUTC
                             ? userCreatedAtRaw
                             : monthFirstDayUTC;
                         const actEnd = monthLastDayUTC;
 
-                        // 해당 월 활동 시간(초)
                         const monthActiveSeconds = Math.max(
                             0,
                             (actEnd.getTime() - actStart.getTime()) / 1000
                         );
 
-                        // Pro-rata 비율로 채굴량 배분
                         const weight = new Decimal(monthActiveSeconds).div(totalActiveSeconds);
                         const monthMinedAmount = currentMined.mul(weight);
                         const monthBonusAmount = currentBonus.mul(weight);
