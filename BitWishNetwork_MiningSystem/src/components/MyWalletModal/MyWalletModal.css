@@ -35,6 +35,7 @@
     color: white;
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .header-top-row {
@@ -156,6 +157,7 @@
     border-bottom: 1px solid #E5E7EB;
     padding: 0 14px;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .tab-item {
@@ -184,6 +186,7 @@
     padding: 18px;
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
     background: #F3F4F6;
 }
 
