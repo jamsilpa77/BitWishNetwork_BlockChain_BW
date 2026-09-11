@@ -131,17 +131,17 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
 
     const [position, setPosition] = useState(() => {
         if (typeof window !== 'undefined') {
-            return { x: (window.innerWidth - 800) / 2, y: 300 };
+            return { x: (window.innerWidth - 533) / 2, y: 140 };
         }
-        return { x: 0, y: 300 };
+        return { x: 0, y: 140 };
     });
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
     useEffect(() => {
-        const width = 800;
+        const width = 533;
         const x = (window.innerWidth - width) / 2;
-        const y = 300;
+        const y = 140;
         setPosition({ x, y });
     }, [isOpen]);
 
@@ -495,7 +495,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                     <h3 className="card-title" style={{ display: 'block', fontSize: '1.2rem', fontWeight: 800, color: '#111827', marginBottom: '20px', marginTop: 0 }}>{getTranslation('wallet.dashboard.balance.title')}</h3>
 
                                     <div className="balance-row">
-                                        <span className="balance-label">{getTranslation('wallet.dashboard.balance.realTimeReward')}:</span>
+                                        <span className="balance-label">{getTranslation('wallet.dashboard.balance.realTimeReward')}</span>
                                         <span className="balance-value-wrapper">
                                             <span className="balance-value green">{precisionCalculator.formatForUI(walletData.balance)}<span className="unit">BW</span></span>
                                             <span className="balance-tooltip">{precisionCalculator.formatForUI(walletData.balance)} BW</span>
@@ -506,7 +506,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                     </div>
 
                                     <div className="balance-row mt-20">
-                                        <span className="balance-label">{getTranslation('wallet.dashboard.balance.available')}:</span>
+                                        <span className="balance-label">{getTranslation('wallet.dashboard.balance.available')}</span>
                                         <span className="balance-value-wrapper">
                                             <span className="balance-value black">{precisionCalculator.formatForUI(walletData.availableBalance)}<span className="unit">BW</span></span>
                                             <span className="balance-tooltip">{precisionCalculator.formatForUI(walletData.availableBalance)} BW</span>
@@ -522,8 +522,10 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                     <h3 className="card-title purple-text" style={{ display: 'block', fontSize: '1.2rem', fontWeight: 800, color: '#7C3AED', marginBottom: '20px', marginTop: 0 }}>{getTranslation('wallet.dashboard.referral.title')}</h3>
 
                                     <div className="balance-row">
-                                        <span className="balance-label">{getTranslation('wallet.dashboard.referral.storage')}:</span>
-                                        <span className="balance-value orange">{precisionCalculator.formatForUI(walletData.referralReward)}<span className="unit">BW</span></span>
+                                        <span className="balance-label">{getTranslation('wallet.dashboard.referral.storage')}</span>
+                                        <span className="balance-value-wrapper">
+                                            <span className="balance-value orange">{precisionCalculator.formatForUI(walletData.referralReward)}<span className="unit">BW</span></span>
+                                        </span>
                                     </div>
 
                                     <div className="balance-row mt-20">

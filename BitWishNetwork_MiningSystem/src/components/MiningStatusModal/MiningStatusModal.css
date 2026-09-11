@@ -22,10 +22,10 @@
 .mining-status-modal {
     background: white;
     border-radius: 20px;
-    padding: 24px;
-    width: 600px;
+    padding: 15px;
+    width: 400px;
     max-width: 95%;
-    max-height: 88vh;
+    max-height: 85vh;
     overflow-y: auto;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
     font-family: 'Noto Sans KR', sans-serif;
@@ -159,19 +159,19 @@
 .top-buttons-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 6px;
+    margin-bottom: 12px;
 }
 
 .grid-button {
     border: none;
     border-radius: 8px;
-    padding: 12px 5px;
+    padding: 8px 2px;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 3px;
     color: white;
     cursor: pointer;
     transition: transform 0.1s;
@@ -199,13 +199,15 @@
 }
 
 .button-icon {
-    font-size: 1rem;
+    font-size: 0.85rem;
 }
 
 .button-text {
-    font-size: 0.8rem;
+    font-size: 0.68rem;
     font-weight: 700;
+    text-align: center;
     white-space: nowrap;
+    letter-spacing: -0.03em;
 }
 
 /* 지갑 주소 박스 (노란색) */
@@ -213,9 +215,9 @@
     background: #FFFBE6;
     border: 1px solid #FFE58F;
     border-radius: 8px;
-    padding: 15px;
+    padding: 10px;
     text-align: center;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .wallet-box-header {
@@ -223,9 +225,9 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     color: #D48806;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
 }
 
@@ -234,8 +236,8 @@
     color: #874d00;
     font-weight: 700;
     word-break: break-all;
-    font-size: 0.9rem;
-    margin-bottom: 5px;
+    font-size: 0.78rem;
+    margin-bottom: 4px;
 }
 
 .wallet-note {
@@ -294,8 +296,8 @@
 .mining-status-check-box {
     border: 1px solid #E0B0FF;
     border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 15px;
+    padding: 10px;
+    margin-bottom: 10px;
     background: #FAFAFF;
 }
 
@@ -306,15 +308,15 @@
     gap: 5px;
     color: #9C27B0;
     font-weight: 700;
-    margin-bottom: 15px;
-    font-size: 1rem;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
 }
 
 /* 컬럼 컨테이너 (Flexbox 사용) */
 .status-columns-container {
     display: flex;
     justify-content: space-between;
-    gap: 20px;
+    gap: 12px;
     width: 100%;
 }
 
@@ -322,7 +324,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 25px;
+    gap: 16px;
     /* 항목 간 간격 */
     align-items: center;
 }
@@ -331,12 +333,12 @@
 .status-column.left {
     border-right: 1px dashed #E0B0FF;
     /* 중앙 구분선 */
-    padding-right: 10px;
+    padding-right: 6px;
 }
 
 /* 오른쪽 컬럼 */
 .status-column.right {
-    padding-left: 10px;
+    padding-left: 6px;
 }
 
 .status-item {
@@ -346,15 +348,15 @@
 }
 
 .status-value-large {
-    font-size: 1.2rem;
+    font-size: 0.9rem;
     font-weight: 800;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
 }
 
 .status-value-medium {
-    font-size: 1.1rem;
+    font-size: 0.85rem;
     font-weight: 700;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
 }
 
 .purple {
@@ -441,8 +443,8 @@
     background: #E8F5E9;
     border: 1px solid #A5D6A7;
     border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 20px;
+    padding: 10px;
+    margin-bottom: 12px;
     text-align: center;
 }
 
@@ -452,7 +454,7 @@
 
 .reward-value.green {
     color: #2E7D32;
-    font-size: 1.5rem;
+    font-size: 1.15rem;
     font-weight: 800;
 }
 
@@ -493,10 +495,10 @@
 .footer-btn {
     border: none;
     border-radius: 5px;
-    padding: 10px;
+    padding: 8px 4px;
     color: white;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     cursor: pointer;
     display: flex;
     align-items: center;

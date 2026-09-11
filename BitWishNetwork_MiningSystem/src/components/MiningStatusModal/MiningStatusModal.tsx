@@ -76,9 +76,9 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
     // [Step 6] 1프레임 위치 오류(잔상) 방지를 위한 렌더링 즉시 초기값 할당
     const [position, setPosition] = useState(() => {
         if (typeof window !== 'undefined') {
-            return { x: (window.innerWidth - 600) / 2, y: 450 };
+            return { x: (window.innerWidth - 400) / 2, y: 160 };
         }
-        return { x: 0, y: 450 };
+        return { x: 0, y: 160 };
     });
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -86,9 +86,9 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
     // [Step 5-2 & 6.3] 오픈/클로즈 양방향에서 좌표를 리셋하여 유령 궤적(Ghosting) 원천 차단
     useEffect(() => {
         // isOpen이 true든 false든 상태가 변할 때마다 무조건 중앙 좌표로 리셋해둠
-        const width = 600; // 정확한 CSS 폭 반영
+        const width = 400; // 정확한 CSS 폭 반영
         const x = (window.innerWidth - width) / 2;
-        const y = 450; // 지정 좌표(마이닝 시작 버튼 아래) 적용
+        const y = 160; // 지정 좌표 적용
         setPosition({ x, y });
     }, [isOpen]);
 
