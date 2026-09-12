@@ -660,11 +660,11 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '13px' }}>
                                     <thead style={{ backgroundColor: '#F0F9FF', borderBottom: '2px solid #BAE6FD' }}>
                                         <tr>
-                                            <th style={{ width: '35%', padding: '12px 10px', color: '#0369A1', textAlign: 'left' }}>{getTranslation('wallet.dashboard.miningTable.header.startDate')}</th>
-                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>{getTranslation('wallet.dashboard.miningTable.header.minedAmount')}</th>
-                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>{getTranslation('wallet.dashboard.miningTable.header.bonus')}</th>
-                                            <th style={{ width: '18%', padding: '12px 10px', color: '#0369A1', textAlign: 'right' }}>{getTranslation('wallet.dashboard.miningTable.header.total')}</th>
-                                            <th style={{ width: '11%', padding: '12px 10px', color: '#0369A1' }}>{getTranslation('wallet.dashboard.miningTable.header.status')}</th>
+                                            <th style={{ width: '24%', padding: '12px 10px', color: '#0369A1', textAlign: 'left', whiteSpace: 'nowrap' }}>{getTranslation('wallet.dashboard.miningTable.header.startDate')}</th>
+                                            <th style={{ width: '20%', padding: '12px 10px', color: '#0369A1', textAlign: 'right', whiteSpace: 'nowrap' }}>{getTranslation('wallet.dashboard.miningTable.header.minedAmount')}</th>
+                                            <th style={{ width: '20%', padding: '12px 10px', color: '#0369A1', textAlign: 'right', whiteSpace: 'nowrap' }}>{getTranslation('wallet.dashboard.miningTable.header.bonus')}</th>
+                                            <th style={{ width: '21%', padding: '12px 10px', color: '#0369A1', textAlign: 'right', whiteSpace: 'nowrap' }}>{getTranslation('wallet.dashboard.miningTable.header.total')}</th>
+                                            <th style={{ width: '15%', padding: '12px 10px', color: '#0369A1', whiteSpace: 'nowrap' }}>{getTranslation('wallet.dashboard.miningTable.header.status')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -672,23 +672,23 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                         {((walletData as any)?.miningHistory || []).length > 0 ? (
                                             (walletData as any).miningHistory.map((item: any, idx: number) => (
                                                 <tr key={idx} style={{ borderBottom: '1px solid #F3F4F6', color: '#111827' }}>
-                                                    <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: '500', color: '#111827' }}>
+                                                    <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: '500', color: '#111827', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                                         {/* DB의 item.year와 item.month를 참조하여 KST 기준 시차 왜곡 없는 정순 포맷 표출 */}
                                                         {item.year && item.month
                                                             ? `${item.year}.${String(item.month).padStart(2, '0')}.${String(new Date(item.year, item.month, 0).getDate()).padStart(2, '0')}`
                                                             : (new Date(item.settledAt).toISOString().split('T')[0] || '').replace(/-/g, '.')}
                                                     </td>
-                                                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{precisionCalculator.formatForUI(item.minedAmount)} BW</td>
-                                                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827' }}>{precisionCalculator.formatForUI(item.bonusAmount)} BW</td>
-                                                    <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: '#059669' }}>{precisionCalculator.formatForUI(item.totalAmount)} BW</td>
-                                                    <td style={{ padding: '12px 10px' }}>
+                                                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{precisionCalculator.formatForUI(item.minedAmount)} BW</td>
+                                                    <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{precisionCalculator.formatForUI(item.bonusAmount)} BW</td>
+                                                    <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: '#059669', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{precisionCalculator.formatForUI(item.totalAmount)} BW</td>
+                                                    <td style={{ padding: '12px 10px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                                         {(() => {
                                                             const settledDate = new Date(item.settledAt);
 
                                                             // 1. KYC 미승인 회원 또는 WAITING_KYC 레코드 -> 'KYC 대기' 배지 표출
                                                             if (!walletData.isKycVerified || item.migrationStatus === 'WAITING_KYC') {
                                                                 return (
-                                                                    <span style={{ fontSize: '11px', backgroundColor: '#FEF3C7', color: '#92400E', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                                                    <span style={{ fontSize: '11px', backgroundColor: '#FEF3C7', color: '#92400E', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold', whiteSpace: 'nowrap', display: 'inline-block' }}>
                                                                         {getTranslation('wallet.dashboard.miningTable.statusWaitingKyc') || 'KYC 대기'}
                                                                     </span>
                                                                 );
@@ -703,7 +703,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                                             // 3. 15일 경과 또는 UNLOCKED/MIGRATED 상태 -> 초록색 '잠금 해제' 배지 표출
                                                             if (diff <= 0 || item.migrationStatus === 'UNLOCKED' || item.migrationStatus === 'MIGRATED') {
                                                                 return (
-                                                                    <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                                                    <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 6px', borderRadius: '4px', fontWeight: 'bold', whiteSpace: 'nowrap', display: 'inline-block' }}>
                                                                         {getTranslation('wallet.dashboard.miningTable.statusUnlocked') || '잠금 해제'}
                                                                     </span>
                                                                 );
@@ -715,11 +715,11 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                                             const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
                                                             return (
-                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                                    <span style={{ fontSize: '10px', color: '#EF4444', fontWeight: 'bold' }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                                                                    <span style={{ fontSize: '10px', color: '#EF4444', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                                                                         D-{days} {hours.toString().padStart(2, '0')}:{mins.toString().padStart(2, '0')}:{secs.toString().padStart(2, '0')}
                                                                     </span>
-                                                                    <span style={{ fontSize: '9px', backgroundColor: '#FEF2F2', color: '#B91C1C', padding: '1px 4px', borderRadius: '3px' }}>
+                                                                    <span style={{ fontSize: '9px', backgroundColor: '#FEF2F2', color: '#B91C1C', padding: '1px 4px', borderRadius: '3px', whiteSpace: 'nowrap', display: 'inline-block' }}>
                                                                         {getTranslation('wallet.dashboard.miningTable.statusLocked') || 'LOCKED'}
                                                                     </span>
                                                                 </div>
@@ -732,7 +732,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
 
                                         {/* [최종복구] 당월 실시간 채굴 현황 행 - RealTimeSyncService 연동을 통해 매끄러운 수치 가동 보장 */}
                                         <tr style={{ backgroundColor: '#F0FDF4', color: '#111827', borderBottom: '2px solid #DCFCE7' }}>
-                                            <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', fontSize: '11.5px', color: '#111827' }}>
+                                            <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', fontSize: '11.5px', color: '#111827', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                                 {/* [실시간 누적 타이머 작동] 달이 바뀔 때 자동 리셋 및 실시간 [X일] HH:MM:SS 가산 연산 */}
                                                 {(() => {
                                                     const now = currentTime; // 1초 단위로 갱신되는 화면 시계
@@ -778,17 +778,17 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                                 })()}
                                             </td>
 
-                                            <td className="mining-amount-cell" style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: '#111827' }} title={`${precisionCalculator.formatForUI(walletData.balance)} BW`}>
-                                                <span>{precisionCalculator.formatForUI(walletData.balance)} BW</span>
+                                            <td className="mining-amount-cell" style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: '#111827', whiteSpace: 'nowrap', verticalAlign: 'middle' }} title={`${precisionCalculator.formatForUI(walletData.balance)} BW`}>
+                                                <span style={{ whiteSpace: 'nowrap' }}>{precisionCalculator.formatForUI(walletData.balance)} BW</span>
                                             </td>
-                                            <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: '#111827' }} title={`${precisionCalculator.formatForUI(walletData.referralBonus)} BW`}>
-                                                <span>{precisionCalculator.formatForUI(walletData.referralBonus)} BW</span>
+                                            <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '600', color: '#111827', whiteSpace: 'nowrap', verticalAlign: 'middle' }} title={`${precisionCalculator.formatForUI(walletData.referralBonus)} BW`}>
+                                                <span style={{ whiteSpace: 'nowrap' }}>{precisionCalculator.formatForUI(walletData.referralBonus)} BW</span>
                                             </td>
-                                            <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#059669' }} title={`${precisionCalculator.formatForUI(walletData.balance.plus(walletData.referralBonus))} BW`}>
-                                                <span>{precisionCalculator.formatForUI(walletData.balance.plus(walletData.referralBonus))} BW</span>
+                                            <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '800', color: '#059669', whiteSpace: 'nowrap', verticalAlign: 'middle' }} title={`${precisionCalculator.formatForUI(walletData.balance.plus(walletData.referralBonus))} BW`}>
+                                                <span style={{ whiteSpace: 'nowrap' }}>{precisionCalculator.formatForUI(walletData.balance.plus(walletData.referralBonus))} BW</span>
                                             </td>
-                                            <td style={{ padding: '12px 10px' }}>
-                                                <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', animation: 'pulse 2s infinite' }}>{getTranslation('wallet.dashboard.miningTable.statusMining')}</span>
+                                            <td style={{ padding: '12px 10px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                                <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', animation: 'pulse 2s infinite', whiteSpace: 'nowrap', display: 'inline-block' }}>{getTranslation('wallet.dashboard.miningTable.statusMining')}</span>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -809,12 +809,12 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '12px', color: '#E2E8F0' }}>
                                     <thead style={{ backgroundColor: '#1E293B', borderBottom: '2px solid #0EA5E9' }}>
                                         <tr>
-                                            <th style={{ padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px' }}>{btt('blockHeight')}</th>
-                                            <th style={{ padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px' }}>{btt('txHash')}</th>
-                                            <th style={{ padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px' }}>{btt('amount')}</th>
-                                            <th style={{ padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px' }}>{btt('type')}</th>
-                                            <th style={{ padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px' }}>{btt('status')}</th>
-                                            <th style={{ padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px' }}>{btt('date')}</th>
+                                            <th style={{ width: '12%', padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>{btt('blockHeight')}</th>
+                                            <th style={{ width: '24%', padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>{btt('txHash')}</th>
+                                            <th style={{ width: '16%', padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>{btt('amount')}</th>
+                                            <th style={{ width: '14%', padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>{btt('type')}</th>
+                                            <th style={{ width: '14%', padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>{btt('status')}</th>
+                                            <th style={{ width: '20%', padding: '12px 8px', color: '#0EA5E9', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>{btt('date')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -823,29 +823,31 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                         ) : blockTxList.length > 0 ? (
                                             blockTxList.map((tx: any, idx: number) => (
                                                 <tr key={idx} style={{ borderBottom: '1px solid #1E3A5F', transition: 'background-color 0.15s' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1E293B')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                                                    <td style={{ padding: '10px 8px', fontWeight: 'bold', color: '#38BDF8' }}>#{tx.blockHeight}</td>
-                                                    <td style={{ padding: '10px 8px' }}>
-                                                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#94A3B8' }}>
-                                                            {tx.txId ? `${tx.txId.substring(0, 6)}...${tx.txId.substring(tx.txId.length - 6)}` : '-'}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => { navigator.clipboard.writeText(tx.txId || ''); alert(btt('copied')); }}
-                                                            style={{ marginLeft: '4px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#64748B', padding: '2px' }}
-                                                            title="Copy"
-                                                        >📋</button>
+                                                    <td style={{ padding: '10px 8px', fontWeight: 'bold', color: '#38BDF8', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>#{tx.blockHeight}</td>
+                                                    <td style={{ padding: '10px 8px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                                                            <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#94A3B8', whiteSpace: 'nowrap' }}>
+                                                                {tx.txId ? `${tx.txId.substring(0, 6)}...${tx.txId.substring(tx.txId.length - 6)}` : '-'}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => { navigator.clipboard.writeText(tx.txId || ''); alert(btt('copied')); }}
+                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#64748B', padding: '2px', lineHeight: 1 }}
+                                                                title="Copy"
+                                                            >📋</button>
+                                                        </div>
                                                     </td>
-                                                    <td style={{ padding: '10px 8px', fontWeight: '600', color: '#34D399' }}>{tx.amount} BW</td>
-                                                    <td style={{ padding: '10px 8px' }}>
-                                                        <span style={{ fontSize: '10px', backgroundColor: tx.type === 'Referral Reward' ? '#7C2D12' : '#312E81', color: tx.type === 'Referral Reward' ? '#FDBA74' : '#A78BFA', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                                    <td style={{ padding: '10px 8px', fontWeight: '600', color: '#34D399', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{tx.amount} BW</td>
+                                                    <td style={{ padding: '10px 8px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                                        <span style={{ fontSize: '10px', backgroundColor: tx.type === 'Referral Reward' ? '#7C2D12' : '#312E81', color: tx.type === 'Referral Reward' ? '#FDBA74' : '#A78BFA', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', whiteSpace: 'nowrap', display: 'inline-block' }}>
                                                             {tx.type === 'Referral Reward' ? btt('referralReward') : btt('minting')}
                                                         </span>
                                                     </td>
-                                                    <td style={{ padding: '10px 8px' }}>
-                                                        <span style={{ fontSize: '10px', backgroundColor: '#064E3B', color: '#6EE7B7', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                                    <td style={{ padding: '10px 8px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                                        <span style={{ fontSize: '10px', backgroundColor: '#064E3B', color: '#6EE7B7', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', whiteSpace: 'nowrap', display: 'inline-block' }}>
                                                             ✅ {btt('confirmed')}
                                                         </span>
                                                     </td>
-                                                    <td style={{ padding: '10px 8px', fontSize: '10px', color: '#64748B' }}>
+                                                    <td style={{ padding: '10px 8px', fontSize: '10px', color: '#64748B', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                                         {tx.createdAt ? new Date(tx.createdAt).toLocaleString(currentLanguage === 'ko' ? 'ko-KR' : currentLanguage === 'ja' ? 'ja-JP' : currentLanguage === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '-'}
                                                     </td>
                                                 </tr>
