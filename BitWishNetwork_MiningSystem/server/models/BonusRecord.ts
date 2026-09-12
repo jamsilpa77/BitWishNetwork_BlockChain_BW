@@ -34,6 +34,9 @@ export interface IBonusRecord extends Document {
         checkInTime: Date;            // 체크인 시간
         bonusRate: string;            // 적용된 보너스율 (0.05)
     }>;
+
+    // 5. [3공정 수복] 추천 보너스 블록 생성 기준점 (referralBonusStorage 기준)
+    lastBonusBlockThreshold: string;
 }
 
 const BonusRecordSchema: Schema = new Schema({
@@ -64,7 +67,10 @@ const BonusRecordSchema: Schema = new Schema({
         checkInTime: { type: Date, default: Date.now },
         bonusRate: { type: String, default: '0.05000000000000000000000000000000000000000000000000' },
         fixedBonusAmount: { type: String, required: false } // 과거 데이터 고정값 저장용
-    }]
+    }],
+
+    // [3공정 수복] referralBonusStorage 1 BW 단위 블록 생성 기준점 (중복 생성 방지)
+    lastBonusBlockThreshold: { type: String, default: '0' }
 }, {
     timestamps: true
 });

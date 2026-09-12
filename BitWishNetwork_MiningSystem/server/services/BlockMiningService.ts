@@ -114,17 +114,90 @@ export class BlockMiningService {
 
     /**
      * [전체 블록 수 조회 전용 유틸]
-     * bitwish_network.blocks 컬렉션의 document 총 개수를 반환합니다.
-     * 기본 제네시스 블록 1개 + 유저들의 추천 보상 총 30 BW 스냅샷(총 31)에서 출발합니다.
+     * bitwish_network.blocks 컬렉션의 document 총 개수(실제 PoW 물리 블록 수)를 반환합니다.
+     * [1공정 수복] 기존 가짜 숫자 +30 오프셋 하드코딩을 삭제하고 100% 실재하는 블록 개수만 반환합니다.
      */
     public static async getTotalBlockCount(): Promise<number> {
         try {
             const networkDb = mongoose.connection.useDb('bitwish_network');
             const count = await networkDb.collection('blocks').countDocuments({});
-            return count + 30; // 30추천보상 스냅샷 오프셋 합산
+            return count;
         } catch (error) {
             console.error("[블록 카운트 조회 에러]:", error);
-            return 31; // 기본 제네시스 1 + 추천 보상 30
+            return 0;
+        }
+    }
+
+    /**
+     * [1공정 수복] 발행량 대비 누락 물리 블록(약 2,364개) 정규 PoW 소급 순차 마이닝 수복 엔진
+     * 기존 1~N번 블록의 불변성(Immutability)을 100% 보존하면서, 
+     * 누락된 수량에 대해 체인 최상단 높이부터 정규 PoW 마이닝 트랜잭션으로 순차 블록을 생성 적재합니다.
+     */
+    public static async auditAndSyncGlobalBlocks(): Promise<{ createdBlocks: number; totalBlocks: number }> {
+        try {
+            console.log("⛏️ [1공정 수복] 메인넷 전체 발행량 대비 누락 물리 블록 전수조사 및 PoW 소급 마이닝을 개시합니다...");
+            const networkDb = mongoose.connection.useDb('bitwish_network');
+            const miningDb = mongoose.connection.useDb('bitwish_mining');
+
+            // 1. 현재 DB에 저장된 실제 PoW 물리 블록 개수 집계
+            const currentBlockCount = await networkDb.collection('blocks').countDocuments({});
+
+            // 2. 전 지갑의 실시간 발행 수량(개인 채굴 + 보너스 보관함 + 월간 정산금) 집계
+            const miningStateAgg = await miningDb.collection('miningstates').aggregate([
+                { $group: { _id: null, total: { $sum: { $toDouble: "$accumulatedReward" } } } }
+            ]).toArray();
+            const totalMined = new Decimal(miningStateAgg[0]?.total || 0);
+
+            const bonusRecordAgg = await miningDb.collection('bonusrecords').aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalReferral: { $sum: { $toDouble: "$referralRewardStorage" } },
+                        totalBonus: { $sum: { $toDouble: "$referralBonusStorage" } }
+                    }
+                }
+            ]).toArray();
+            const totalBonus = new Decimal(bonusRecordAgg[0]?.totalReferral || 0)
+                .plus(new Decimal(bonusRecordAgg[0]?.totalBonus || 0));
+
+            const settlementAgg = await miningDb.collection('monthlysettlements').aggregate([
+                { $group: { _id: null, total: { $sum: { $toDouble: "$totalAmount" } } } }
+            ]).toArray();
+            const totalSettled = new Decimal(settlementAgg[0]?.total || 0);
+
+            // 총 실시간 발행 수량 (정수 변환)
+            const totalSupplyDecimal = totalMined.plus(totalBonus).plus(totalSettled);
+            const targetBlockCount = totalSupplyDecimal.floor().toNumber();
+
+            console.log(`📊 [1공정 수복] 현재 메인넷 물리 블록 수: ${currentBlockCount}개 | 목표 발행량 정수 블록 수: ${targetBlockCount}개`);
+
+            if (targetBlockCount > currentBlockCount) {
+                const blocksToCreate = targetBlockCount - currentBlockCount;
+                console.log(`🚀 [1공정 수복] 총 ${blocksToCreate}개의 누락 블록 소급 순차 PoW 마이닝 생성을 시작합니다...`);
+
+                // 대표 시스템 Validator 지갑 명의로 정규 블록 순차 마이닝
+                const systemValidator = 'BitWish-Miner-Pool';
+                let createdCount = 0;
+
+                for (let i = 0; i < blocksToCreate; i++) {
+                    await this.onMiningBlock(systemValidator);
+                    createdCount++;
+                    if (createdCount % 100 === 0 || createdCount === blocksToCreate) {
+                        const progress = ((createdCount / blocksToCreate) * 100).toFixed(1);
+                        console.log(` └ ⛏️ [1공정 진행율 ${progress}%] ${createdCount}/${blocksToCreate}개 물리 블록 생성 및 체인 연결 완료`);
+                    }
+                }
+
+                const finalBlockCount = await this.getTotalBlockCount();
+                console.log(`✅ [1공정 수복 완료] 총 ${createdCount}개 정규 PoW 블록 생성 완료! (최종 메인넷 블록 수: ${finalBlockCount}개)`);
+                return { createdBlocks: createdCount, totalBlocks: finalBlockCount };
+            } else {
+                console.log(`✅ [1공정 수복 검증] 메인넷 물리 블록이 발행량과 이미 100% 일치합니다. (블록 수: ${currentBlockCount}개)`);
+                return { createdBlocks: 0, totalBlocks: currentBlockCount };
+            }
+        } catch (error) {
+            console.error("❌ [1공정 소급 마이닝 에러] 글로벌 블록 수복 실행 중 예외 발생:", error);
+            return { createdBlocks: 0, totalBlocks: 0 };
         }
     }
 

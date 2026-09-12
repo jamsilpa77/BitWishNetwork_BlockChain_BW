@@ -108,8 +108,8 @@ router.get('/realtime', async (req, res) => {
         // 5. 발행률 (%)
         const issuanceRate = currentSupply.div(totalSupply).times(100).toNumber();
 
-        // 기본 제네시스 블록 1개 + 추천 보상 총 30 BW 스냅샷(총 31)을 기반으로 시작하고 이후 마이닝될 때마다 +1씩 증가
-        let totalBlocks = 31;
+        // [1공정 수복] bitwish_network.blocks DB에 실재하는 PoW 물리 블록 문서 개수를 그대로 리턴 (하드코딩 +30 제거)
+        let totalBlocks = 0;
         let blockCreationFee = '0';
         let ecosystemFund = '0';
         let foundationFund = '0';
@@ -119,7 +119,7 @@ router.get('/realtime', async (req, res) => {
             await nativeClient.connect();
             const networkDb = nativeClient.db('bitwish_network');
             const dbCount = await networkDb.collection('blocks').countDocuments({}) || 0;
-            totalBlocks = dbCount + 30;
+            totalBlocks = dbCount;
 
             // network_stats 에서 기금 정보 가져오기
             const fundStats = await networkDb.collection('network_stats').findOne({ id: 'global_fund_stats' });
@@ -131,7 +131,7 @@ router.get('/realtime', async (req, res) => {
 
             await nativeClient.close();
         } catch (blockError) {
-            console.warn('Block count check failed, default to 31:', blockError);
+            console.warn('Block count check failed:', blockError);
         }
 
         // 네트워크 상태

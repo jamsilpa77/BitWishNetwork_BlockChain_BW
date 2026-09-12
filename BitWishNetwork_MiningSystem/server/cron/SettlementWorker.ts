@@ -144,11 +144,16 @@ export class SettlementWorker {
                 // 2. 실시간 당월 채굴량 '0'으로 초기화하여 다음 달로 이관 (추천 수/속도는 영구 유지)
                 miningState.accumulatedReward = '0.00000000000000000000000000000000000000000000000000';
                 miningState.lastSyncTime = now;
+                // [4공정 수복] 채굴량 기준점도 0으로 리셋 — 다음 달부터 0→1 BW 도달 시 블록 생성 재개
+                // (기준점을 리셋하지 않으면 다음 달에 1 BW씩 쌓여도 블록 생성 고리가 끊김)
+                miningState.lastBlockRewardThreshold = '0';
                 await miningState.save();
 
                 // 3. 추천 보너스 보관함 초기화 (있는 경우)
                 if (bonusRecord && !new Decimal(bonusRecord.referralBonusStorage || '0').isZero()) {
                     bonusRecord.referralBonusStorage = '0.00000000000000000000000000000000000000000000000000';
+                    // [4공정 수복] 보너스 기준점도 0으로 리셋 — 다음 달부터 0→1 BW 도달 시 블록 생성 재개
+                    (bonusRecord as any).lastBonusBlockThreshold = '0';
                     await bonusRecord.save();
                 }
 

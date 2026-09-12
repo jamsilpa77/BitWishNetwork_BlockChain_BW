@@ -89,6 +89,8 @@ async function autoRestoreMiningStates() {
                 await state.save();
             }
         }
+        // [1공정 수복] 글로벌 발행량 대비 누락 물리 블록 전수조사 및 PoW 소급 순차 마이닝 실행
+        await BlockMiningService.auditAndSyncGlobalBlocks();
         console.log("✅ [수복 엔진] 모든 유저 데이터 복원 및 누락 블록 수복 완료!");
     } catch (err) {
         console.error("❌ [수복 엔진 에러] 데이터 수복 중 예외 발생:", err);
@@ -400,6 +402,54 @@ async function autoHealMonthlySettlements() {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// [3공정 시작점 초기화] 서버 최초 배포 시 기존 유저의 lastBonusBlockThreshold 설정
+// ─────────────────────────────────────────────────────────────────────────────
+// 목적:
+//   - 3공정은 "앞으로" 보너스가 1 BW 쌓일 때마다 블록을 1개씩 생성하는 엔진입니다.
+//   - 기존 유저는 이미 쌓인 referralBonusStorage가 있을 수 있습니다.
+//   - lastBonusBlockThreshold 필드가 없으면 0으로 시작하여, 이미 쌓인 보너스 전량에 대해
+//     블록을 중복 생성하는 문제가 발생합니다.
+//   - 이 함수는 해당 필드가 없는 기존 유저에 대해 현재 referralBonusStorage의 정수 부분으로
+//     시작점을 설정하여, 배포 이후 새로 쌓이는 보너스에 대해서만 블록이 생성되도록 합니다.
+//   - 멱등성 보장: lastBonusBlockThreshold 필드가 이미 존재하는 문서는 건드리지 않습니다.
+// ─────────────────────────────────────────────────────────────────────────────
+async function initBonusBlockThreshold() {
+    try {
+        console.log('🔧 [3공정 시작점 초기화] 기존 유저 lastBonusBlockThreshold 초기값 설정 시작...');
+        const miningDb = mongoose.connection.useDb('bitwish_mining');
+
+        // lastBonusBlockThreshold 필드가 없는 BonusRecord 문서만 대상으로 처리
+        const records = await miningDb.collection('bonusrecords').find({
+            lastBonusBlockThreshold: { $exists: false }
+        }).toArray();
+
+        let initializedCount = 0;
+        for (const record of records) {
+            const currentBonus = new Decimal(record.referralBonusStorage || '0');
+            // 현재 쌓인 보너스의 정수 부분을 시작점으로 설정
+            const startThreshold = currentBonus.floor().toString();
+
+            await miningDb.collection('bonusrecords').updateOne(
+                { _id: record._id },
+                { $set: { lastBonusBlockThreshold: startThreshold } }
+            );
+            initializedCount++;
+            if (parseFloat(startThreshold) > 0) {
+                console.log(`   ✔ ${record.walletAddress}: referralBonusStorage=${currentBonus.toFixed(4)} BW → 시작점=${startThreshold} BW`);
+            }
+        }
+
+        if (initializedCount > 0) {
+            console.log(`✅ [3공정 시작점 초기화] 총 ${initializedCount}개 유저 시작점 설정 완료. 앞으로 쌓이는 보너스부터 블록 생성 시작.`);
+        } else {
+            console.log(`✅ [3공정 시작점 초기화] 모든 유저 시작점이 이미 설정되어 있습니다. (스킵)`);
+        }
+    } catch (err) {
+        console.error('❌ [3공정 시작점 초기화 에러]:', err);
+    }
+}
+
 // [2단계 수복 완율] 서버 구동 시 코어 엔진 및 백엔드 무인 서비스 안전 점화 (runOneTimeCleanup 0원 초기화 위험 코드 핀포인트 소거 완율)
 bwChainCore.initialize().then(async () => {
     console.log("🚀 [Phase 4 융합] 백엔드 내부에 블록체인 코어 엔진 무결점 대기 완료");
@@ -414,6 +464,10 @@ bwChainCore.initialize().then(async () => {
     // [정산 수복 엔진] 서버 부팅 시 과거 누락 월별 정산 원장 자동 소급 수복 (완전 무인 자동화)
     // 멱등성 100% 보장: 이미 존재하는 레코드는 MongoDB 유니크 인덱스가 방어하여 중복 생성 없음
     await autoHealMonthlySettlements();
+
+    // [3공정 시작점 초기화] 기존 유저의 lastBonusBlockThreshold를 현재 보너스 정수값으로 설정
+    // 반드시 autoRestoreMiningStates() 이전에 실행 (3공정 중복 블록 생성 방지)
+    await initBonusBlockThreshold();
 
     // 데이터 복원 및 블록 일괄 수복 엔진 최초 1회 실행 (100% 원형 보존)
     await autoRestoreMiningStates();

@@ -13,6 +13,7 @@ import User from '../models/User';
 import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
 import Decimal from 'decimal.js';
+import { BlockMiningService } from '../services/BlockMiningService';
 
 export class UserController {
 
@@ -224,6 +225,14 @@ export class UserController {
             await referrerBonusRecord.save();
             console.log(`[REFERRAL] Referrer bonus perfectly updated - Reward: ${referrerBonusRecord.referralRewardStorage}`);
 
+            // [2공정 수복] 추천인 1 BW 보상 발생 시 메인넷 물리 블록 1개 즉시 실시간 마이닝 적재
+            try {
+                await BlockMiningService.onMiningBlock(referrer.walletAddress);
+                console.log(`📦 [2공정 수복] 추천 보상 블록 소환 완료! Validator: ${referrer.walletAddress}`);
+            } catch (blockErr) {
+                console.error(`❌ [2공정 수복] 추천인 보상 물리 블록 소환 실패:`, blockErr);
+            }
+
             // [Phase 2 최종완성] 2. 단순 +1 명수놀이 파기, '진짜 식별된 명단 숫자'로 마이닝 속도 연동 결합
             const realReferralCount = referrerBonusRecord.referralList.length;
 
@@ -290,6 +299,14 @@ export class UserController {
             }
             await newUserMiningState.save();
             console.log(`[REFERRAL] New user 2% policy engine restored: ${newWalletAddress}`);
+
+            // [2공정 수복] 신규 가입자(자식) 가입 보상 1 BW 지급과 동시에 메인넷 물리 블록 1개 즉시 실시간 마이닝 적재
+            try {
+                await BlockMiningService.onMiningBlock(newWalletAddress);
+                console.log(`📦 [2공정 수복] 신규 가입 보상 블록 소환 완료! Validator: ${newWalletAddress}`);
+            } catch (childBlockErr) {
+                console.error(`❌ [2공정 수복] 신규 가입자 보상 물리 블록 소환 실패:`, childBlockErr);
+            }
 
             // blocktransactions 컬렉션에 실시간 가입 보상 및 추천 보상 블록 트랜잭션 기록
             const mongooseObj = require('mongoose');

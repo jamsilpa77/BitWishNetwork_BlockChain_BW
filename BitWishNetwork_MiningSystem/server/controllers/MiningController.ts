@@ -263,7 +263,8 @@ export class MiningController {
 
                             // 2-2. referralBonusStorage 업데이트 (전체 추천 보너스 누적)
                             const currentStorage = new Decimal(bonusRecord.referralBonusStorage || '0');
-                            bonusRecord.referralBonusStorage = currentStorage.plus(referralBonus).toString();
+                            const newBonusStorage = currentStorage.plus(referralBonus);
+                            bonusRecord.referralBonusStorage = newBonusStorage.toString();
 
                             // 2-3. 각 가입자별 accumulatedBonus 업데이트
                             if (bonusRecord.referralList.length > 0) {
@@ -273,6 +274,26 @@ export class MiningController {
                                 for (let i = 0; i < bonusRecord.referralList.length; i++) {
                                     const currentAccumulated = new Decimal(bonusRecord.referralList[i].accumulatedBonus || '0');
                                     bonusRecord.referralList[i].accumulatedBonus = currentAccumulated.plus(bonusPerReferral).toString();
+                                }
+                            }
+
+                            // [3공정 수복] referralBonusStorage 정수 1 BW 경계 돌파 시 물리 블록 즉시 소환
+                            const bonusLastThreshold = new Decimal((bonusRecord as any).lastBonusBlockThreshold || '0');
+                            const bonusNextThreshold = bonusLastThreshold.plus(1);
+                            if (newBonusStorage.gte(bonusNextThreshold)) {
+                                const bonusBlocksToCreate = newBonusStorage.minus(bonusLastThreshold).floor().toNumber();
+                                if (bonusBlocksToCreate > 0) {
+                                    console.log(`⛏️ [3공정 추천 보너스 블록 카운팅] ${walletAddress}: ${newBonusStorage.toFixed(4)} BW 도달 → +${bonusBlocksToCreate} 블록 생성`);
+                                    for (let bi = 0; bi < bonusBlocksToCreate; bi++) {
+                                        try {
+                                            await BlockMiningService.onMiningBlock(walletAddress);
+                                            console.log(`✅ [3공정] 추천 보너스 블록 ${bi + 1}/${bonusBlocksToCreate} 생성 완료`);
+                                        } catch (bonusBlockErr) {
+                                            console.error(`❌ [3공정] 추천 보너스 블록 생성 실패:`, bonusBlockErr);
+                                        }
+                                    }
+                                    (bonusRecord as any).lastBonusBlockThreshold = bonusLastThreshold.plus(bonusBlocksToCreate).toString();
+                                    console.log(`📊 [3공정] 추천 보너스 블록 기준점 갱신: ${(bonusRecord as any).lastBonusBlockThreshold} BW`);
                                 }
                             }
 
@@ -473,7 +494,29 @@ export class MiningController {
                         // 장부 수록
                         if (bonusRecord) {
                             const currentStorage = new Decimal(bonusRecord.referralBonusStorage || '0');
-                            bonusRecord.referralBonusStorage = currentStorage.plus(referralBonusDelta).toString();
+                            const newBonusStorage = currentStorage.plus(referralBonusDelta);
+                            bonusRecord.referralBonusStorage = newBonusStorage.toString();
+
+                            // [3공정 수복] referralBonusStorage 정수 1 BW 경계 돌파 시 물리 블록 즉시 소환 (소급 정산 경로)
+                            const bonusLastThreshold = new Decimal((bonusRecord as any).lastBonusBlockThreshold || '0');
+                            const bonusNextThreshold = bonusLastThreshold.plus(1);
+                            if (newBonusStorage.gte(bonusNextThreshold)) {
+                                const bonusBlocksToCreate = newBonusStorage.minus(bonusLastThreshold).floor().toNumber();
+                                if (bonusBlocksToCreate > 0) {
+                                    console.log(`⛏️ [3공정 소급 추천 보너스 블록] ${walletAddress}: ${newBonusStorage.toFixed(4)} BW 도달 → +${bonusBlocksToCreate} 블록 생성`);
+                                    for (let bi = 0; bi < bonusBlocksToCreate; bi++) {
+                                        try {
+                                            await BlockMiningService.onMiningBlock(walletAddress);
+                                            console.log(`✅ [3공정 소급] 추천 보너스 블록 ${bi + 1}/${bonusBlocksToCreate} 생성 완료`);
+                                        } catch (bonusBlockErr) {
+                                            console.error(`❌ [3공정 소급] 추천 보너스 블록 생성 실패:`, bonusBlockErr);
+                                        }
+                                    }
+                                    (bonusRecord as any).lastBonusBlockThreshold = bonusLastThreshold.plus(bonusBlocksToCreate).toString();
+                                    console.log(`📊 [3공정 소급] 추천 보너스 블록 기준점 갱신: ${(bonusRecord as any).lastBonusBlockThreshold} BW`);
+                                }
+                            }
+
                             await bonusRecord.save();
                         }
                     }
