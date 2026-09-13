@@ -89,9 +89,8 @@ async function autoRestoreMiningStates() {
                 await state.save();
             }
         }
-        // [1공정 수복] 글로벌 발행량 대비 누락 물리 블록 전수조사 및 PoW 소급 순차 마이닝 실행
-        await BlockMiningService.auditAndSyncGlobalBlocks();
-        console.log("✅ [수복 엔진] 모든 유저 데이터 복원 및 누락 블록 수복 완료!");
+        // [수복 완율] 글로벌 발행량 대비 누락 물리 블록 전수조사는 서버 최초 가동 시 1회만 수행하고, 30초 주기 반복 실행에서는 소거합니다.
+        console.log("✅ [수복 엔진] 모든 유저 데이터 복원 및 실시간 마이닝 수복 검증 완료!");
     } catch (err) {
         console.error("❌ [수복 엔진 에러] 데이터 수복 중 예외 발생:", err);
     }
