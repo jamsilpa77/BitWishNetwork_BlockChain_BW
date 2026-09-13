@@ -62,27 +62,28 @@ async function autoRestoreMiningStates() {
 
                 console.log(`[수복 엔진] ${walletAddress}: 복원 전=${dbAmount.toFixed(4)} BW → 복원 후=${realTimeAmount.toFixed(4)} BW`);
 
-                // [블록 수복 카운팅] 1BW 경계 초과 체크 및 자동 블록 생성
+                // [블록 수복 카운팅] 1BW 경계 초과 체크 및 자동 블록 생성 (단 1개로 엄격 제한)
                 const lastThreshold = new Decimal(state.lastBlockRewardThreshold || '0');
                 const nextThreshold = lastThreshold.plus(1);
 
                 if (realTimeAmount.gte(nextThreshold)) {
-                    const blocksToCreate = realTimeAmount.minus(lastThreshold).floor().toNumber();
+                    // 1회 틱당 최대 1개의 블록만 생성되도록 상한선 1개 강제 제약
+                    const rawGap = realTimeAmount.minus(lastThreshold).floor().toNumber();
+                    const blocksToCreate = Math.min(1, rawGap);
 
                     if (blocksToCreate > 0) {
-                        console.log(`⛏️ [수복 엔진] ${walletAddress}: 누락 블록 +${blocksToCreate}개 일괄 복원 시작`);
+                        console.log(`⛏️ [수복 엔진] ${walletAddress}: 1 BW 경계 돌파 → 정밀 블록 1개 생성`);
 
-                        for (let i = 0; i < blocksToCreate; i++) {
-                            try {
-                                await BlockMiningService.onMiningBlock(walletAddress);
-                                console.log(`✅ [수복 엔진] 블록 ${i + 1}/${blocksToCreate} 생성 완료`);
-                            } catch (blockError) {
-                                console.error(`❌ [수복 엔진] 블록 생성 실패:`, blockError);
-                            }
+                        try {
+                            await BlockMiningService.onMiningBlock(walletAddress);
+                            console.log(`✅ [수복 엔진] 정밀 블록 1개 생성 완료`);
+                        } catch (blockError) {
+                            console.error(`❌ [수복 엔진] 블록 생성 실패:`, blockError);
                         }
 
-                        state.lastBlockRewardThreshold = lastThreshold.plus(blocksToCreate).toString();
-                        console.log(`📊 [수복 엔진] 새 기준점 업데이트: ${state.lastBlockRewardThreshold} BW`);
+                        // 누적 격차 튀는 현상을 원천 차단하기 위해 기준점을 현재 실시간 수량의 정수로 즉시 업데이트
+                        state.lastBlockRewardThreshold = realTimeAmount.floor().toString();
+                        console.log(`📊 [수복 엔진] 새 기준점 정밀 업데이트: ${state.lastBlockRewardThreshold} BW`);
                     }
                 }
 
