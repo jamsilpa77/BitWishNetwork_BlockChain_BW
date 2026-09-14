@@ -13,7 +13,6 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-const multer = require('multer');
 import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
 import PartnerApplication from '../models/PartnerApplication';
@@ -23,59 +22,63 @@ Decimal.set({ precision: 50 });
 
 const router = express.Router();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// [3-A] Multer 파일 업로드 미들웨어 설정
-// 저장 경로: /uploads/partner/{walletAddress}/
-// 허용 파일 타입: image/jpeg, image/png, image/webp
-// 최대 파일 크기: 10MB per file
-// ─────────────────────────────────────────────────────────────────────────────
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        // walletAddress는 요청 body 또는 query에서 추출
-        const walletAddress = (req.body?.walletAddress || req.query?.walletAddress || 'unknown') as string;
-        // 지갑 주소를 안전한 디렉토리명으로 정규화
-        const safeWallet = walletAddress.replace(/[^a-zA-Z0-9]/g, '_');
-        const uploadDir = path.join(__dirname, '../../uploads/partner', safeWallet);
+let multer: any = null;
+try {
+    multer = require('multer');
+} catch (e) {
+    console.warn('[Partner Route] multer module not found. File upload middleware disabled until npm install.');
+}
 
-        // 디렉토리가 없으면 자동 생성 (recursive)
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
+let upload: any;
+if (multer) {
+    const storage = multer.diskStorage({
+        destination: (req: any, file: any, cb: any) => {
+            const walletAddress = (req.body?.walletAddress || req.query?.walletAddress || 'unknown') as string;
+            const safeWallet = walletAddress.replace(/[^a-zA-Z0-9]/g, '_');
+            const uploadDir = path.join(__dirname, '../../uploads/partner', safeWallet);
+
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            cb(null, uploadDir);
+        },
+        filename: (req: any, file: any, cb: any) => {
+            const uniqueSuffix = Date.now() + '_' + Math.round(Math.random() * 1e9);
+            const ext = path.extname(file.originalname || '').toLowerCase();
+            cb(null, uniqueSuffix + ext);
         }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        // 파일명: {타임스탬프}_{원본파일명} 형식으로 저장 (덮어쓰기 방지)
-        const uniqueSuffix = Date.now() + '_' + Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, uniqueSuffix + ext);
-    }
-});
+    });
 
-// 허용 MIME 타입 필터 (image/jpeg, image/png, image/webp만 허용)
-const fileFilter = (req: any, file: any, cb: any) => {
-    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (allowedMimes.includes(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(new Error('허용되지 않는 파일 형식입니다. JPG, PNG, WEBP만 업로드 가능합니다.'));
-    }
-};
+    const fileFilter = (req: any, file: any, cb: any) => {
+        const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('허용되지 않는 파일 형식입니다. JPG, PNG, WEBP만 업로드 가능합니다.'));
+        }
+    };
 
-const upload = multer({
-    storage,
-    fileFilter,
-    limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB per file
-    }
-});
+    upload = multer({
+        storage,
+        fileFilter,
+        limits: {
+            fileSize: 10 * 1024 * 1024,
+        }
+    });
+} else {
+    upload = {
+        single: () => (req: any, res: any, next: any) => next()
+    };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // [3-A] POST /api/partner/upload — 단일 이미지 파일 업로드
 // 반환: { success: true, fileUrl: string }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', upload.single('file'), async (req: any, res: any) => {
     try {
-        if (!req.file) {
+        const uploadedFile = req.file;
+        if (!uploadedFile) {
             return res.status(400).json({ success: false, message: '업로드된 파일이 없습니다.' });
         }
 
@@ -83,15 +86,15 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         const safeWallet = walletAddress.replace(/[^a-zA-Z0-9]/g, '_');
 
         // 서버에서 접근 가능한 URL 경로로 변환
-        const fileUrl = `/uploads/partner/${safeWallet}/${req.file.filename}`;
+        const fileUrl = `/uploads/partner/${safeWallet}/${uploadedFile.filename}`;
 
         console.log(`[Partner Upload] 파일 업로드 완료: ${walletAddress} → ${fileUrl}`);
 
         return res.json({
             success: true,
             fileUrl,
-            originalName: req.file.originalname,
-            size: req.file.size
+            originalName: uploadedFile.originalname,
+            size: uploadedFile.size
         });
     } catch (error: any) {
         console.error('[Partner Upload Error]:', error);
@@ -108,7 +111,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 //   3. 신청 즉시 1BW 보너스 지급 (1회만) → MiningState.accumulatedReward += 1BW
 //   4. registrationBonusPaid = true 설정
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/apply', async (req, res) => {
+router.post('/apply', async (req: any, res: any) => {
     try {
         const {
             walletAddress,
@@ -219,7 +222,7 @@ router.post('/apply', async (req, res) => {
 // [3-E] GET /api/partner/status?walletAddress=xxx — 현재 사용자 신청 현황 조회
 // 반환: 현재 사용자의 PartnerApplication 최신 1건
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/status', async (req, res) => {
+router.get('/status', async (req: any, res: any) => {
     try {
         const { walletAddress } = req.query as { walletAddress: string };
 
@@ -265,7 +268,7 @@ router.get('/status', async (req, res) => {
 // [3-E] GET /api/partner/admin/list — 관리자: 신청 목록 조회 (페이지네이션)
 // Query: status=PENDING|APPROVED|REJECTED|ALL, page=1, limit=20
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/admin/list', async (req, res) => {
+router.get('/admin/list', async (req: any, res: any) => {
     try {
         const { status, page = '1', limit = '20' } = req.query as {
             status?: string;
@@ -317,7 +320,7 @@ router.get('/admin/list', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // [3-E] GET /api/partner/admin/detail/:applicationId — 관리자: 신청 상세 조회
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/admin/detail/:applicationId', async (req, res) => {
+router.get('/admin/detail/:applicationId', async (req: any, res: any) => {
     try {
         const { applicationId } = req.params;
 
@@ -347,7 +350,7 @@ router.get('/admin/detail/:applicationId', async (req, res) => {
 //   5. 승인 완료 3BW 즉시 지급 (1회만) → accumulatedReward += 3
 //   6. approvalBonusPaid = true 설정
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/admin/approve/:applicationId', async (req, res) => {
+router.post('/admin/approve/:applicationId', async (req: any, res: any) => {
     try {
         const { applicationId } = req.params;
         const { adminWalletAddress } = req.body; // 처리한 관리자 지갑 주소
@@ -443,7 +446,7 @@ router.post('/admin/approve/:applicationId', async (req, res) => {
 //   2. adminNote 저장 (반려 사유)
 //   3. MiningState.partnerStatus = 'NOT_REGISTERED' 복원
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/admin/reject/:applicationId', async (req, res) => {
+router.post('/admin/reject/:applicationId', async (req: any, res: any) => {
     try {
         const { applicationId } = req.params;
         const { adminNote, adminWalletAddress } = req.body;
@@ -504,7 +507,7 @@ router.post('/admin/reject/:applicationId', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Multer 에러 핸들러 미들웨어
 // ─────────────────────────────────────────────────────────────────────────────
-router.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+router.use((error: any, req: any, res: any, next: any) => {
     if (error && (error.name === 'MulterError' || error.code === 'LIMIT_FILE_SIZE')) {
         if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
