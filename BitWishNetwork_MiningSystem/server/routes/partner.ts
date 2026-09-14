@@ -13,7 +13,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import multer from 'multer';
+const multer = require('multer');
 import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
 import PartnerApplication from '../models/PartnerApplication';
@@ -52,7 +52,7 @@ const storage = multer.diskStorage({
 });
 
 // 허용 MIME 타입 필터 (image/jpeg, image/png, image/webp만 허용)
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (req: any, file: any, cb: any) => {
     const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (allowedMimes.includes(file.mimetype)) {
         cb(null, true);
@@ -505,7 +505,7 @@ router.post('/admin/reject/:applicationId', async (req, res) => {
 // Multer 에러 핸들러 미들웨어
 // ─────────────────────────────────────────────────────────────────────────────
 router.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (error instanceof multer.MulterError) {
+    if (error && (error.name === 'MulterError' || error.code === 'LIMIT_FILE_SIZE')) {
         if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
                 success: false,
