@@ -26,7 +26,7 @@ router.get('/realtime', async (req, res) => {
             {
                 $group: {
                     _id: null,
-                    totalAccumulated: { $sum: { $toDouble: "$accumulatedReward" } }
+                    totalAccumulated: { $sum: { $toDouble: { $ifNull: ["$accumulatedReward", "0"] } } }
                 }
             }
         ]);
@@ -38,10 +38,10 @@ router.get('/realtime', async (req, res) => {
         let liveBoost = new Decimal(0);
 
         activeMiners.forEach(miner => {
-            const lastSync = new Date(miner.lastSyncTime).getTime();
-            const elapsed = (now - lastSync) / 1000; // 초 단위 경과 시간
+            const lastSync = miner.lastSyncTime ? new Date(miner.lastSyncTime).getTime() : now;
+            const elapsed = Math.max(0, (now - lastSync) / 1000); // 초 단위 경과 시간
             if (elapsed > 0) {
-                const ratePerSec = new Decimal(miner.currentTotalRate).div(3600);
+                const ratePerSec = new Decimal(miner.currentTotalRate || '0.25').div(3600);
                 liveBoost = liveBoost.plus(ratePerSec.mul(elapsed));
             }
         });
@@ -56,7 +56,7 @@ router.get('/realtime', async (req, res) => {
                         $sum: {
                             $cond: [
                                 { $in: ["$migrationStatus", ["LOCKED", "WAITING_KYC"]] },
-                                { $toDouble: "$totalAmount" },
+                                { $toDouble: { $ifNull: ["$totalAmount", "0"] } },
                                 0
                             ]
                         }
@@ -65,7 +65,7 @@ router.get('/realtime', async (req, res) => {
                         $sum: {
                             $cond: [
                                 { $in: ["$migrationStatus", ["UNLOCKED", "MIGRATED"]] },
-                                { $toDouble: "$totalAmount" },
+                                { $toDouble: { $ifNull: ["$totalAmount", "0"] } },
                                 0
                             ]
                         }
@@ -88,8 +88,8 @@ router.get('/realtime', async (req, res) => {
             {
                 $group: {
                     _id: null,
-                    totalRewardStorage: { $sum: { $toDouble: "$referralRewardStorage" } },
-                    totalBonusStorage: { $sum: { $toDouble: "$bonusStorage" } }
+                    totalRewardStorage: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } },
+                    totalBonusStorage: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
                 }
             }
         ]);
@@ -108,16 +108,13 @@ router.get('/realtime', async (req, res) => {
         // 5. 발행률 (%)
         const issuanceRate = currentSupply.div(totalSupply).times(100).toNumber();
 
-        // [1공정 수복] bitwish_network.blocks DB에 실재하는 PoW 물리 블록 문서 개수를 그대로 리턴 (하드코딩 +30 제거)
+        // [1공정 수복] bitwish_network.blocks DB에 실재하는 PoW 물리 블록 문서 개수를 그대로 리턴 (mongoose 커넥션 재사용)
         let totalBlocks = 0;
         let blockCreationFee = '0';
         let ecosystemFund = '0';
         let foundationFund = '0';
         try {
-            const { MongoClient } = require('mongodb');
-            const nativeClient = new MongoClient('mongodb://localhost:27017');
-            await nativeClient.connect();
-            const networkDb = nativeClient.db('bitwish_network');
+            const networkDb = mongoose.connection.useDb('bitwish_network');
             const dbCount = await networkDb.collection('blocks').countDocuments({}) || 0;
             totalBlocks = dbCount;
 
@@ -128,8 +125,6 @@ router.get('/realtime', async (req, res) => {
                 ecosystemFund = fundStats.ecosystemFund || '0';
                 foundationFund = fundStats.foundationFund || '0';
             }
-
-            await nativeClient.close();
         } catch (blockError) {
             console.warn('Block count check failed:', blockError);
         }

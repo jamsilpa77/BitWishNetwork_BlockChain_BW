@@ -109,7 +109,9 @@ async function syncBlocksOneToOne() {
             $or: [
                 { "header.blockHeight": { $gt: targetBlockHeight } },
                 { blockHeight: { $gt: targetBlockHeight } },
-                { index: { $gt: targetBlockHeight } }
+                { index: { $gt: targetBlockHeight } },
+                { "data.header.blockHeight": { $gt: targetBlockHeight } },
+                { "data.blockHeight": { $gt: targetBlockHeight } }
             ]
         });
 
