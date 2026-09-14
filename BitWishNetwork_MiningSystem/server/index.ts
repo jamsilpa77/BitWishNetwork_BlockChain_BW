@@ -42,6 +42,45 @@ async function autoRestoreMiningStates() {
         const now = new Date();
         const activeStates = await MiningState.find({ isMining: true });
 
+        // ⚡ [2공정 수복] 전역 발행량 상한 락 (Global Cap Guard) 계산
+        const networkDb = mongoose.connection.useDb('bitwish_network');
+        const miningDb = mongoose.connection.useDb('bitwish_mining');
+
+        const currentBlockCount = await networkDb.collection('blocks').countDocuments();
+
+        // 대시보드 stats.ts 및 BlockMiningService와 100% 동일한 참값 총발행량 공식
+        const baseRewardAgg = await miningDb.collection('miningstates').aggregate([
+            { $group: { _id: null, total: { $sum: { $toDouble: "$accumulatedReward" } } } }
+        ]).toArray();
+        const baseMined = new Decimal(baseRewardAgg[0]?.total || 0);
+
+        const settlementAgg = await miningDb.collection('monthlysettlements').aggregate([
+            { $group: { _id: null, total: { $sum: { $toDouble: "$totalAmount" } } } }
+        ]).toArray();
+        const totalSettled = new Decimal(settlementAgg[0]?.total || 0);
+
+        const bonusRecordAgg = await miningDb.collection('bonusrecords').aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalReferral: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } },
+                    totalBonus: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
+                }
+            }
+        ]).toArray();
+        const totalBonus = new Decimal(bonusRecordAgg[0]?.totalReferral || 0)
+            .plus(new Decimal(bonusRecordAgg[0]?.totalBonus || 0));
+
+        const totalRealSupply = baseMined.plus(totalSettled).plus(totalBonus);
+        const targetBlockCount = totalRealSupply.floor().toNumber();
+
+        // 물리 블록 수가 실시간 참값 총발행량 정수에 도달/초과했는지 판단하는 상한 락 플래그
+        const isGlobalCapReached = currentBlockCount >= targetBlockCount;
+
+        if (isGlobalCapReached) {
+            console.log(`🔒 [2공정 Global Cap Guard] 메인넷 블록(${currentBlockCount}개) >= 목표 발행량(${targetBlockCount}개) → 새 블록 생성을 100% 차단하고 기준점만 동기화합니다.`);
+        }
+
         for (const state of activeStates) {
             const walletAddress = state.walletAddress;
             const dbAmount = new Decimal(state.accumulatedReward || '0');
@@ -67,12 +106,15 @@ async function autoRestoreMiningStates() {
                 const lastThreshold = new Decimal(state.lastBlockRewardThreshold || '0');
                 const nextThreshold = lastThreshold.plus(1);
 
+                let updatedThreshold = state.lastBlockRewardThreshold || '0';
+
                 if (realTimeAmount.gte(nextThreshold)) {
                     // 1회 틱당 최대 1개의 블록만 생성되도록 상한선 1개 강제 제약
                     const rawGap = realTimeAmount.minus(lastThreshold).floor().toNumber();
                     const blocksToCreate = Math.min(1, rawGap);
 
-                    if (blocksToCreate > 0) {
+                    // ⚡ [2공정 수복 완료] isGlobalCapReached가 true이면 onMiningBlock() 호출을 100% 금지
+                    if (blocksToCreate > 0 && !isGlobalCapReached) {
                         console.log(`⛏️ [수복 엔진] ${walletAddress}: 1 BW 경계 돌파 → 정밀 블록 1개 생성`);
 
                         try {
@@ -81,14 +123,24 @@ async function autoRestoreMiningStates() {
                         } catch (blockError) {
                             console.error(`❌ [수복 엔진] 블록 생성 실패:`, blockError);
                         }
-
-                        // 누적 격차 튀는 현상을 원천 차단하기 위해 기준점을 현재 실시간 수량의 정수로 즉시 업데이트
-                        state.lastBlockRewardThreshold = realTimeAmount.floor().toString();
-                        console.log(`📊 [수복 엔진] 새 기준점 정밀 업데이트: ${state.lastBlockRewardThreshold} BW`);
                     }
+
+                    // 상한 락 적용 중이어도 지갑 기준점은 최신 정수로 동기화하여 중복 감지 방지
+                    updatedThreshold = realTimeAmount.floor().toString();
+                    console.log(`📊 [수복 엔진] 새 기준점 정밀 동기화: ${updatedThreshold} BW (Global Cap Guard: ${isGlobalCapReached ? '잠금' : '해제'})`);
                 }
 
-                await state.save();
+                // ⚡ [1공정 수복 완료] Mongoose .save() 반영 누락 결함 완전 차단 → updateOne 직접 강제 저장
+                await MiningState.updateOne(
+                    { _id: state._id },
+                    {
+                        $set: {
+                            accumulatedReward: realTimeAmount.toString(),
+                            lastSyncTime: now,
+                            lastBlockRewardThreshold: updatedThreshold
+                        }
+                    }
+                );
             }
         }
         // [수복 완율] 글로벌 발행량 대비 누락 물리 블록 전수조사는 서버 최초 가동 시 1회만 수행하고, 30초 주기 반복 실행에서는 소거합니다.

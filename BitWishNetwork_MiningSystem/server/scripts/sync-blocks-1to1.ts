@@ -115,17 +115,23 @@ async function syncBlocksOneToOne() {
             ]
         });
 
-        // 4. blocktransactions 컬렉션에서도 동일 초과 트랜잭션 소거
-        const deleteTxResult = await txColl.deleteMany({
-            blockHeight: { $gt: targetBlockHeight }
-        });
-
-        const finalTotalBlocks = await blocksColl.countDocuments({});
+        // 5. MiningState 내 lastBlockRewardThreshold 기준점이 실제 채굴량을 초과하는 경우 정밀 동기화
+        const activeStates = await miningDb.collection('miningstates').find({}).toArray();
+        let syncedStatesCount = 0;
+        for (const state of activeStates) {
+            const accFloor = new Decimal(state.accumulatedReward || '0').floor().toString();
+            await miningDb.collection('miningstates').updateOne(
+                { _id: state._id },
+                { $set: { lastBlockRewardThreshold: accFloor } }
+            );
+            syncedStatesCount++;
+        }
 
         console.log(`\n==================================================`);
         console.log(`🎉 [3공정 1대1 완벽 수복 최종 성과 리포트]`);
         console.log(` ├ 🗑️  삭제된 초과 잉여 블록:     ${deleteBlocksResult.deletedCount || overflowCount}개`);
         console.log(` ├ 🗑️  삭제된 초과 트랜잭션:      ${deleteTxResult.deletedCount || 0}개`);
+        console.log(` ├ 🔄 동기화된 지갑 기준점:       ${syncedStatesCount}개 지갑 threshold 정밀 맞춤`);
         console.log(` ├ 🛡️  유저 총 자산:               ${totalRealSupplyDecimal.toFixed(4)} BW (100% 온전 보존)`);
         console.log(` └ 📍 최종 수복된 블록 높이:       ${finalTotalBlocks}블록 = ${targetBlockHeight} BW (1대1 완벽 칼동기화 완료!)`);
         console.log(`==================================================\n`);
