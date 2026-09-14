@@ -440,19 +440,24 @@ bwChainCore.initialize().then(async () => {
     new SettlementWorker();
     console.log("⚙️ [SettlementWorker] 무인 정산 및 타임락 오토메이션 엔진 기동 완료");
 
-    // [수복 엔진] 블록 트랜잭션 및 추천인 보상 장부 자동 수복
-    await autoHealBlockTransactions();
+    // [1공정 수복] 포트 개방 및 웹 응답을 차단하지 않도록 무거운 수복 연산은 비동기 백그라운드로 전환
+    (async () => {
+        try {
+            // [수복 엔진] 블록 트랜잭션 및 추천인 보상 장부 자동 수복
+            await autoHealBlockTransactions();
 
-    // [정산 수복 엔진] 서버 부팅 시 과거 누락 월별 정산 원장 자동 소급 수복 (완전 무인 자동화)
-    // 멱등성 100% 보장: 이미 존재하는 레코드는 MongoDB 유니크 인덱스가 방어하여 중복 생성 없음
-    await autoHealMonthlySettlements();
+            // [정산 수복 엔진] 서버 부팅 시 과거 누락 월별 정산 원장 자동 소급 수복
+            await autoHealMonthlySettlements();
 
-    // [3공정 시작점 초기화] 기존 유저의 lastBonusBlockThreshold를 현재 보너스 정수값으로 설정
-    // 반드시 autoRestoreMiningStates() 이전에 실행 (3공정 중복 블록 생성 방지)
-    await initBonusBlockThreshold();
+            // [3공정 시작점 초기화] 기존 유저의 lastBonusBlockThreshold를 현재 보너스 정수값으로 설정
+            await initBonusBlockThreshold();
 
-    // 데이터 복원 및 블록 일괄 수복 엔진 최초 1회 실행 (100% 원형 보존)
-    await autoRestoreMiningStates();
+            // 데이터 복원 및 블록 일괄 수복 엔진 최초 1회 실행 (100% 원형 보존)
+            await autoRestoreMiningStates();
+        } catch (healErr) {
+            console.error("❌ [백그라운드 수복 엔진 에러]:", healErr);
+        }
+    })();
 
     // [무인 자동 마이닝 엔진] 매 30초마다 백엔드 단독으로 모든 유저의 경과 시간을 상시 정산하여 1BW 돌파 시 블록 자동 생성
     setInterval(async () => {
@@ -576,15 +581,14 @@ mongoose.connect(MONGODB_URI)
     .then(async () => {
         console.log('✅ Connected to MongoDB Hybrid Storage');
 
-        // 관리자 기본 계정 시드 실행
-        await seedAdminUser();
-
-        // Start Server
-        // [보안] 프로덕션에서는 127.0.0.1에만 바인딩하여 외부에서 5001 포트 직접 접근 원천 차단
+        // [1공정 수복] 0.1초 만에 웹 서버 포트를 즉시 최우선 개방 (502 Bad Gateway 원천 차단)
         app.listen(Number(PORT), isProduction ? '127.0.0.1' : '0.0.0.0', () => {
             console.log(`🚀 Server is running on port ${PORT}`);
             console.log(`🔄 Server restarted at ${new Date().toLocaleString()}`);
         });
+
+        // 관리자 기본 계정 시드는 백그라운드로 안전하게 실행
+        seedAdminUser().catch((err) => console.error('[SEED] 어드민 계정 생성 실패:', err));
     })
     .catch((err) => {
         console.error('❌ MongoDB Connection Error:', err);

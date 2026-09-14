@@ -163,16 +163,12 @@ router.get('/realtime', async (req, res) => {
  */
 router.get('/blocks', async (req, res) => {
     try {
-        const { MongoClient } = require('mongodb');
-        const nativeClient = new MongoClient('mongodb://localhost:27017');
-        await nativeClient.connect();
-        const networkDb = nativeClient.db('bitwish_network');
+        const networkDb = mongoose.connection.useDb('bitwish_network');
         const blocks = await networkDb.collection('blocks')
             .find({})
             .sort({ 'header.blockHeight': -1 })
             .limit(20)
             .toArray();
-        await nativeClient.close();
         res.json({ success: true, data: blocks });
     } catch (error) {
         console.error('Explorer Blocks API Error:', error);
