@@ -115,6 +115,11 @@ async function syncBlocksOneToOne() {
             ]
         });
 
+        // 4. blocktransactions 컬렉션에서도 동일 초과 트랜잭션 소거
+        const deleteTxResult = await txColl.deleteMany({
+            blockHeight: { $gt: targetBlockHeight }
+        });
+
         // 5. MiningState 내 lastBlockRewardThreshold 기준점이 실제 채굴량을 초과하는 경우 정밀 동기화
         const activeStates = await miningDb.collection('miningstates').find({}).toArray();
         let syncedStatesCount = 0;
@@ -126,6 +131,8 @@ async function syncBlocksOneToOne() {
             );
             syncedStatesCount++;
         }
+
+        const finalTotalBlocks = await blocksColl.countDocuments({});
 
         console.log(`\n==================================================`);
         console.log(`🎉 [3공정 1대1 완벽 수복 최종 성과 리포트]`);
