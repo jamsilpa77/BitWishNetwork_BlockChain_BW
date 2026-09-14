@@ -142,31 +142,56 @@ export class BlockMiningService {
             // 1. 현재 DB에 저장된 실제 PoW 물리 블록 개수 집계
             const currentBlockCount = await networkDb.collection('blocks').countDocuments({});
 
-            // 2. 전 지갑의 실시간 발행 수량(개인 채굴 + 보너스 보관함 + 월간 정산금) 집계
+            // ═══════════════════════════════════════════════════════════════
+            // [1공정 수복] stats.ts 대시보드와 100% 동일한 집계 공식 적용
+            // 총 발행량 = MiningState(accumulatedReward + 실시간liveBoost)
+            //           + MonthlySettlement(totalAmount)
+            //           + BonusRecord(referralRewardStorage + bonusStorage)
+            // ★ 핵심 교정 1: referralBonusStorage → bonusStorage (stats.ts와 동일 필드)
+            // ★ 핵심 교정 2: 실시간 채굴 중인 유저의 미동기화 liveBoost 반드시 합산
+            // ═══════════════════════════════════════════════════════════════
+
+            // 2-1. DB에 저장된 기초 채굴 합계 조회 (stats.ts L25~33과 동일)
             const miningStateAgg = await miningDb.collection('miningstates').aggregate([
                 { $group: { _id: null, total: { $sum: { $toDouble: "$accumulatedReward" } } } }
             ]).toArray();
-            const totalMined = new Decimal(miningStateAgg[0]?.total || 0);
+            let totalMined = new Decimal(miningStateAgg[0]?.total || 0);
 
+            // 2-2. 실시간 보정: 채굴 중인 유저의 미동기화 채굴량 합산 (stats.ts L36~47과 동일)
+            const activeStatesForBoost = await miningDb.collection('miningstates').find({ isMining: true }).toArray();
+            const nowMs = Date.now();
+            let liveBoost = new Decimal(0);
+            for (const miner of activeStatesForBoost) {
+                const lastSync = miner.lastSyncTime ? new Date(miner.lastSyncTime).getTime() : nowMs;
+                const elapsed = Math.max(0, (nowMs - lastSync) / 1000);
+                if (elapsed > 0) {
+                    const ratePerSec = new Decimal(miner.currentTotalRate || '0.25').div(3600);
+                    liveBoost = liveBoost.plus(ratePerSec.mul(elapsed));
+                }
+            }
+            totalMined = totalMined.plus(liveBoost);
+
+            // 2-3. 월간 정산 누적 합계 (stats.ts L51~81과 동일)
+            const settlementAgg = await miningDb.collection('monthlysettlements').aggregate([
+                { $group: { _id: null, total: { $sum: { $toDouble: "$totalAmount" } } } }
+            ]).toArray();
+            const totalSettled = new Decimal(settlementAgg[0]?.total || 0);
+
+            // 2-4. 가입/추천 보상 총합 (stats.ts L87~97과 동일 필드: bonusStorage 사용)
             const bonusRecordAgg = await miningDb.collection('bonusrecords').aggregate([
                 {
                     $group: {
                         _id: null,
-                        totalReferral: { $sum: { $toDouble: "$referralRewardStorage" } },
-                        totalBonus: { $sum: { $toDouble: "$referralBonusStorage" } }
+                        totalReferral: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } },
+                        totalBonus: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
                     }
                 }
             ]).toArray();
             const totalBonus = new Decimal(bonusRecordAgg[0]?.totalReferral || 0)
                 .plus(new Decimal(bonusRecordAgg[0]?.totalBonus || 0));
 
-            const settlementAgg = await miningDb.collection('monthlysettlements').aggregate([
-                { $group: { _id: null, total: { $sum: { $toDouble: "$totalAmount" } } } }
-            ]).toArray();
-            const totalSettled = new Decimal(settlementAgg[0]?.total || 0);
-
-            // 총 실시간 발행 수량 (정수 변환)
-            const totalSupplyDecimal = totalMined.plus(totalBonus).plus(totalSettled);
+            // 총 실시간 발행 수량 (stats.ts와 동일 공식: MiningState + liveBoost + MonthlySettlement + BonusRecord)
+            const totalSupplyDecimal = totalMined.plus(totalSettled).plus(totalBonus);
             const targetBlockCount = totalSupplyDecimal.floor().toNumber();
 
             console.log(`📊 [1공정 수복] 현재 메인넷 물리 블록 수: ${currentBlockCount}개 | 목표 발행량 정수 블록 수: ${targetBlockCount}개`);

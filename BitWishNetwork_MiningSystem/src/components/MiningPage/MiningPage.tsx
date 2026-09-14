@@ -39,6 +39,7 @@ import {
 } from '@/types';
 import { MINING_CONSTANTS, BONUS_CONSTANTS, MINING_STATUS, ATTENDANCE_STATUS, REFERRAL_STATUS, PARTNER_STATUS } from '@/constants';
 import { Decimal } from 'decimal.js';
+import { PartnerRegisterModal } from '../PartnerRegisterModal/PartnerRegisterModal';
 import './MiningPage.css';
 
 /**
@@ -64,6 +65,7 @@ const MiningPage: React.FC = () => {
   const [referralBonus, setReferralBonus] = useState<ReferralBonus | null>(null);
   const [partnerBonus, setPartnerBonus] = useState<PartnerBonus | null>(null);
   const [walletAddress, setWalletAddress] = useState<string>('');
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState<boolean>(false);
 
   // [3단계 초정밀 수복] 프론트엔드-백엔드 서버 시계 0.00초 완벽 동기화를 위한 레퍼런스
   const miningStartTimeRef = useRef<number | null>(null);
@@ -409,7 +411,7 @@ const MiningPage: React.FC = () => {
   };
 
   const handlePartnerBonus = () => {
-    console.log('가맹점 보너스 설정');
+    setIsPartnerModalOpen(true);
   };
 
   const handleProfileSettings = () => {
@@ -571,14 +573,19 @@ const MiningPage: React.FC = () => {
           {/* 가맹점 보너스 */}
           <div className="bonus-card partner">
             <div className="bonus-icon">🏪</div>
-            <h3>{getTranslation('bonus.partner.title')}</h3>
-            <p className="bonus-desc">{getTranslation('bonus.partner.desc')}</p>
+            <h3>{getTranslation('bonus.partner.title') || '가맹점 등록 보너스'}</h3>
+            <p className="bonus-desc">{getTranslation('bonus.partner.desc') || '가맹점 승인 시 채굴률 +30% 가산 및 일시 보너스'}</p>
             <div className="bonus-status">
               {partnerBonus?.status === 'APPROVED' ? (
-                <span className="status-active">✨ {getTranslation('bonus.partner.active')} (125%)</span>
+                <span className="status-active">✨ 가맹점 승인 완료 (+30%)</span>
               ) : (
-                <button className="bonus-action-button" onClick={handlePartnerBonus}>
-                  {getTranslation('bonus.partner.action')}
+                <button
+                  type="button"
+                  className="bonus-action-button"
+                  onClick={handlePartnerBonus}
+                  style={{ cursor: 'pointer', zIndex: 10 }}
+                >
+                  🏪 가맹점 등록 신청하기 →
                 </button>
               )}
             </div>
@@ -595,6 +602,17 @@ const MiningPage: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* 가맹점 등록 모달 */}
+      <PartnerRegisterModal
+        isOpen={isPartnerModalOpen}
+        onClose={() => setIsPartnerModalOpen(false)}
+        walletAddress={walletAddress}
+        onSuccess={() => {
+          loadBonusStatus();
+          loadMiningStatus();
+        }}
+      />
     </div>
   );
 };

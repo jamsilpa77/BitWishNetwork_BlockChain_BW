@@ -13,6 +13,7 @@
 import React, { useState } from 'react';
 import './AdminPage.css';
 import KYCManager from './KYCManager';
+import { PartnerManager } from './PartnerManager';
 
 const AdminPage: React.FC = () => {
     // --- [플랫폼 및 전광판 제어용 신규 상태 변수] ---
@@ -1959,9 +1960,8 @@ const AdminPage: React.FC = () => {
                 )}
 
                 {activeTab === 'partner' && (
-                    <div className="admin-panel">
-                        <h2>🏪 가맹점 등록 관리</h2>
-                        <p>가맹점 신청 목록 및 승인/거부</p>
+                    <div className="admin-panel animate-fade-in">
+                        <PartnerManager />
                     </div>
                 )}
 

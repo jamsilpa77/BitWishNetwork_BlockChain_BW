@@ -17,6 +17,7 @@ import statsRoutes from './routes/stats';
 import kycRoutes from './routes/kyc';
 import rankingRoutes from './routes/ranking';
 import transactionRoutes from './routes/transaction';
+import partnerRoutes from './routes/partner';
 import { SettlementWorker } from './cron/SettlementWorker';
 import bcrypt from 'bcryptjs';
 import { BWCommunityUser } from './models/bwCommunityModels';
@@ -199,41 +200,22 @@ async function autoHealBlockTransactions() {
         }
         console.log(`👶 [수복 엔진] 가입자 가입 보상 블록 총 ${restoredChildCount}개 수복 완료.`);
 
-        // 5. [핵심 수복] 이전 하드코딩 삭제로 소실된 블록 재생성을 위한 lastBlockRewardThreshold 교정
-        // 각 유저의 실제 물리 블록 수와 DB의 lastBlockRewardThreshold를 비교하여 기준점을 하향 조정
-        const allMiningStates = await miningDb.collection('miningstates').find({}).toArray();
-        let thresholdCorrectedCount = 0;
-
-        for (const state of allMiningStates) {
-            const walletAddress = state.walletAddress;
-            if (!walletAddress) continue;
-
-            const threshold = parseFloat(state.lastBlockRewardThreshold || '0');
-            if (threshold <= 0) continue;
-
-            // 이 유저의 실제 물리 블록 수를 blocks 컬렉션에서 카운트 (validator 주소로 검색)
-            const actualBlockCount = await networkDb.collection('blocks').countDocuments({
-                $or: [
-                    { 'data.header.validator': walletAddress },
-                    { 'header.validator': walletAddress }
-                ]
-            });
-
-            // [정밀 검증] 채굴 시작 시 지급되는 1블록을 포함하여 threshold + 1과 실제 블록 개수를 대조
-            // 기준점(threshold + 1)이 실제 블록 수보다 높으면 → 블록이 누락된 것이므로 하향 조정하여 자동 재생성 트리거
-            if (threshold + 1 > actualBlockCount) {
-                const correctedThreshold = Math.max(0, actualBlockCount - 1);
-                await miningDb.collection('miningstates').updateOne(
-                    { walletAddress: walletAddress },
-                    { $set: { lastBlockRewardThreshold: correctedThreshold.toString() } }
-                );
-                console.log(`🔧 [수복 엔진] ${walletAddress}: 기준점 교정 ${threshold} → ${correctedThreshold} (${threshold - correctedThreshold}개 블록 재생성 예정)`);
-                thresholdCorrectedCount++;
-            }
-        }
-        if (thresholdCorrectedCount > 0) {
-            console.log(`🔧 [수복 엔진] 총 ${thresholdCorrectedCount}명의 유저 기준점 교정 완료 → 다음 주기에 누락 블록 자동 재생성됨`);
-        }
+        // ═══════════════════════════════════════════════════════════════════════
+        // [2공정 수복 완료] lastBlockRewardThreshold 하향 교정 로직 영구 비활성화
+        // ───────────────────────────────────────────────────────────────────────
+        // 비활성화 사유:
+        //   이 로직은 초기 1회성 수복 목적으로 작성된 코드였으나,
+        //   서버가 재시작될 때마다 반복 실행되면서 아래의 치명적 부작용을 야기했습니다:
+        //
+        //   ❌ 문제: threshold를 낮추면 → 30초 주기 autoRestoreMiningStates() 워커가
+        //            이미 생성이 완료된 과거 블록 구간을 다시 "미생성 구간"으로 오인 →
+        //            서버 재시작마다 불필요한 허수 블록을 계속 생성 (누적 1,000개+ 과생성 원인)
+        //
+        //   ✅ 조치: 본 로직 전체를 영구 비활성화하여 threshold가 기존 DB 값 그대로 유지되도록
+        //            고정. 이로써 30초 워커는 실제 1BW 돌파 시에만 블록을 1개 생성하는
+        //            정상 동작만 수행합니다.
+        // ═══════════════════════════════════════════════════════════════════════
+        console.log(`✅ [2공정 수복] lastBlockRewardThreshold 하향 교정 로직 비활성화 — threshold 기존 DB값 유지, 허수 블록 과생성 원천 차단 완료`);
 
         console.log("✅ [수복 엔진] 모든 물리 블록 및 추천 보상 장부 수복 정리가 성공적으로 완료되었습니다!");
 
@@ -523,6 +505,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/ranking', rankingRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/partner', partnerRoutes);
 
 // [BW Community Plugin] 마이닝 로직과 100% 완벽하게 독립된 커뮤니티 전용 라우터 안전 마운트
 import bwCommunityRoutes from './routes/bw_community_api';

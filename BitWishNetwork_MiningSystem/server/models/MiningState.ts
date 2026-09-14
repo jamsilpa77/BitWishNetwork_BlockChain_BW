@@ -33,6 +33,7 @@ export interface IMiningState extends Document {
     extensionBonusRate: string;   // [신규] 크롬 확장프로그램 보너스율 (출석 5% + 니모닉 10% = 최대 15% 누적)
 
     partnerStatus: string;        // 가맹점 상태 (NOT_REGISTERED, PENDING, REGISTERED)
+    partnerBonusRate: string;     // 가맹점 승인 시 기본 채굴률에 가산되는 보너스율 (승인 시 '0.3', 미승인 시 '0')
     lastBlockRewardThreshold: string; // 마지막으로 블록이 생성된 BW 기준점 (1BW 도달 시마다 블록 생성 추적)
 }
 
@@ -66,6 +67,11 @@ const MiningStateSchema: Schema = new Schema({
         enum: ['NOT_REGISTERED', 'PENDING', 'REGISTERED'],
         default: 'NOT_REGISTERED'
     },
+
+    // 가맹점 승인 시 기본 채굴률에 가산되는 보너스율
+    // 승인 완료: '0.3' (기본 채굴률의 30% 가산) / 미승인: '0'
+    // 예시: 기본 0.25 BW/h → 0.25 + (0.25 × 0.3) = 0.325 BW/h
+    partnerBonusRate: { type: String, default: '0' },
 
     // [블록 +1 카운팅] 마지막으로 블록이 생성된 BW 기준점
     // 유저의 accumulatedReward가 이 값 + 1 을 초과하면 블록을 +1 생성하고 이 값을 갱신
