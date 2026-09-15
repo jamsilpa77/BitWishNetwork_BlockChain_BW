@@ -120,20 +120,19 @@ async function audit21Wallets() {
         // ──────────────────────────────────────────────────────────────────────────────────────────────────
         // 🔍 초정밀 21개 지갑 개별 항목 세부 분리 전수조사 리포트 출력
         // ──────────────────────────────────────────────────────────────────────────────────────────────────
-        console.log(`📋 [21개 지갑 항목별 세부 분리 초정밀 전수조사 리포트]`);
-        console.log(`───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────`);
-        console.log(` 번호 | 상태     | 지갑 주소                                  | 순수 마이닝 BW | 추천보상 보관함 | 추천보너스 보관함 | 과거정산 BW | 참값 총 보유 BW | 정수BW | 블록수 | 오차 |`);
-        console.log(`───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────`);
-
         walletAuditReports.forEach(r => {
-            const statusStr = r.isMining ? '⛏️ ACTIVE ' : '💤 IDLE   ';
-            const diffStr = r.blockDiff > 0 ? `+${r.blockDiff}개 초과` : (r.blockDiff < 0 ? `${r.blockDiff}개 부족` : '✅ 1:1일치');
-            console.log(
-                ` ${String(r.index).padStart(2)}  | ${statusStr} | ${r.walletAddress} | ${r.pureMiningReward.padStart(12)} | ${r.referralRewardStorage.padStart(13)} | ${r.referralBonusStorage.padStart(14)} | ${r.settledAmount.padStart(9)} | ${r.totalBW.padStart(13)} BW | ${String(r.floorBW).padStart(6)} | ${String(r.userBlockCount).padStart(6)} | ${diffStr} |`
-            );
+            const statusStr = r.isMining ? '⛏️ ACTIVE (채굴중)' : '💤 IDLE   (대기중)';
+            const diffStr = r.blockDiff > 0 ? `⚠️ ${r.blockDiff}개 초과` : (r.blockDiff < 0 ? `⚠️ ${Math.abs(r.blockDiff)}개 부족` : '✅ 1:1일치');
+            console.log(` ───────────── [지갑 ${String(r.index).padStart(2)}/21] ${r.walletAddress} ─────────────`);
+            console.log(`  ├ 📌 상태: ${statusStr}`);
+            console.log(`  ├ ① 실시간 순수 마이닝 누적 채굴량:  ${r.pureMiningReward} BW`);
+            console.log(`  ├ ② 추천인 1BW 보상 보관함:       ${r.referralRewardStorage} BW`);
+            console.log(`  ├ ③ 추천인 2% 마이닝 보너스 보관함: ${r.referralBonusStorage} BW`);
+            console.log(`  ├ ④ 과거 확정 정산 원장 자산:      ${r.settledAmount} BW`);
+            console.log(`  ├ 💎 [합계 참값 총 보유 자산]:      ${r.totalBW} BW (정수: ${r.floorBW} BW)`);
+            console.log(`  └ 📦 DB 실제 저장된 실물 블록 수:  ${r.userBlockCount}개 (상태: ${diffStr})`);
+            console.log(``);
         });
-
-        console.log(`───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n`);
 
         // ──────────────────────────────────────────────────────────────────────────────────────────────────
         // ⛏️ 8명 채굴 유저 심층 감사 요약
