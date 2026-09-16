@@ -22,21 +22,6 @@ export class BlockMiningService {
      */
     public static async onMiningBlock(walletAddress: string, session?: any): Promise<BlockMiningResult> {
         try {
-            // [Global Cap Guard] 실시간 총 BW 발행 수량(정수) 상한선 검증 및 동적 차단
-            const currentBlockCount = await this.getTotalBlockCount();
-            const totalIssuedBW = await this.calculateTotalIssuedBW();
-            const targetCap = totalIssuedBW.floor().toNumber();
-
-            if (currentBlockCount >= targetCap) {
-                console.log(`🛡️ [Global Cap Guard] 블록 생성 차단: 현재 물리 블록(${currentBlockCount}개) >= 실시간 총 BW 발행량(${targetCap} BW)`);
-                return {
-                    success: false,
-                    blockHeight: currentBlockCount,
-                    totalBlockCount: currentBlockCount,
-                    distributedFee: { ecosystemFund: '0', foundationFund: '0' }
-                };
-            }
-
             // 1단계: 블록체인 메인넷 코어를 호출하여 새 PoW 블록을 bitwish_network.blocks 컬렉션에 생성 및 저장
             const bwChainCore = (global as any).bwChainCore || require('../index').bwChainCore;
             if (!bwChainCore) {
@@ -142,62 +127,6 @@ export class BlockMiningService {
             return 0;
         }
     }
-
-    /**
-     * [Global Cap Guard 전용] 실시간 전체 지갑의 총 BW 발행량(채굴+월간정산+보너스+실시간시간증분) 동적 집계 함수
-     */
-    public static async calculateTotalIssuedBW(): Promise<Decimal> {
-        try {
-            const miningDb = mongoose.connection.useDb('bitwish_mining');
-
-            // 1. MiningState 기본 누적 채굴 합계
-            const miningStateAgg = await miningDb.collection('miningstates').aggregate([
-                { $group: { _id: null, total: { $sum: { $toDouble: "$accumulatedReward" } } } }
-            ]).toArray();
-            let totalMined = new Decimal(miningStateAgg[0]?.total || 0);
-
-            // 2. 실시간 liveBoost 채굴량 합산 (현재 채굴 중인 유저의 미동기화 분 단위 경과 수량)
-            const activeStates = await miningDb.collection('miningstates').find({ isMining: true }).toArray();
-            const nowMs = Date.now();
-            let liveBoost = new Decimal(0);
-            for (const miner of activeStates) {
-                const lastSync = miner.lastSyncTime ? new Date(miner.lastSyncTime).getTime() : nowMs;
-                const elapsed = Math.max(0, (nowMs - lastSync) / 1000);
-                if (elapsed > 0) {
-                    const ratePerSec = new Decimal(miner.currentTotalRate || '0.25').div(3600);
-                    liveBoost = liveBoost.plus(ratePerSec.mul(elapsed));
-                }
-            }
-            totalMined = totalMined.plus(liveBoost);
-
-            // 3. 월간 정산 누적 합계
-            const settlementAgg = await miningDb.collection('monthlysettlements').aggregate([
-                { $group: { _id: null, total: { $sum: { $toDouble: "$totalAmount" } } } }
-            ]).toArray();
-            const totalSettled = new Decimal(settlementAgg[0]?.total || 0);
-
-            // 4. 가입/추천 보상 합계
-            const bonusRecordAgg = await miningDb.collection('bonusrecords').aggregate([
-                {
-                    $group: {
-                        _id: null,
-                        totalReferralReward: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } },
-                        totalReferralBonus: { $sum: { $toDouble: { $ifNull: ["$referralBonusStorage", "0"] } } },
-                        totalBonus: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
-                    }
-                }
-            ]).toArray();
-            const totalBonus = new Decimal(bonusRecordAgg[0]?.totalReferralReward || 0)
-                .plus(new Decimal(bonusRecordAgg[0]?.totalReferralBonus || 0))
-                .plus(new Decimal(bonusRecordAgg[0]?.totalBonus || 0));
-
-            return totalMined.plus(totalSettled).plus(totalBonus);
-        } catch (err) {
-            console.error("❌ [Global Cap Guard] 총 BW 발행량 집계 에러:", err);
-            return new Decimal(0);
-        }
-    }
-
 
     /**
      * [1공정 수복] 발행량 대비 누락 물리 블록(약 2,364개) 정규 PoW 소급 순차 마이닝 수복 엔진
