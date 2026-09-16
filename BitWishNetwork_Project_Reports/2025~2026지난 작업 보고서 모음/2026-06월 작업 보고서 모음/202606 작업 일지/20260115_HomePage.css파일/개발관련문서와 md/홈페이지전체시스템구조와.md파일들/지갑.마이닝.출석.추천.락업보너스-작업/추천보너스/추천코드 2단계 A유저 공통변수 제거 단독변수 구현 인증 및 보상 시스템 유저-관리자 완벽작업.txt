@@ -1,0 +1,449 @@
+## **단계별 구현 계획서**
+
+### **1단계: 공통변수 `setReferralSystemState` 완전 제거**
+
+#### **A. 현재 문제 코드 식별 및 제거**
+```typescript
+// ❌ 제거할 공통 변수 (라인 3479)
+const [referralSystemState, setReferralSystemState] = useState({
+  referralCode: '',
+  isReferralCodeValid: false,
+  referralValidationResult: null,
+  referralBonusApplied: false,
+  referralBonusRate: 0,
+  additionalBonusRate: 0,
+  referrerAddress: ''
+});
+
+// ❌ 제거할 공통 함수들
+const handleReferralVerificationComplete = (result: any) => {
+  setReferralSystemState(prev => ({...})); // 제거
+};
+
+const handleReferralVerificationError = (error: string) => {
+  setReferralSystemState(prev => ({...})); // 제거
+};
+```
+◆◆
+
+#### **B. 공통 변수 사용 부분 모두 제거**
+```typescript
+// ❌ 제거할 코드들
+// 1. 라인 344: setReferralSystemState 사용 부분
+// 2. 라인 373: setReferralSystemState 사용 부분
+// 3. 라인 4033: handleUserReferralCodeSubmit 내부
+// 4. 라인 4101: handleAdminReferralCodeSubmit 내부
+// 5. 라인 4480: handleUserResetReferral 내부
+// 6. 라인 4594: 기타 setReferralSystemState 사용 부분들
+```
+◆◆◆
+
+### **2단계: 각각의 단독 변수로 완전 분리**
+
+#### **A. 유저용 전용 변수 사용**
+```typescript
+// ✅ 유저용 추천인 코드 인증 함수 수정
+const handleUserReferralCodeSubmit = async (referralCode: string) => {
+  try {
+    console.log('   유저용 추천인 코드 입력 처리 시작:', referralCode);
+    
+    // 추천인 코드 검증
+    const validationResult = await validateReferralCode(referralCode);
+    
+    if (validationResult.isValid) {
+      // 상호간 인증 및 보상 지급 처리
+      const joinResult = await handleUserReferralJoin(referralCode, authenticatedWalletAddress);
+      
+      if (joinResult.success) {
+        // ✅ 유저 전용 상태 업데이트
+        setUserReferralSystemState(prev => ({
+          ...prev,
+          referralCode: referralCode,
+          referrerAddress: validationResult.referrerAddress || '',
+          referralBonusApplied: true,
+          referralBonusRate: validationResult.bonusRate || 0
+        }));
+        
+        // 추천인 수 증가 (유저용)
+        setUserReferralCount(prev => prev + 1);
+        
+        // 보너스율 업데이트 (유저용)
+        const newBonus = calculateUserReferralBonus(userReferralCount + 1);
+        setUserReferralBonus(newBonus);
+        
+        alert(`✅ 유저용 추천인 가입 성공!\n\n보상 지급:\n- 추천인: 1 BW + 1.2% 보너스\n- 가입자: 1 BW + 1.2% 보너스`);
+        
+        console.log('✅ 유저용 추천인 가입 성공:', joinResult.data);
+      }
+    } else {
+      alert(`❌ 유저용 추천인 코드 오류: ${validationResult.errorMessage}`);
+    }
+  } catch (error) {
+    console.error('❌ 유저용 추천인 코드 입력 처리 실패:', error);
+    alert('❌ 추천인 코드 처리에 실패했습니다. 다시 시도해주세요.');
+  }
+};
+```
+
+#### **B. 관리자용 전용 변수 사용**
+```typescript
+// ✅ 관리자용 추천인 코드 인증 함수 수정
+const handleAdminReferralCodeSubmit = async (referralCode: string) => {
+  try {
+    console.log('   관리자용 추천인 코드 입력 처리 시작:', referralCode);
+    
+    // 추천인 코드 검증
+    const validationResult = await validateReferralCode(referralCode);
+    
+    if (validationResult.isValid) {
+      // 상호간 인증 및 보상 지급 처리
+      const joinResult = await handleAdminReferralJoin(referralCode, authenticatedWalletAddress);
+      
+      if (joinResult.success) {
+        // ✅ 관리자 전용 상태 업데이트
+        setAdminReferralSystemState(prev => ({
+          ...prev,
+          referralCode: referralCode,
+          referrerAddress: validationResult.referrerAddress || '',
+          referralBonusApplied: true,
+          referralBonusRate: validationResult.bonusRate || 0
+        }));
+        
+        // 추천인 수 증가 (관리자용)
+        setAdminReferralCount(prev => prev + 1);
+        
+        // 보너스율 업데이트 (관리자용)
+        const newBonus = calculateAdminReferralBonus(adminReferralCount + 1);
+        setAdminReferralBonus(newBonus);
+        
+        alert(`✅ 관리자용 추천인 가입 성공!\n\n보상 지급:\n- 추천인: 1 BW + 1.2% 보너스\n- 가입자: 1 BW + 1.2% 보너스`);
+        
+        console.log('✅ 관리자용 추천인 가입 성공:', joinResult.data);
+      }
+    } else {
+      alert(`❌ 관리자용 추천인 코드 오류: ${validationResult.errorMessage}`);
+    }
+  } catch (error) {
+    console.error('❌ 관리자용 추천인 코드 입력 처리 실패:', error);
+    alert('❌ 추천인 코드 처리에 실패했습니다. 다시 시도해주세요.');
+  }
+};
+```
+
+### **3단계: 1BW 즉시 지급 로직 각각 구현**
+
+#### **A. 유저용 1BW 즉시 지급**
+```typescript
+// ✅ 유저용 1BW 즉시 지급 함수
+const handleUserInstantBonusPayment = async (referralCode: string) => {
+  try {
+    console.log('   유저용 1BW 즉시 지급 시작');
+    
+    // 유저 지갑 주소 확인
+    if (!authenticatedWalletAddress) {
+      throw new Error('유저 지갑 주소가 없습니다.');
+    }
+    
+    // 1BW 즉시 지급
+    const instantBonus = 1.0;
+    
+    // 유저 지갑 잔액 업데이트
+    setUserBalance(prev => prev + instantBonus);
+    
+    // localStorage에 저장
+    const userWalletData = {
+      address: authenticatedWalletAddress,
+      balance: userBalance + instantBonus,
+      lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem('userWalletData', JSON.stringify(userWalletData));
+    
+    console.log(`✅ 유저용 1BW 즉시 지급 완료: ${instantBonus} BW`);
+    return { success: true, amount: instantBonus };
+    
+  } catch (error) {
+    console.error('❌ 유저용 1BW 즉시 지급 실패:', error);
+    throw error;
+  }
+};
+```
+
+#### **B. 관리자용 1BW 즉시 지급**
+```typescript
+// ✅ 관리자용 1BW 즉시 지급 함수
+const handleAdminInstantBonusPayment = async (referralCode: string) => {
+  try {
+    console.log('💰 관리자용 1BW 즉시 지급 시작');
+    
+    // 관리자 지갑 주소 확인
+    if (!authenticatedWalletAddress) {
+      throw new Error('관리자 지갑 주소가 없습니다.');
+    }
+    
+    // 1BW 즉시 지급
+    const instantBonus = 1.0;
+    
+    // 관리자 지갑 잔액 업데이트
+    setAdminBalance(prev => prev + instantBonus);
+    
+    // localStorage에 저장
+    const adminWalletData = {
+      address: authenticatedWalletAddress,
+      balance: adminBalance + instantBonus,
+      lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem('adminWalletData', JSON.stringify(adminWalletData));
+    
+    console.log(`✅ 관리자용 1BW 즉시 지급 완료: ${instantBonus} BW`);
+    return { success: true, amount: instantBonus };
+    
+  } catch (error) {
+    console.error('❌ 관리자용 1BW 즉시 지급 실패:', error);
+    throw error;
+  }
+};
+```
+
+### **4단계: 1.2% 보너스를 각각의 마이닝 설정에 반영**
+
+#### **A. 유저용 1.2% 보너스 마이닝 설정 반영**
+```typescript
+// ✅ 유저용 1.2% 보너스 마이닝 설정 반영
+const handleUserReferralBonusToMining = async (bonusRate: number) => {
+  try {
+    console.log('🎯 유저용 1.2% 보너스 마이닝 설정 반영 시작');
+    
+    // 1.2% 보너스율 계산
+    const referralBonusRate = 0.012; // 1.2%
+    
+    // 유저 마이닝 보너스 업데이트
+    setUserReferralBonus(prev => prev + referralBonusRate);
+    
+    // 유저 마이닝 상태 업데이트
+    const updatedUserMiningState = {
+      userIsMiningActive,
+      userMiningStartTime,
+      userMiningStopTime,
+      userMiningRewards,
+      userReferralBonus: userReferralBonus + referralBonusRate, // ✅ 마이닝 설정에 반영
+      userAttendanceCalendar,
+      userConsecutiveAttendanceDays,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    // localStorage에 저장
+    localStorage.setItem('userMiningState', JSON.stringify(updatedUserMiningState));
+    
+    console.log(`✅ 유저용 1.2% 보너스 마이닝 설정 반영 완료: ${referralBonusRate * 100}%`);
+    return { success: true, bonusRate: referralBonusRate };
+    
+  } catch (error) {
+    console.error('❌ 유저용 1.2% 보너스 마이닝 설정 반영 실패:', error);
+    throw error;
+  }
+};
+```
+
+#### **B. 관리자용 1.2% 보너스 마이닝 설정 반영**
+```typescript
+// ✅ 관리자용 1.2% 보너스 마이닝 설정 반영
+const handleAdminReferralBonusToMining = async (bonusRate: number) => {
+  try {
+    console.log('🎯 관리자용 1.2% 보너스 마이닝 설정 반영 시작');
+    
+    // 1.2% 보너스율 계산
+    const referralBonusRate = 0.012; // 1.2%
+    
+    // 관리자 마이닝 보너스 업데이트
+    setAdminReferralBonus(prev => prev + referralBonusRate);
+    
+    // 관리자 마이닝 상태 업데이트
+    const updatedAdminMiningState = {
+      isMiningActive,
+      miningStartTime,
+      miningStopTime,
+      adminReferralBonus: adminReferralBonus + referralBonusRate, // ✅ 마이닝 설정에 반영
+      adminAttendanceCalendar,
+      adminConsecutiveAttendanceDays,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    // localStorage에 저장
+    localStorage.setItem('adminMiningState', JSON.stringify(updatedAdminMiningState));
+    
+    console.log(`✅ 관리자용 1.2% 보너스 마이닝 설정 반영 완료: ${referralBonusRate * 100}%`);
+    return { success: true, bonusRate: referralBonusRate };
+    
+  } catch (error) {
+    console.error('❌ 관리자용 1.2% 보너스 마이닝 설정 반영 실패:', error);
+    throw error;
+  }
+};
+```
+
+### **5단계: 마이닝 시스템과 완벽한 연동**
+
+#### **A. 통합된 유저용 추천인 코드 인증 함수**
+```typescript
+// ✅ 통합된 유저용 추천인 코드 인증 함수
+const handleUserReferralCodeSubmit = async (referralCode: string) => {
+  try {
+    console.log('🎯 유저용 추천인 코드 입력 처리 시작:', referralCode);
+    
+    // 1. 추천인 코드 검증
+    const validationResult = await validateReferralCode(referralCode);
+    
+    if (validationResult.isValid) {
+      // 2. 상호간 인증 및 보상 지급 처리
+      const joinResult = await handleUserReferralJoin(referralCode, authenticatedWalletAddress);
+      
+      if (joinResult.success) {
+        // 3. 1BW 즉시 지급 (유저 지갑)
+        await handleUserInstantBonusPayment(referralCode);
+        
+        // 4. 1.2% 보너스 (유저 마이닝 설정에 반영)
+        await handleUserReferralBonusToMining(0.012);
+        
+        // 5. 유저 전용 상태 업데이트
+        setUserReferralSystemState(prev => ({
+          ...prev,
+          referralCode: referralCode,
+          referrerAddress: validationResult.referrerAddress || '',
+          referralBonusApplied: true,
+          referralBonusRate: validationResult.bonusRate || 0
+        }));
+        
+        // 6. 추천인 수 증가 (유저용)
+        setUserReferralCount(prev => prev + 1);
+        
+        // 7. 보너스율 업데이트 (유저용)
+        const newBonus = calculateUserReferralBonus(userReferralCount + 1);
+        setUserReferralBonus(newBonus);
+        
+        alert(`✅ 유저용 추천인 가입 성공!\n\n보상 지급:\n- 추천인: 1 BW + 1.2% 보너스\n- 가입자: 1 BW + 1.2% 보너스`);
+        
+        console.log('✅ 유저용 추천인 가입 성공:', joinResult.data);
+      }
+    } else {
+      alert(`❌ 유저용 추천인 코드 오류: ${validationResult.errorMessage}`);
+    }
+  } catch (error) {
+    console.error('❌ 유저용 추천인 코드 입력 처리 실패:', error);
+    alert('❌ 추천인 코드 처리에 실패했습니다. 다시 시도해주세요.');
+  }
+};
+```
+
+#### **B. 통합된 관리자용 추천인 코드 인증 함수**
+```typescript
+// ✅ 통합된 관리자용 추천인 코드 인증 함수
+const handleAdminReferralCodeSubmit = async (referralCode: string) => {
+  try {
+    console.log('   관리자용 추천인 코드 입력 처리 시작:', referralCode);
+    
+    // 1. 추천인 코드 검증
+    const validationResult = await validateReferralCode(referralCode);
+    
+    if (validationResult.isValid) {
+      // 2. 상호간 인증 및 보상 지급 처리
+      const joinResult = await handleAdminReferralJoin(referralCode, authenticatedWalletAddress);
+      
+      if (joinResult.success) {
+        // 3. 1BW 즉시 지급 (관리자 지갑)
+        await handleAdminInstantBonusPayment(referralCode);
+        
+        // 4. 1.2% 보너스 (관리자 마이닝 설정에 반영)
+        await handleAdminReferralBonusToMining(0.012);
+        
+        // 5. 관리자 전용 상태 업데이트
+        setAdminReferralSystemState(prev => ({
+          ...prev,
+          referralCode: referralCode,
+          referrerAddress: validationResult.referrerAddress || '',
+          referralBonusApplied: true,
+          referralBonusRate: validationResult.bonusRate || 0
+        }));
+        
+        // 6. 추천인 수 증가 (관리자용)
+        setAdminReferralCount(prev => prev + 1);
+        
+        // 7. 보너스율 업데이트 (관리자용)
+        const newBonus = calculateAdminReferralBonus(adminReferralCount + 1);
+        setAdminReferralBonus(newBonus);
+        
+        alert(`✅ 관리자용 추천인 가입 성공!\n\n보상 지급:\n- 추천인: 1 BW + 1.2% 보너스\n- 가입자: 1 BW + 1.2% 보너스`);
+        
+        console.log('✅ 관리자용 추천인 가입 성공:', joinResult.data);
+      }
+    } else {
+      alert(`❌ 관리자용 추천인 코드 오류: ${validationResult.errorMessage}`);
+    }
+  } catch (error) {
+    console.error('❌ 관리자용 추천인 코드 입력 처리 실패:', error);
+    alert('❌ 추천인 코드 처리에 실패했습니다. 다시 시도해주세요.');
+  }
+};
+```
+
+### **6단계: 마이닝 화면 실시간 반영**
+
+#### **A. 유저 마이닝 화면 실시간 반영**
+```typescript
+// ✅ 유저 마이닝 화면에서 추천 보너스 실시간 표시
+const UserMiningBonusDisplay = () => {
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+      <h3 className="text-lg font-bold text-blue-800 mb-3">   추천 보너스 (유저용)</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600">{userReferralCount}명</div>
+          <p className="text-sm text-gray-600">총 추천인 수</p>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600">{(userReferralBonus * 100).toFixed(1)}%</div>
+          <p className="text-sm text-gray-600">추천 보너스율</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+#### **B. 관리자 마이닝 화면 실시간 반영**
+```typescript
+// ✅ 관리자 마이닝 화면에서 추천 보너스 실시간 표시
+const AdminMiningBonusDisplay = () => {
+  return (
+    <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+      <h3 className="text-lg font-bold text-purple-800 mb-3">👥 추천 보너스 (관리자용)</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-purple-600">{adminReferralCount}명</div>
+          <p className="text-sm text-gray-600">총 추천인 수</p>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-purple-600">{(adminReferralBonus * 100).toFixed(1)}%</div>
+          <p className="text-sm text-gray-600">추천 보너스율</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+## **최종 구현 완료 후 결과**
+
+### **✅ 완벽한 분리 구조**
+1. **유저용**: `userReferralSystemState` + `userMiningState` + 유저 지갑
+2. **관리자용**: `adminReferralSystemState` + `adminMiningState` + 관리자 지갑
+
+### **✅ 실시간 보상 반영**
+1. **1BW 즉시 지급**: 각각의 지갑 잔액에 즉시 반영
+2. **1.2% 보너스**: 각각의 마이닝 설정 화면에 즉시 반영
+
+### **✅ 완벽한 독립성**
+- 유저용과 관리자용이 서로 영향 없이 동작
+- 각각의 localStorage 저장소 사용
+- 마이닝 시스템과 완벽한 연동
+
+**이제 유저/관리자 추천인 시스템이 완전히 독립적인 두 개의 시스템으로 분리되어 각각의 보상이 각각의 지갑과 마이닝 설정에 완벽하게 반영됩니다!**

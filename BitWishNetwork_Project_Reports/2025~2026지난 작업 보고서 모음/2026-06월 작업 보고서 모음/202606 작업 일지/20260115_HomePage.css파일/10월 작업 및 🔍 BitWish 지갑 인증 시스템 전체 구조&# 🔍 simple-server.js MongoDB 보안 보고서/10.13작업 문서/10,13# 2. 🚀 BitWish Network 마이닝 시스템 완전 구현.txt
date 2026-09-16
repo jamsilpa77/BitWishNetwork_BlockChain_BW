@@ -1,0 +1,771 @@
+# 🚀 BitWish Network 마이닝 시스템 완전 구현 가이드
+
+완벽하게 이해했습니다! 지금부터 **단계별 순위별로** 모든 구현 코드를 채팅창에 완벽하게 작성하겠습니다.
+
+**준수사항 100% 엄수하며 진행합니다!**
+
+---
+
+## 📌 **구현 순서 및 구조**
+
+```
+Phase 1: MongoDB 스키마 설계 (전체 시스템 기반)
+  ↓
+Phase 2: Backend API (simple-server.cjs)
+  ↓
+Phase 3: Frontend Components (관리자용 완전 독립)
+  ↓
+Phase 4: 다국어 번역 시스템
+  ↓
+Phase 5: 유저용 컴포넌트 (관리자와 완전 분리)
+```
+
+---
+
+# 🗄️ **Phase 1: MongoDB 스키마 설계**
+
+## 1-1. 회원 마이닝 데이터 스키마
+
+```javascript
+// MongoDB Collection: "admin_user_mining_data"
+{
+  _id: ObjectId("..."),
+  
+  // 기본 정보
+  walletAddress: "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540", // 고유 식별자
+  referralCode: "BWREF-A1B2C3D4", // BitWish 인증 추천 코드
+  miningStartTime: "2025-01-12 14:30:22", // 마이닝 시작 시각
+  
+  // 마이닝 상태
+  miningStatus: {
+    isActive: true, // 마이닝 활성화 상태
+    isPaused: false, // 일시정지 (서버 종료 전까지 false)
+    lastUpdateTime: "2025-01-12 15:30:22"
+  },
+  
+  // 총 채굴량 (실시간 누적)
+  totalMined: {
+    amount: "540.00000000", // 8자리 소수점
+    currency: "BW"
+  },
+  
+  // 채굴 상세 분류
+  miningBreakdown: {
+    basic: {
+      rate: "0.25000000", // BW/시간
+      total: "530.00000000" // 기본 채굴 누적
+    },
+    attendance: {
+      rate: "0.05", // 5% 보너스
+      total: "5.00000000", // 출석 보너스 누적
+      lastCheckIn: "2025-01-12 09:00:00",
+      isCheckedToday: true
+    },
+    referralOneTime: {
+      count: 3, // 추천 가입자 수
+      perReferral: "1.00000000", // 1명당 1 BW
+      total: "3.00000000" // 일회성 보너스 합계
+    },
+    referralPermanent: {
+      rate: "0.02", // 2% 영구 보너스
+      total: "2.00000000", // 영구 보너스 누적
+      activeReferrals: 3 // 활성 추천인 수
+    }
+  },
+  
+  // 월별 채굴 보관
+  monthlyMining: {
+    "2025-01": {
+      amount: "186.00000000",
+      saved: true,
+      startDate: "2025-01-05",
+      endDate: "2025-01-31",
+      breakdown: {
+        basic: "180.00000000",
+        attendance: "3.00000000",
+        referral: "3.00000000"
+      }
+    },
+    "2025-02": {
+      amount: "168.00000000",
+      saved: true,
+      startDate: "2025-02-01",
+      endDate: "2025-02-28",
+      breakdown: {
+        basic: "162.00000000",
+        attendance: "3.00000000",
+        referral: "3.00000000"
+      }
+    }
+  },
+  
+  // 추천 보너스 보관함
+  referralBonusVault: {
+    totalVault: "3.40000000", // 총 보관 금액
+    
+    // 추천받은 사람별 상세
+    referees: {
+      "BWD961BB12345": {
+        refereeAddress: "BWD961BB12345",
+        oneTimeBonus: "1.00000000", // 가입 즉시 지급
+        permanentBonus: "0.80000000", // 2% 누적
+        totalFromThisReferee: "1.80000000",
+        
+        // KYC 상태 추적
+        kycStatus: "pending", // pending, approved, rejected
+        kycApprovedDate: null,
+        canMigrate: false,
+        migrationDate: null,
+        
+        refereeJoinedAt: "2025-01-10 10:30:00",
+        refereeStartedMiningAt: "2025-01-10 11:00:00"
+      },
+      "BW56365012345": {
+        refereeAddress: "BW56365012345",
+        oneTimeBonus: "1.00000000",
+        permanentBonus: "0.60000000",
+        totalFromThisReferee: "1.60000000",
+        
+        kycStatus: "approved",
+        kycApprovedDate: "2025-01-25",
+        canMigrate: true,
+        migrationDate: "2025-02-09", // 15일 후
+        
+        refereeJoinedAt: "2025-01-08 14:20:00",
+        refereeStartedMiningAt: "2025-01-08 15:00:00"
+      }
+    }
+  },
+  
+  // KYC 상태
+  kyc: {
+    status: "approved", // none, pending, approved, rejected
+    
+    submittedAt: "2025-01-10 10:00:00",
+    approvedDate: "2025-01-12 14:00:00",
+    rejectedDate: null,
+    
+    // 제출 서류
+    documents: {
+      idCard: {
+        uploaded: true,
+        fileName: "idcard_12345.jpg",
+        uploadedAt: "2025-01-10 10:00:00"
+      },
+      fullBodyPhoto: {
+        uploaded: true,
+        fileName: "fullbody_12345.jpg",
+        uploadedAt: "2025-01-10 10:05:00"
+      },
+      selfieWithID: {
+        uploaded: true,
+        fileName: "selfie_12345.jpg",
+        uploadedAt: "2025-01-10 10:10:00"
+      }
+    },
+    
+    // 개인정보
+    personalInfo: {
+      name: "홍길동",
+      birthDate: "1990-01-01",
+      address: "서울특별시 강남구"
+    },
+    
+    // 마이그레이션 일정
+    migrationStartDate: "2025-01-27", // 승인 후 15일
+    
+    // 15일 카운트다운
+    countdown: {
+      days: 14,
+      hours: 23,
+      minutes: 45,
+      seconds: 30,
+      totalSeconds: 1296330,
+      isActive: true
+    }
+  },
+  
+  // 마이그레이션 내역
+  migrationHistory: [
+    {
+      migrationId: "MIG-2025-01-001",
+      month: "2025-01",
+      amount: "186.00000000",
+      sourceWallet: "COMMUNITY_70PERCENT_WALLET",
+      sourceBalance: "14700000000.00000000",
+      
+      migratedAt: "2025-07-23 00:00:00",
+      transactionHash: "0xabcdef1234567890",
+      status: "completed", // pending, processing, completed, failed
+      
+      breakdown: {
+        basic: "180.00000000",
+        attendance: "3.00000000",
+        referral: "3.00000000"
+      }
+    }
+  ],
+  
+  // 나의 지갑 잔액
+  walletBalance: {
+    myBW: {
+      amount: "540.00000000", // = totalMined (가상 자산)
+      type: "virtual", // virtual (가상)
+      description: "KYC 승인 후 실제 BW로 전환 대기"
+    },
+    
+    availableAmount: {
+      amount: "186.00000000", // 실제 사용 가능
+      type: "real", // real (실제 BW)
+      sourceWallet: "COMMUNITY_70PERCENT_WALLET",
+      description: "마이그레이션 완료된 실제 BW"
+    },
+    
+    referralVaultDisplay: {
+      amount: "3.40000000", // 추천 보관함
+      type: "locked", // locked (잠금)
+      description: "추천받은 사람 KYC 승인 후 이동"
+    }
+  },
+  
+  // 생성/수정 시각
+  createdAt: ISODate("2025-01-12T14:30:22.000Z"),
+  updatedAt: ISODate("2025-01-12T15:30:22.000Z")
+}
+```
+
+---
+
+## 1-2. 시스템 지갑 스키마
+
+```javascript
+// MongoDB Collection: "admin_system_wallets"
+{
+  _id: ObjectId("..."),
+  
+  walletType: "COMMUNITY_70PERCENT", // COMMUNITY_70PERCENT, FOUNDATION_20PERCENT, PARTNER_10PERCENT, ECOSYSTEM_FEE_70, DEV_FEE_30
+  
+  walletInfo: {
+    address: "BW_COMMUNITY_70PERCENT_WALLET_ADDRESS_12345678",
+    name: "회원 마이닝 배분 전용 지갑 (70%)",
+    purpose: "KYC 승인된 회원에게 월별 순차 마이그레이션",
+    percentage: 70
+  },
+  
+  balance: {
+    initial: "14700000000.00000000", // 초기 잔액
+    current: "14699999814.00000000", // 현재 잔액
+    distributed: "186.00000000", // 배분된 금액
+    pending: "0.00000000" // 대기 중인 금액
+  },
+  
+  // 거래 내역
+  transactions: [
+    {
+      transactionId: "TX-2025-01-001",
+      type: "distribution", // distribution (배분), fee_collection (수수료 수집)
+      amount: "186.00000000",
+      recipient: "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+      purpose: "2025-01월 마이그레이션",
+      timestamp: "2025-07-23 00:00:00",
+      status: "completed"
+    }
+  ],
+  
+  createdAt: ISODate("2025-01-01T00:00:00.000Z"),
+  updatedAt: ISODate("2025-01-12T15:30:22.000Z")
+}
+```
+
+---
+
+## 1-3. 수수료 수집 스키마
+
+```javascript
+// MongoDB Collection: "admin_fee_collection"
+{
+  _id: ObjectId("..."),
+  
+  feeType: "BLOCK_GENERATION", // BLOCK_GENERATION, P2P_TRANSACTION
+  
+  feeInfo: {
+    amount: "0.00100000", // 0.001 BW (블록) or 0.01 BW (P2P)
+    sourceType: "block", // block, transaction
+    sourceId: "BLOCK-12345" // 블록 ID 또는 거래 ID
+  },
+  
+  // 자동 분배 (70% + 30%)
+  distribution: {
+    ecosystemShare: {
+      percentage: 70,
+      amount: "0.00070000", // 70%
+      walletAddress: "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS",
+      status: "completed"
+    },
+    
+    devTeamShare: {
+      percentage: 30,
+      amount: "0.00030000", // 30%
+      walletAddress: "BW_DEV_FEE_30_WALLET_ADDRESS",
+      status: "completed"
+    }
+  },
+  
+  collectedAt: ISODate("2025-01-12T15:30:22.000Z"),
+  distributedAt: ISODate("2025-01-12T15:30:23.000Z")
+}
+```
+
+---
+
+## 1-4. 블록 생성 기록 스키마
+
+```javascript
+// MongoDB Collection: "admin_block_records"
+{
+  _id: ObjectId("..."),
+  
+  blockNumber: 2, // 제네시스 블록 = 1
+  blockHash: "0xabcdef1234567890",
+  
+  // 블록 생성자 (마이닝 시작한 회원)
+  creator: {
+    walletAddress: "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    miningStartTime: "2025-01-12 14:30:22"
+  },
+  
+  // 블록 수수료
+  blockFee: {
+    amount: "0.00100000", // 0.001 BW
+    distributed: true,
+    ecosystemShare: "0.00070000",
+    devTeamShare: "0.00030000"
+  },
+  
+  createdAt: ISODate("2025-01-12T14:30:22.000Z")
+}
+```
+
+---
+
+# 🔧 **Phase 2: Backend API 구현 (simple-server.cjs)**
+
+## 2-1. 마이닝 시작 API
+
+```javascript
+// ========================================
+// 관리자 전용: 마이닝 시작 API
+// ========================================
+app.post('/api/admin/bitwish/mining/start', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+
+    // 1. 입력 검증
+    if (!walletAddress || !walletAddress.startsWith('BW')) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 지갑 주소입니다.'
+      });
+    }
+
+    const db = await getMongoDBConnection();
+    const miningCollection = db.collection('admin_user_mining_data');
+    const blockCollection = db.collection('admin_block_records');
+    const feeCollection = db.collection('admin_fee_collection');
+    const systemWalletsCollection = db.collection('admin_system_wallets');
+
+    // 2. 기존 마이닝 데이터 확인
+    const existingMining = await miningCollection.findOne({ walletAddress });
+
+    if (existingMining && existingMining.miningStatus.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: '이미 마이닝이 진행 중입니다.'
+      });
+    }
+
+    const now = new Date();
+    const nowString = now.toISOString().replace('T', ' ').substring(0, 19);
+
+    // 3. 블록 생성 (실제 블록체인 기록)
+    const totalBlocks = await blockCollection.countDocuments();
+    const newBlockNumber = totalBlocks + 1;
+
+    const newBlock = {
+      blockNumber: newBlockNumber,
+      blockHash: `0x${Date.now().toString(16)}${Math.random().toString(16).substring(2)}`,
+      creator: {
+        walletAddress: walletAddress,
+        miningStartTime: nowString
+      },
+      blockFee: {
+        amount: "0.00100000", // 0.001 BW
+        distributed: false,
+        ecosystemShare: "0.00070000", // 70%
+        devTeamShare: "0.00030000"    // 30%
+      },
+      createdAt: now
+    };
+
+    await blockCollection.insertOne(newBlock);
+    console.log(`✅ 블록 생성 완료: Block #${newBlockNumber}`);
+
+    // 4. 수수료 자동 분배 (70% + 30%)
+    const ecosystemWallet = await systemWalletsCollection.findOne({ 
+      walletType: 'ECOSYSTEM_FEE_70' 
+    });
+    const devWallet = await systemWalletsCollection.findOne({ 
+      walletType: 'DEV_FEE_30' 
+    });
+
+    // 수수료 기록
+    const feeRecord = {
+      feeType: 'BLOCK_GENERATION',
+      feeInfo: {
+        amount: "0.00100000",
+        sourceType: 'block',
+        sourceId: `BLOCK-${newBlockNumber}`
+      },
+      distribution: {
+        ecosystemShare: {
+          percentage: 70,
+          amount: "0.00070000",
+          walletAddress: ecosystemWallet.walletInfo.address,
+          status: 'completed'
+        },
+        devTeamShare: {
+          percentage: 30,
+          amount: "0.00030000",
+          walletAddress: devWallet.walletInfo.address,
+          status: 'completed'
+        }
+      },
+      collectedAt: now,
+      distributedAt: now
+    };
+
+    await feeCollection.insertOne(feeRecord);
+
+    // 생태계 지갑 잔액 업데이트
+    await systemWalletsCollection.updateOne(
+      { walletType: 'ECOSYSTEM_FEE_70' },
+      { 
+        $inc: { 'balance.current': 0.0007 },
+        $push: {
+          transactions: {
+            transactionId: `TX-FEE-${Date.now()}`,
+            type: 'fee_collection',
+            amount: "0.00070000",
+            source: `BLOCK-${newBlockNumber}`,
+            purpose: '블록 생성 수수료 (70%)',
+            timestamp: nowString,
+            status: 'completed'
+          }
+        },
+        $set: { updatedAt: now }
+      }
+    );
+
+    // 개발팀 지갑 잔액 업데이트
+    await systemWalletsCollection.updateOne(
+      { walletType: 'DEV_FEE_30' },
+      { 
+        $inc: { 'balance.current': 0.0003 },
+        $push: {
+          transactions: {
+            transactionId: `TX-FEE-${Date.now()}-DEV`,
+            type: 'fee_collection',
+            amount: "0.00030000",
+            source: `BLOCK-${newBlockNumber}`,
+            purpose: '블록 생성 수수료 (30%)',
+            timestamp: nowString,
+            status: 'completed'
+          }
+        },
+        $set: { updatedAt: now }
+      }
+    );
+
+    console.log(`✅ 수수료 분배 완료: 70% (생태계) + 30% (개발팀)`);
+
+    // 5. 마이닝 데이터 생성 또는 업데이트
+    if (existingMining) {
+      // 기존 데이터 재시작
+      await miningCollection.updateOne(
+        { walletAddress },
+        {
+          $set: {
+            'miningStatus.isActive': true,
+            'miningStatus.isPaused': false,
+            'miningStatus.lastUpdateTime': nowString,
+            updatedAt: now
+          }
+        }
+      );
+    } else {
+      // 새 마이닝 데이터 생성
+      const newMiningData = {
+        walletAddress: walletAddress,
+        referralCode: `BWREF-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+        miningStartTime: nowString,
+        
+        miningStatus: {
+          isActive: true,
+          isPaused: false,
+          lastUpdateTime: nowString
+        },
+        
+        totalMined: {
+          amount: "0.00000000",
+          currency: "BW"
+        },
+        
+        miningBreakdown: {
+          basic: {
+            rate: "0.25000000",
+            total: "0.00000000"
+          },
+          attendance: {
+            rate: "0.05",
+            total: "0.00000000",
+            lastCheckIn: null,
+            isCheckedToday: false
+          },
+          referralOneTime: {
+            count: 0,
+            perReferral: "1.00000000",
+            total: "0.00000000"
+          },
+          referralPermanent: {
+            rate: "0.02",
+            total: "0.00000000",
+            activeReferrals: 0
+          }
+        },
+        
+        monthlyMining: {},
+        
+        referralBonusVault: {
+          totalVault: "0.00000000",
+          referees: {}
+        },
+        
+        kyc: {
+          status: 'none',
+          submittedAt: null,
+          approvedDate: null,
+          rejectedDate: null,
+          documents: {
+            idCard: { uploaded: false },
+            fullBodyPhoto: { uploaded: false },
+            selfieWithID: { uploaded: false }
+          },
+          personalInfo: {},
+          migrationStartDate: null,
+          countdown: {
+            days: 0,
+            hours: 0,
+            minutes: 0,
+            seconds: 0,
+            totalSeconds: 0,
+            isActive: false
+          }
+        },
+        
+        migrationHistory: [],
+        
+        walletBalance: {
+          myBW: {
+            amount: "0.00000000",
+            type: "virtual",
+            description: "KYC 승인 후 실제 BW로 전환 대기"
+          },
+          availableAmount: {
+            amount: "0.00000000",
+            type: "real",
+            sourceWallet: "COMMUNITY_70PERCENT_WALLET",
+            description: "마이그레이션 완료된 실제 BW"
+          },
+          referralVaultDisplay: {
+            amount: "0.00000000",
+            type: "locked",
+            description: "추천받은 사람 KYC 승인 후 이동"
+          }
+        },
+        
+        createdAt: now,
+        updatedAt: now
+      };
+
+      await miningCollection.insertOne(newMiningData);
+    }
+
+    // 6. 블록 생성 완료 업데이트
+    await blockCollection.updateOne(
+      { blockNumber: newBlockNumber },
+      {
+        $set: {
+          'blockFee.distributed': true
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: '마이닝이 시작되었습니다.',
+      data: {
+        walletAddress: walletAddress,
+        miningStartTime: nowString,
+        blockNumber: newBlockNumber,
+        blockHash: newBlock.blockHash,
+        blockFee: {
+          total: "0.00100000",
+          ecosystem: "0.00070000",
+          devTeam: "0.00030000"
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 마이닝 시작 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '마이닝 시작 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+```
+
+---
+
+## 2-2. 실시간 채굴량 업데이트 API
+
+```javascript
+// ========================================
+// 관리자 전용: 실시간 채굴량 업데이트 API
+// ========================================
+app.post('/api/admin/bitwish/mining/update', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        message: '지갑 주소가 필요합니다.'
+      });
+    }
+
+    const db = await getMongoDBConnection();
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    const miningData = await miningCollection.findOne({ walletAddress });
+
+    if (!miningData || !miningData.miningStatus.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: '활성화된 마이닝이 없습니다.'
+      });
+    }
+
+    // 1. 경과 시간 계산
+    const startTime = new Date(miningData.miningStartTime);
+    const now = new Date();
+    const elapsedMs = now - startTime;
+    const elapsedHours = elapsedMs / (1000 * 60 * 60);
+
+    // 2. 기본 채굴량 계산 (0.25 BW/시간)
+    const basicMined = elapsedHours * 0.25;
+
+    // 3. 출석 보너스 계산 (5%)
+    let attendanceBonus = 0;
+    if (miningData.miningBreakdown.attendance.isCheckedToday) {
+      attendanceBonus = basicMined * 0.05;
+    }
+
+    // 4. 추천 영구 보너스 계산 (2%)
+    const activeReferrals = miningData.miningBreakdown.referralPermanent.activeReferrals || 0;
+    const referralPermanentBonus = basicMined * 0.02 * activeReferrals;
+
+    // 5. 총 채굴량
+    const totalMined = basicMined + attendanceBonus + referralPermanentBonus + 
+                       parseFloat(miningData.miningBreakdown.referralOneTime.total || 0);
+
+    // 6. 월별 보관 로직
+    const currentMonth = now.toISOString().substring(0, 7); // "2025-01"
+    const monthStart = `${currentMonth}-01`;
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const monthEndString = monthEnd.toISOString().substring(0, 10);
+
+    // 7. 데이터베이스 업데이트
+    const updateData = {
+      $set: {
+        'totalMined.amount': totalMined.toFixed(8),
+        'miningBreakdown.basic.total': basicMined.toFixed(8),
+        'miningBreakdown.attendance.total': attendanceBonus.toFixed(8),
+        'miningBreakdown.referralPermanent.total': referralPermanentBonus.toFixed(8),
+        'miningStatus.lastUpdateTime': now.toISOString().replace('T', ' ').substring(0, 19),
+        'walletBalance.myBW.amount': totalMined.toFixed(8),
+        updatedAt: now
+      }
+    };
+
+    // 월별 보관 업데이트
+    if (!miningData.monthlyMining[currentMonth]) {
+      updateData.$set[`monthlyMining.${currentMonth}`] = {
+        amount: totalMined.toFixed(8),
+        saved: true,
+        startDate: monthStart,
+        endDate: monthEndString,
+        breakdown: {
+          basic: basicMined.toFixed(8),
+          attendance: attendanceBonus.toFixed(8),
+          referral: (referralPermanentBonus + parseFloat(miningData.miningBreakdown.referralOneTime.total || 0)).toFixed(8)
+        }
+      };
+    } else {
+      updateData.$set[`monthlyMining.${currentMonth}.amount`] = totalMined.toFixed(8);
+    }
+
+    await miningCollection.updateOne({ walletAddress }, updateData);
+
+    res.json({
+      success: true,
+      message: '채굴량이 업데이트되었습니다.',
+      data: {
+        walletAddress: walletAddress,
+        totalMined: totalMined.toFixed(8),
+        breakdown: {
+          basic: basicMined.toFixed(8),
+          attendance: attendanceBonus.toFixed(8),
+          referralPermanent: referralPermanentBonus.toFixed(8),
+          referralOneTime: miningData.miningBreakdown.referralOneTime.total
+        },
+        elapsedHours: elapsedHours.toFixed(2)
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 채굴량 업데이트 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '채굴량 업데이트 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+```
+
+계속해서 Phase 3 부터 작성하시겠습니까? 
+아니면 Phase 1-2를 먼저 검토하시겠습니까?
+
+**다음 단계:**
+- Phase 3: 추천 보너스 시스템 API
+- Phase 4: KYC 신청/승인 API
+- Phase 5: 15일 카운트다운 API
+- Phase 6: 마이그레이션 자동 실행 API
+- Phase 7: Frontend 컴포넌트 (관리자 전용)
+- Phase 8: 다국어 번역 시스템
+- Phase 9: 유저용 컴포넌트 (완전 분리)
+
+계속 진행할까요? 🚀

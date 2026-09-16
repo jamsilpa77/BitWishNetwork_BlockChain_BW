@@ -1,0 +1,1265 @@
+# **마이닝 보너스 설정 창 전체 소스코드 분석 작업 시작**
+
+## ** 작업 개요**
+
+### ** 작업 목표**
+- "마이닝 보너스 설정" 창의 모든 요소를 단계별로 완전 분석
+- App.tsx에서 각 기능의 정확한 줄 위치와 소스코드 로직 찾기
+- 모든 UI 요소, 버튼, 모달, 함수의 완전한 매핑
+
+### **   작업 계획**
+1. 마이닝 보너스 설정 창 전체 구조 찾기
+2. 4개 주요 버튼과 모달 창 분석
+3. 각 내부 기능과 소스코드 로직 분석
+4. 실시간 계산 로직과 UI 요소 분석
+5. 완전한 소스코드 매핑 제공
+
+---
+
+## ** 1단계: 마이닝 보너스 설정 창 전체 구조 찾기**
+
+
+[5 tools called]
+
+## ** 2단계: 네트워크 연결 상태 찾기**
+
+
+[4 tools called]
+
+## ** 3단계: 마이닝 상태 확인 창 찾기**
+
+
+[4 tools called]
+
+## ** 4단계: 실시간 마이닝 보상 창 찾기**
+
+
+[4 tools called]
+
+## ** 5단계: 하단 버튼들 찾기**
+
+
+[3 tools called]
+
+## ** 6단계: 추천 보너스 모달 창 찾기**
+
+
+[3 tools called]
+
+## ** 7단계: 추천인 추가/초기화 버튼 찾기**
+
+
+[4 tools called]
+
+## ** 8단계: 락업 보너스 모달 창 찾기**
+
+
+[2 tools called]
+
+## ** 9단계: 락업 초기화 버튼 찾기**
+
+
+[4 tools called]
+
+## ** 10단계: 출석 보너스 모달 창 찾기**
+
+
+[2 tools called]
+
+## ** 11단계: 가맹점 등록 Coming Soon 모달 찾기**
+
+
+[2 tools called]
+
+# **마이닝 보너스 설정 창 전체 소스코드 분석 완료 보고서**
+
+## ** 1. 마이닝 보너스 설정 창 전체 구조**
+
+### **✅ 창 크기와 위치**
+```typescript
+// App.tsx 라인 9023-9945
+{/*    마이닝 보너스 설정 창 */}
+{showMiningBonusModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="p-4">
+        {/* 헤더 */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">⚙️ 마이닝 보너스 설정</h2>
+          <button 
+            onClick={() => {
+              setShowMiningBonusModal(false);
+              clearWalletAuthentication(); // 🎯 지갑 인증 해제 함수 사용
+            }}
+            className="text-gray-400 hover:text-gray-600 text-2xl"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* 고정 메시지 */}
+        <div className="mb-8">
+          <p className="text-gray-700 text-center">
+            {t('mining.createWalletAndNode')} 마이닝 시작과 정지기능 그리고 각종 보너스를 설정할 수 있습니다.
+          </p>
+        </div>
+```
+
+### **✅ 4개 주요 버튼 (라인 9049-9159)**
+```typescript
+{/* 첫 번째 줄: 출석 보너스, 추천 보너스, 락업 보너스 설정, 가맹점 등록 */}
+<div className="grid grid-cols-4 gap-4 mb-6">
+  {/* 1. 출석 보너스 버튼 (라인 9051-9079) */}
+  <button 
+    onClick={() => {
+      if (!authenticatedWalletAddress) {
+        alert('지갑 주소가 인증되지 않았습니다. 먼저 지갑 주소를 인증해주세요.');
+        return;
+      }
+      if (!isMiningActive) {
+        alert('마이닝을 먼저 시작해야 출석 보너스를 받을 수 있습니다.');
+        return;
+      }
+      // 🎯 다른 모든 모달 닫기
+      setShowMiningStartModal(false);
+      setShowMiningStopModal(false);
+      setShowReferralModal(false);
+      setShowLockupModal(false);
+      setShowComingSoonModal(false);
+      // 🎯 출석 보너스 모달 표시
+      setShowAttendanceModal(true);
+    }}
+    className={`px-3 py-3 font-bold rounded-lg transition-all duration-200 transform hover:scale-105 hover:rotate-1 hover:shadow-2xl ${
+      isMiningActive
+        ? 'bg-gradient-to-r from-green-400 to-teal-500 text-white hover:shadow-lg' 
+        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+    }`}
+    disabled={!isMiningActive}
+    title={isMiningActive ? '출석 보너스를 받을 수 있습니다' : '마이닝을 먼저 시작해야 합니다'}
+  >
+       출석 보너스 {!isMiningActive && '(비활성화)'}
+  </button>
+
+  {/* 2. 추천 보너스 버튼 (라인 9081-9109) */}
+  <button 
+    onClick={() => {
+      if (!authenticatedWalletAddress) {
+        alert('지갑 주소가 인증되지 않았습니다. 먼저 지갑 주소를 인증해주세요.');
+        return;
+      }
+      if (!isMiningActive) {
+        alert('마이닝을 먼저 시작해야 추천 보너스를 받을 수 있습니다.');
+        return;
+      }
+      // 🎯 다른 모든 모달 닫기
+      setShowMiningStartModal(false);
+      setShowMiningStopModal(false);
+      setShowAttendanceModal(false);
+      setShowLockupModal(false);
+      setShowComingSoonModal(false);
+      // 🎯 추천 보너스 모달 표시
+      setShowReferralModal(true);
+    }}
+    className={`px-4 py-3 font-bold rounded-lg transition-all duration-200 transform hover:scale-105 hover:rotate-1 hover:shadow-2xl ${
+      isMiningActive
+        ? 'bg-gradient-to-r from-blue-400 to-indigo-500 text-white hover:shadow-lg' 
+        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+    }`}
+    disabled={!isMiningActive}
+    title={isMiningActive ? '추천 보너스를 받을 수 있습니다' : '마이닝을 먼저 시작해야 합니다'}
+  >
+       추천 보너스 {!isMiningActive && '(비활성화)'}
+  </button>
+
+  {/* 3. 락업 보너스 설정 버튼 (라인 9114-9142) */}
+  <button 
+    onClick={() => {
+      if (!authenticatedWalletAddress) {
+        alert('지갑 주소가 인증되지 않았습니다. 먼저 지갑 주소를 인증해주세요.');
+        return;
+      }
+      if (!isMiningActive) {
+        alert('마이닝을 먼저 시작해야 락업 보너스를 설정할 수 있습니다.');
+        return;
+      }
+      // 🎯 다른 모든 모달 닫기
+      setShowMiningStartModal(false);
+      setShowMiningStopModal(false);
+      setShowAttendanceModal(false);
+      setShowReferralModal(false);
+      setShowComingSoonModal(false);
+      // 🎯 락업 보너스 모달 표시
+      setShowLockupModal(true);
+    }}
+    className={`px-4 py-3 font-bold rounded-lg transition-all duration-200 transform hover:scale-105 hover:rotate-1 hover:shadow-2xl ${
+      isMiningActive
+        ? 'bg-gradient-to-r from-purple-400 to-pink-500 text-white hover:shadow-lg' 
+        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+    }`}
+    disabled={!isMiningActive}
+    title={isMiningActive ? '락업 보너스를 설정할 수 있습니다' : '마이닝을 먼저 시작해야 합니다'}
+  >
+       락업 보너스 설정 {!isMiningActive && '(비활성화)'}
+  </button>
+
+  {/* 4. 가맹점 등록 버튼 (라인 9144-9158) */}
+  <button 
+    onClick={() => {
+      // 🎯 다른 모든 모달 닫기
+      setShowMiningStartModal(false);
+      setShowMiningStopModal(false);
+      setShowAttendanceModal(false);
+      setShowReferralModal(false);
+      setShowLockupModal(false);
+      // 🎯 Coming Soon 모달 표시
+      setShowComingSoonModal(true);
+    }}
+    className="px-2 py-3 bg-gradient-to-r from-orange-400 to-red-500 text-white font-bold rounded-lg hover:shadow-lg transition-all duration-200 transform hover:scale-105 hover:rotate-1 hover:shadow-2xl"
+  >
+       가맹점 등록
+  </button>
+</div>
+```
+
+### **✅ 인증된 지갑 주소 텍스트 (라인 9168-9173)**
+```typescript
+{/* 안내 메시지 */}
+<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-6">
+  <p className="text-sm text-yellow-800 text-center">
+    💡 인증된 지갑 주소: {authenticatedWalletAddress || '인증되지 않음'}<br/>
+    창을 닫고 다시 열면 재인증이 필요합니다.
+  </p>
+</div>
+```
+
+## ** 2. 네트워크 연결 상태 (라인 6239-6249)**
+```typescript
+{/* 네트워크 상태 */}
+<div className="bg-white p-4 rounded-xl shadow-lg text-center border-l-4 border-purple-500">
+  <div className="text-3xl font-bold text-purple-600 mb-2">🌐</div>
+  <div className={`text-xl font-bold mb-2 ${
+    blockchainStatus.networkStatus === t('blockchain.connected') ? 'text-green-600' : 'text-red-600'
+  }`}>
+    {blockchainStatus.networkStatus === t('blockchain.connected') ? '🟢' : '  '} {blockchainStatus.networkStatus}
+  </div>
+  <p className="text-purple-700 font-semibold">{t('blockchain.networkStatus')}</p>
+  <p className="text-sm text-gray-600">{t('blockchain.realTimeConnection')}</p>
+</div>
+```
+
+## ** 3. 마이닝 상태 확인 창 (라인 9254-9396)**
+
+### **✅ 좌측 열: 시간당 보상 및 보너스 (라인 9262-9345)**
+```typescript
+{/* 좌측 열: 시간당 보상 및 보너스 */}
+<div className="space-y-3">
+  {/* 시간당 보상 (보너스 포함) BW */}
+  <div className="text-center mr-16">
+    <div className="text-2xl font-bold text-purple-600">
+      {(() => {
+        const rewardData = calculateRealTimeMiningRewardDecimal();
+        return rewardData.hourlyReward.toFixed(8);
+      })()} BW
+    </div>
+    <p className="text-sm text-gray-600">시간당 보상 (보너스 포함)</p>
+  </div>
+
+  {/* 출석 보너스 % */}
+  <div className="text-center mr-16">
+    <div className="text-lg font-semibold text-purple-600">
+      {(() => {
+        const rewardData = calculateRealTimeMiningRewardDecimal();
+        return rewardData.ui.attendancePct.toFixed(6);
+      })()}%
+    </div>
+    <p className="text-sm text-gray-600">출석 보너스</p>
+  </div>
+
+  {/* 기본 락업 보관함 BW */}
+  <div className="text-center">
+    <div className="text-lg font-semibold text-blue-600">
+      {(() => {
+        //    락업 초기화 시 보관함도 완전 초기화
+        if (!isLockupRegistered || !isMiningActive || !miningStartTime) {
+          return '0.000000';
+        }
+          
+        // 기본 락업 보관함 계산 (실시간 반영)
+        const elapsedTimeMs = Date.now() - miningStartTime.getTime();
+        const elapsedHours = elapsedTimeMs / (1000 * 60 * 60);
+        
+        // 총 노드 보상 계산 (기본 + 출석 + 추천)
+        const baseRate = 0.25;
+        const attendanceBonus = (consecutiveAttendanceDays > 0 && isAttendanceBonusTimeValid()) ? 
+          calculateAttendanceBonus(consecutiveAttendanceDays).bonusRate : 0;
+        // 🎯 calculateRealTimeMiningRewardDecimal에서 계산된 정확한 추천 보너스 사용
+        const rewardData = calculateRealTimeMiningRewardDecimal();
+        const referralBonus = rewardData.referralBonus; // 이미 소수점 형태
+        const totalNodeReward = baseRate * (1 + attendanceBonus + referralBonus);
+        
+        // 락업 보너스 (등록된 APY 사용)
+        const lockupBonusRate = registeredLockupData.apy / 100;
+        const lockupBonusPerHour = totalNodeReward * lockupBonusRate;
+        
+        // 락업된 비율만큼 보관함에 저장
+        const lockupRatioDecimal = registeredLockupData.ratio / 100;
+        const storedLockupBonus = lockupBonusPerHour * elapsedHours * lockupRatioDecimal;
+        
+        return storedLockupBonus.toFixed(6);
+      })()} BW
+    </div>
+    <p className="text-sm text-gray-600">기본 락업 보관함</p>
+  </div>
+
+  {/* 추가 락업 보관함 BW */}
+  {(isSecondLockupRegistered || (secondLockupRatio > 0 && secondLockupMonths > 0)) && (
+    <div className="text-center">
+      <div className="text-lg font-semibold text-purple-600">
+        {calculateSecondLockupVault().toFixed(6)} BW
+      </div>
+      <p className="text-sm text-gray-600">추가 락업 보관함</p>
+    </div>
+  )}
+</div>
+```
+
+### **✅ 우측 열: 일일 보상 및 추천 보너스 (라인 9347-9395)**
+```typescript
+{/* 우측 열: 일일 보상 및 추천 보너스 */}
+<div className="space-y-3">
+  {/* 일일 보상 (보너스 포함) BW */}
+  <div className="text-center ml-16">
+    <div className="text-2xl font-bold text-purple-600">
+      {(() => {
+        const rewardData = calculateRealTimeMiningRewardDecimal();
+        return rewardData.dailyReward.toFixed(8);
+      })()} BW
+    </div>
+    <p className="text-sm text-gray-600">일일 보상 (보너스 포함)</p>
+  </div>
+
+  {/* 추천 보너스 % */}
+  <div className="text-center ml-16">
+    <div className="text-lg font-semibold text-purple-600">
+      {/*    추천인 보너스 실시간 반영 (구간별 누적 계산) */}
+      {(() => {
+        const rewardData = calculateRealTimeMiningRewardDecimal();
+        return rewardData.ui.referralPct.toFixed(6);
+      })()}%
+    </div>
+    <p className="text-sm text-gray-600">추천 보너스</p>
+  </div>
+
+  {/* 총 보너스율 % */}
+  <div className="text-center ml-16">
+    <div className="text-lg font-bold text-purple-700">
+      {(() => {
+        const rewardData = calculateRealTimeMiningRewardDecimal();
+        return rewardData.ui.totalPct.toFixed(6);
+      })()}%
+    </div>
+    <p className="text-sm text-gray-600">총 보너스율</p>
+  </div>
+
+  {/* 추천 보관 BW */}
+  <div className="text-center ml-16">
+    <div className="text-lg font-semibold text-purple-600">
+      {/* 🎯 추천 보관 BW 실시간 반영 */}
+      {referralCount > 0 ? 
+        calculateReferralStorageBW(referralCount).toFixed(6) : '0.000000'} BW
+    </div>
+    <p className="text-sm text-gray-600">추천 보관 BW</p>
+  </div>
+  
+  {/* 추천인 수 표시 (추천인 0명) */}
+  <div className="text-center ml-16 mt-4">
+    <div className="text-sm font-medium text-gray-700">
+      <span className="text-blue-600 font-semibold">(추천인</span>
+      <span className="text-purple-600 font-bold mx-1">{referralCount}</span>
+      <span className="text-blue-600 font-semibold">명)</span>
+    </div>
+  </div>
+</div>
+```
+
+## ** 4. 추천 보너스 현황 접이식 창 (라인 9550-9630)**
+```typescript
+{/* 🎯 실시간 추천 보너스 현황 표시 - 접이식 UI */}
+{isMiningActive && (
+  <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4 mt-6">
+    {/* 헤더 (클릭 가능) */}
+    <div 
+      className="flex items-center justify-between cursor-pointer hover:bg-purple-100 p-2 rounded-lg transition-colors"
+      onClick={toggleReferralBonusExpanded}
+    >
+      <h3 className="font-semibold text-purple-800 flex items-center">
+           추천 보너스 현황
+        {isReferralBonusExpanded ? ' 📖' : ' 📄'}
+      </h3>
+      <div className="text-2xl transition-transform duration-200">
+        {isReferralBonusExpanded ? '🔽' : '▶️'}
+      </div>
+    </div>
+
+    {/* 접이식 콘텐츠 */}
+    {isReferralBonusExpanded && (
+      <div className="mt-4 space-y-4 transition-all duration-300 ease-in-out opacity-100 transform translate-y-0">
+        {/* 추천 보너스 정보 그리드 */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {/* 좌측: 기본 정보 */}
+          <div className="space-y-2">
+            {/* 총 추천인 수 */}
+            <div className="bg-white p-3 rounded-lg border border-purple-200">
+              <div className="text-center">
+                <div className="text-lg font-bold text-purple-700">
+                  {referralCount}명
+                </div>
+                <p className="text-xs text-purple-600 font-semibold">총 추천인 수</p>
+              </div>
+            </div>
+            
+            {/* 영구 보너스율 % */}
+            <div className="bg-white p-3 rounded-lg border border-purple-200">
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-700">
+                  {(calculateReferralBonusDecimal(referralCount).permanentBonusRate.times(100).toNumber()).toFixed(1)}%
+                </div>
+                <p className="text-xs text-green-600 font-semibold">영구 보너스율</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* 우측: 추가 정보 */}
+          <div className="space-y-2">
+            {/* 구간별 추가 보너스% */}
+            <div className="bg-white p-3 rounded-lg border border-purple-200">
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-700">
+                  {(calculateReferralBonusDecimal(referralCount).cumulativeBonusRate.times(100).toNumber()).toFixed(3)}%
+                </div>
+                <p className="text-xs text-blue-600 font-semibold">구간별 추가 보너스</p>
+              </div>
+            </div>
+            
+            {/* 총 보너스율 % */}
+            <div className="bg-white p-3 rounded-lg border border-purple-200">
+              <div className="text-center">
+                <div className="text-lg font-bold text-orange-700">
+                  {(calculateReferralBonusDecimal(referralCount).totalBonusRate.times(100).toNumber()).toFixed(3)}%
+                </div>
+                <p className="text-xs text-orange-600 font-semibold">총 보너스율</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* 구간 정보 표시 */}
+        <div className="bg-white p-3 rounded-lg border border-purple-200">
+          <div className="text-center">
+            <div className="text-sm font-semibold text-purple-700 mb-1">
+              현재 구간: {calculateReferralBonusDecimal(referralCount).segmentInfo.currentSegment}
+            </div>
+            <div className="text-xs text-gray-600">
+              구간 비율: {(calculateReferralBonusDecimal(referralCount).segmentInfo.segmentRate * 100).toFixed(3)}%
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+```
+
+## ** 5. 실시간 마이닝 보상 창 (라인 9719-9850)**
+```typescript
+{/* ⚡ 실시간 마이닝 보상 */}
+{(isMiningActive || (!isMiningActive && miningStartTime)) && (() => {
+  // ✅ 렌더링 시점에 총 경과 시간을 계산합니다.
+  let totalElapsedTime = 0; // ✅ 누적 시간 초기화
+  if (miningStartTime) {
+    if (isMiningActive) {
+      //    마이닝 진행 중: 실시간으로 경과 시간 계산
+      totalElapsedTime = Date.now() - miningStartTime.getTime();
+    } else {
+      // 🎯 마이닝 정지됨: 정지 시간까지만 계산 (고정)
+      totalElapsedTime = miningStopTime ? 
+        miningStopTime.getTime() - miningStartTime.getTime() : 
+        Date.now() - miningStartTime.getTime();
+    }
+  }
+
+  // 총 경과 시간(ms)을 시, 분, 초로 변환합니다.
+  const hours = Math.floor(totalElapsedTime / (1000 * 60 * 60));
+  const minutes = Math.floor((totalElapsedTime % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((totalElapsedTime % (1000 * 60)) / 1000);
+
+  // 🎯 BigDecimal 기반 정확한 누적 보상 계산 (기존 부동소수점 로직 완전 제거)
+  const rewardData = calculateAccumulatedRewardDecimal();
+  const totalRewards = rewardData.totalAccumulatedReward.toNumber();
+  
+  return (
+    <div className="bg-green-100 border border-green-300 rounded-lg p-3 mt-4 relative">
+      {/* 관리자 테스트용 초기화 버튼 */}
+      {authenticatedWalletAddress === 'GDG3OPHDK5WGTAG2UVEMDUUGMGIBSZMPF4RAUPVRQMG7PRNAZT5YU256' && (
+        <button
+          onClick={async () => {
+            if (confirm('🔒 관리자 전용: 마이닝을 완전히 초기화하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.')) {
+              try {
+                console.log('🔒 관리자 마이닝 초기화 시작...');
+                
+                // 🎯 가상 마이닝 완전 초기화
+                await resetVirtualMining();
+                
+                // 💾 localStorage에서 마이닝 상태 완전 삭제
+                localStorage.removeItem('miningState');
+                
+                // 🎯 모든 마이닝 관련 상태 초기화
+                setIsMiningActive(false);
+                setMiningStartTime(null);
+                setPausedElapsedTime(0);
+                setTick(0);
+                
+                // 🎯 블록체인 상태 초기화
+                setRealTimeBlockchainData(prev => ({
+                  ...prev,
+                  attendanceBonus: 0,
+                  referralBonus: 0,
+                  lockupBonus: 0,
+                  miningRewards: 0,
+                  lastUpdate: new Date()
+                }));
+                
+                console.log('   관리자 마이닝 초기화 완료');
+                alert('✅ 관리자 마이닝 초기화가 완료되었습니다.');
+              } catch (error) {
+                console.error('❌ 관리자 마이닝 초기화 오류:', error);
+                alert('❌ 마이닝 초기화 중 오류가 발생했습니다.');
+              }
+            }
+          }}
+          className="absolute top-2 right-2 px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors shadow-lg z-10"
+          title="🔒 관리자 전용: 마이닝 완전 초기화"
+        >
+          🔒 초기화
+        </button>
+      )}
+      
+      <h3 className="text-lg font-bold text-green-700 text-center mb-3">실시간 마이닝 보상</h3>
+      <div className="grid grid-cols-2 gap-4">
+        {/* 누적 보상 BW */}
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-600 mb-2">
+            {(() => {
+              const rewardData = calculateAccumulatedRewardDecimal();
+              return rewardData.accumulatedReward.toFixed(8);
+            })()} BW
+          </div>
+          <p className="text-sm text-green-700">누적 보상</p>
+        </div>
+        
+        {/* 진행 시간 */}
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-600 mb-2 tabular-nums">
+            {(() => {
+              if (!miningStartTime) return '00:00:00';
+              
+              const currentTime = new Date();
+              const totalElapsedTime = currentTime.getTime() - miningStartTime.getTime();
+              
+              // 🎯 BigDecimal 기반 정확한 시간 계산
+              const decimalTotalElapsedTime = new Decimal(totalElapsedTime);
+              const decimalSecondsPerMinute = new Decimal(60 * 1000);
+              const decimalMinutesPerHour = new Decimal(60);
+              
+              const decimalTotalMinutes = decimalTotalElapsedTime.dividedBy(decimalSecondsPerMinute);
+              const decimalHours = decimalTotalMinutes.dividedBy(decimalMinutesPerHour).floor();
+              const decimalMinutes = decimalTotalMinutes.modulo(decimalMinutesPerHour).floor();
+              const decimalSeconds = decimalTotalElapsedTime.dividedBy(new Decimal(1000)).modulo(new Decimal(60)).floor();
+              
+              return `${decimalHours.toString().padStart(2, '0')}:${decimalMinutes.toString().padStart(2, '0')}:${decimalSeconds.toString().padStart(2, '0')}`;
+            })()}
+          </div>
+          <p className="text-sm text-green-700">진행 시간</p>
+        </div>
+      </div>
+    </div>
+  );
+})}
+```
+
+## ** 6. 하단 버튼들 (라인 9870-9941)**
+```typescript
+{/* 하단 버튼들 */}
+<div className="flex flex-wrap gap-3 justify-center mt-8">
+  {/* 마이닝 시작 (보너스 적용) 버튼 */}
+  <button 
+    onClick={async () => {
+      if (!authenticatedWalletAddress) {
+        alert('지갑 주소가 인증되지 않았습니다. 먼저 지갑 주소를 인증해주세요.');
+        return;
+      }
+      try {
+        // 🎯 startMining 함수 사용 (가상 더미 마이닝 시스템 연결)
+        await startMining();
+        
+        // ✅ 마이닝 상태만 변경 (UI 데이터는 그대로 유지)
+        setIsMiningActive(true);
+        
+        // ✅ 마이닝 시작 시간 기록 (현재 시간으로 설정)
+        setMiningStartTime(new Date());
+        
+        // ✅ 마이닝 상태 저장 (localStorage에 현재 상태 보존)
+        saveMiningState();
+        
+        console.log('⚡ 마이닝 시작됨 - UI 데이터는 그대로 유지');
+      } catch (error) {
+        console.error('❌ 마이닝 시작 오류:', error);
+      }
+    }}
+    className="px-4 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors"
+  >
+    ⚡ 마이닝 시작 (보너스 적용)
+  </button>
+  
+  {/* 마이닝 정지 버튼 */}
+  <button 
+    onClick={async () => {
+      if (!authenticatedWalletAddress) {
+        alert('지갑 주소가 인증되지 않았습니다. 먼저 지갑 주소를 인증해주세요.');
+        return;
+      }
+      try {
+        //    stopMining 함수 사용 (가상 더미 마이닝 시스템 연결)
+        await stopMining();
+        
+        // ✅ 마이닝 상태만 변경 (UI 데이터는 그대로 유지)
+        setIsMiningActive(false);
+        
+        // ✅ 마이닝 정지 시간 기록 (현재 진행 시간 고정용)
+        setMiningStopTime(new Date());
+        
+        // ✅ 마이닝 상태 저장 (localStorage에 현재 상태 보존)
+        saveMiningState();
+        
+        console.log('🛑 마이닝 정지됨 - UI 데이터는 그대로 유지');
+      } catch (error) {
+        console.error('❌ 가상 더미 마이닝 정지 오류:', error);
+        alert('가상 더미 마이닝 시스템에 연결할 수 없습니다.');
+      }
+    }}
+    className="px-4 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+  >
+    ⏹️ 마이닝 정지
+  </button>
+  
+  {/* 나의 지갑 버튼 */}
+  <button 
+    onClick={() => {
+      setShowMiningBonusModal(false);
+      setSeedPhrase(''); //    시드문구 초기화
+      setShowMyWallet(true);
+    }}
+    className="px-4 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+  >
+    🔑 {t('wallet.myWallet')}
+  </button>
+  
+  {/* X닫기 버튼 */}
+  <button 
+    onClick={() => {
+      // 🎯 마이닝 보너스 설정 창 닫기 (마이닝 상태 유지)
+      setShowMiningBonusModal(false);
+      // ❌ 마이닝 상태 초기화 제거 - setIsMiningActive(false), setMiningStartTime(null) 삭제
+      setShowMiningStopStatus(false);
+    }}
+    className="px-4 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+  >
+    ❌ {t('common.close')}
+  </button>
+</div>
+```
+
+## ** 7. 모달 창들**
+
+### **✅ 추천 보너스 모달 (라인 8255-8430)**
+```typescript
+{/* 🎯 추천인 보너스 모달 (크기 조정 및 구조 변경) */}
+{showReferralModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]" onClick={() => setShowReferralModal(false)}>
+    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
+      <div className="p-6">
+        {/* 헤더 */}
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-3">  </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">추천인 보너스</h2>
+          <p className="text-gray-600">추천인을 초대하여 추가 BW 토큰을 획득하세요</p>
+        </div>
+
+        {/* 추천 코드 섹션 */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl mb-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">   나의 추천 코드</h3>
+          <div className="bg-white p-3 rounded-lg border-2 border-blue-200 mb-3">
+            <p className="text-sm text-gray-600 mb-2">{t('wallet.referralCode')}:</p>
+            <p className="font-mono text-base font-bold text-blue-600 break-all">
+              REF{authenticatedWalletAddress.slice(-8).toUpperCase()}
+            </p>
+          </div>
+        </div>
+
+        {/* 추천인 추가 버튼 (라인 8373-8397) */}
+        {authenticatedWalletAddress && (
+          <button 
+            onClick={async () => {
+              try {
+                console.log('🔍 추천인 추가 버튼 클릭됨!');
+                console.log('🔍 현재 상태:', {
+                  authenticatedWalletAddress,
+                  referralCount,
+                  referralSystemState
+                });
+                  
+                console.log('   handleAddReferralDecimal 함수 호출 시작!');
+                handleAddReferralDecimal();
+                console.log('🔍 handleAddReferralDecimal 함수 호출 완료!');
+              } catch (error) {
+                console.error('추천인 추가 실패:', error);
+                alert('❌ 추천인 추가 실패');
+              }
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg transition-all duration-200 text-lg"
+          >
+               추천인 추가
+          </button>
+        )}
+
+        {/* 추천인 초기화 버튼 (라인 8403-8421) */}
+        {authenticatedWalletAddress && (
+          <button
+            onClick={() => {
+              console.log('   추천인 초기화 버튼 클릭됨!');
+              console.log('🔍 현재 상태:', {
+                authenticatedWalletAddress,
+                referralCount,
+                referralSystemState
+              });
+              console.log('🔍 handleResetReferral 함수 호출 시작!');
+              handleResetReferral();
+              console.log('🔍 handleResetReferral 함수 호출 완료!');
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold rounded-lg hover:shadow-lg transition-all duration-200 text-lg ml-3"
+          >
+            🔄 추천인 초기화
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+```
+
+### **✅ 락업 보너스 모달 (라인 8463-8980)**
+```typescript
+{/* 🎯 기본 락업 보너스 모달 - 1.2% 고정 시스템 */}
+{showLockupModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]" onClick={() => setShowLockupModal(false)}>
+    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="p-6">
+        {/* 헤더 */}
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-4">🔒</div>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-2xl font-bold text-gray-900">락업 보너스 설정</h2>
+          </div>
+          <p className="text-gray-600">BW 토큰을 락업하여 보상을 획득하세요</p>
+        </div>
+
+        {/* 기본 락업 설정 */}
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold text-purple-800">기본 락업 설정</h3>
+          </div>
+          
+          {/* 기본 락업 초기화 버튼 (라인 8745-8752) */}
+          <button
+            onClick={() => setShowBasicLockupResetModal(true)}
+            className="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm font-medium"
+            title="기본 락업 설정을 초기화합니다"
+          >
+               기본 락업 초기화
+          </button>
+        </div>
+
+        {/* 추가 락업 설정 */}
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold text-purple-800">추가 락업 설정</h3>
+          </div>
+          
+          {/* 추가 락업 초기화 버튼 (라인 8903-8910) */}
+          <button
+            onClick={() => setShowSecondLockupResetModal(true)}
+            className="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm font-medium"
+            title="추가 락업 설정을 초기화합니다"
+          >
+            🔄 추가 락업 초기화
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+### **✅ 출석 보너스 모달 (라인 7889-8250)**
+```typescript
+{/*    간단한 출석 보너스 모달 (작은 달력 창) */}
+{showAttendanceModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]" onClick={() => setShowAttendanceModal(false)}>
+    <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+      <div className="p-6">
+        {/* 헤더 */}
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">📅</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">{t('attendance.bonus')}</h2>
+          <p className="text-sm text-gray-600">{t('attendance.consecutiveDaysSetting')}</p>
+        </div>
+
+        {/* 동적 연도 완벽한 달력 */}
+        <div className="bg-gradient-to-r from-green-50 to-teal-50 p-4 rounded-lg mb-4">
+          <h3 className="text-sm font-semibold text-gray-800 mb-3 text-center">   {currentYear}년 출석 달력</h3>
+          
+          {/* 오늘 날짜 및 요일 표시 */}
+          <div className="text-center mb-3 p-2 bg-blue-50 rounded-lg">
+            <div className="text-sm font-semibold text-blue-700">
+              오늘: {new Date().getFullYear()}년 {new Date().getMonth() + 1}월 {new Date().getDate()}일
+            </div>
+            <div className="text-xs text-blue-600 mt-1">
+              {['일', '월', '화', '수', '목', '금', '토'][new Date().getDay()]}요일
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+### **✅ 가맹점 등록 Coming Soon 모달 (라인 8984-9020)**
+```typescript
+{/* 🎯 Coming Soon 모달 */}
+{showComingSoonModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4">
+      <div className="p-8 text-center">
+        {/* 헤더 */}
+        <div className="mb-6">
+          <div className="text-6xl mb-4">  </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Coming Soon</h2>
+          <p className="text-gray-600">가맹점 등록 기능이 곧 출시됩니다</p>
+        </div>
+
+        {/* 기능 설명 */}
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-xl mb-6">
+          <h3 className="text-lg font-bold text-orange-600 mb-2">🏪 가맹점 등록 시스템</h3>
+          <p className="text-sm text-gray-600">
+            BitWish Network 파트너 가맹점으로 등록하여<br/>
+            <span className="font-bold text-orange-600">125% 가산 보너스</span>를 받으세요!
+          </p>
+        </div>
+
+        {/* 예상 출시일 */}
+        <div className="bg-blue-50 p-4 rounded-xl mb-6">
+          <p className="text-sm text-gray-600">예상 출시일</p>
+          <p className="text-lg font-bold text-blue-600">2026년 3~4월</p>
+          <p className="text-xs text-gray-500 mt-1">⚠️ 날짜 변경될 수 있음</p>
+        </div>
+
+        {/* 닫기 버튼 */}
+        <button 
+          onClick={() => setShowComingSoonModal(false)}
+          className="w-full px-6 py-3 bg-gray-500 text-white font-semibold rounded-xl hover:bg-gray-600 transition-colors"
+        >
+          {t('common.close')}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+## ** 8. 핵심 함수들**
+
+### **✅ 추천인 추가 함수 (라인 2296-2386)**
+```typescript
+// 🆕 추천인 추가 함수 (관리자 전용) - 백서 정확한 공식 적용
+const handleAddReferralDecimal = async () => {
+  try {
+    console.log('🎯 추천인 추가 함수 시작 (백서 정책)');
+    
+    // 가상의 새로운 추천인 추가 (테스트용)
+    const newReferralAddress = `G${Math.random().toString(36).substring(2, 15).toUpperCase()}${Math.random().toString(36).substring(2, 15).toUpperCase()}`;
+    
+    // 🎯 백서 정확한 공식: 4단계 누적 보너스 시스템
+    const newReferralRelationship = {
+      referrerAddress: authenticatedWalletAddress,
+      referredAddress: newReferralAddress,
+      referralCode: `REF${authenticatedWalletAddress.slice(-8).toUpperCase()}`,
+      joinDate: new Date(),
+      isActive: true,
+      bonusRate: calculateReferralBonusDecimal(referralCount + 1).totalBonusRate.toNumber(),
+      permanentBonusRate: calculateReferralBonusDecimal(referralCount + 1).permanentBonusRate.toNumber(),
+      cumulativeBonusRate: calculateReferralBonusDecimal(referralCount + 1).cumulativeBonusRate.toNumber()
+    };
+    
+    // 🎯 추천인 수 증가 (실시간 반영)
+    setReferralCount(prev => prev + 1);
+    
+    // 🎯 추천인 관계 저장 (localStorage)
+    const existingRelationships = JSON.parse(localStorage.getItem('referralRelationships') || '[]');
+    existingRelationships.push(newReferralRelationship);
+    localStorage.setItem('referralRelationships', JSON.stringify(existingRelationships));
+    
+    console.log('🎯 추천인 추가 완료 (백서 정책):', newReferralRelationship);
+    
+    // 🎯 성공 메시지 표시
+    setSuccessMessage(`✅ 추천인 추가 완료! 총 추천인 수: ${referralCount + 1}명`);
+    setShowSuccessModal(true);
+    
+  } catch (error) {
+    console.error('❌ 추천인 추가 실패:', error);
+    alert('추천인 추가 중 오류가 발생했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+  }
+};
+```
+
+### **✅ 추천인 초기화 함수 (라인 2224-2257)**
+```typescript
+// 추천인 초기화 함수 (테스트용) - 관리자 전용
+const handleResetReferral = async () => {
+  try {
+    console.log('🔄 추천인 초기화 함수 시작! (실시간 반영)');
+    
+    // 추천인 수 초기화
+    setReferralCount(0);
+    
+    // 추천인 관계 초기화 (localStorage)
+    localStorage.removeItem('referralRelationships');
+    
+    // 🎯 추천인 시스템 상태 초기화
+    setReferralSystemState({
+      referralCode: '',
+      isReferralCodeValid: false,
+      referralValidationResult: null,
+      referralCount: 0,
+      totalBonusRate: 0,
+      permanentBonusRate: 0,
+      cumulativeBonusRate: 0
+    });
+    
+    console.log('✅ 추천인 초기화 완료 (실시간 반영)');
+    
+    // 🎯 성공 메시지 표시
+    setSuccessMessage('✅ 추천인 초기화 완료!');
+    setShowSuccessModal(true);
+    
+  } catch (error) {
+    console.error('❌ 추천인 초기화 실패:', error);
+    alert('추천인 초기화 중 오류가 발생했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+  }
+};
+```
+
+### **✅ 기본 락업 초기화 함수 (라인 2392-2428)**
+```typescript
+// 관리자용: 기본 락업 초기화 함수
+const handleLockupReset = async () => {
+  try {
+    console.log('   기본 락업 초기화 시작...');
+    
+    // 🎯 기본 락업 상태 초기화
+    setLockupRatio(20);
+    setLockupMonths(1);
+    setIsLockupRegistered(false);
+    setRegisteredLockupData({
+      ratio: 20,
+      months: 1,
+      apy: 2.7,
+      startDate: null,
+      endDate: null
+    });
+    
+    // 🎯 localStorage에서 기본 락업 데이터 삭제
+    localStorage.removeItem('basicLockupData');
+    
+    console.log('✅ 기본 락업 초기화 완료:', { ratio: 20, months: 1, registered: false });
+    
+    // 🎯 성공 메시지 표시
+    setSuccessMessage('✅ 기본 락업 초기화 완료!');
+    setShowSuccessModal(true);
+    
+  } catch (error) {
+    console.error('❌ 기본 락업 초기화 오류:', error);
+    setSuccessMessage('❌ 기본 락업 초기화 중 오류가 발생했습니다.');
+  }
+};
+```
+
+### **✅ 추가 락업 초기화 함수 (라인 2433-2469)**
+```typescript
+// 관리자용: 추가 락업 초기화 함수
+const handleSecondLockupReset = async () => {
+  try {
+    console.log('   추가 락업 초기화 시작...');
+    
+    // 🎯 추가 락업 상태 초기화
+    setSecondLockupRatio(0);
+    setSecondLockupMonths(0);
+    setIsSecondLockupRegistered(false);
+    setRegisteredSecondLockupData({
+      ratio: 0,
+      months: 0,
+      apy: 0,
+      startDate: null,
+      endDate: null
+    });
+    
+    // 🎯 localStorage에서 추가 락업 데이터 삭제
+    localStorage.removeItem('secondLockupData');
+    
+    console.log('✅ 추가 락업 초기화 완료:', { ratio: 0, months: 0, registered: false });
+    
+    // 🎯 성공 메시지 표시
+    setSuccessMessage('✅ 추가 락업 초기화 완료!');
+    setShowSuccessModal(true);
+    
+  } catch (error) {
+    console.error('❌ 추가 락업 초기화 오류:', error);
+    setSuccessMessage('❌ 추가 락업 초기화 중 오류가 발생했습니다.');
+  }
+};
+```
+
+## ** 9. 실시간 계산 함수들**
+
+### **✅ 실시간 마이닝 보상 계산 함수 (라인 731-809)**
+```typescript
+//    BigDecimal 기반 실시간 마이닝 보상 계산 함수 (완벽한 정밀도)
+const calculateRealTimeMiningRewardDecimal = (): {
+  hourlyReward: Decimal;
+  dailyReward: Decimal;
+  referralBonus: number;
+  ui: {
+    attendancePct: number;
+    referralPct: number;
+    totalPct: number;
+  };
+} => {
+  // 기본 채굴률 (BigDecimal)
+  const decimalBaseRate = new Decimal(0.25);
+  
+  // 출석 보너스 (BigDecimal) - 시간 제한 적용
+  const decimalAttendanceBonus = (consecutiveAttendanceDays > 0 && isAttendanceBonusTimeValid()) ? 
+    new Decimal(calculateAttendanceBonus(consecutiveAttendanceDays).bonusRate) : 
+    new Decimal(0);
+  
+  // 추천 보너스 (BigDecimal) - 구간별 누적 계산
+  const decimalReferralBonus = new Decimal(calculateReferralBonusDecimal(referralCount).totalBonusRate);
+  
+  // 락업 보너스 (BigDecimal)
+  const decimalLockupBonus = new Decimal(calculateLockupBonus(lockupRatio, lockupMonths).monthlyRate);
+  
+  // 가맹점 보너스 (BigDecimal)
+  const decimalMerchantBonus = new Decimal(isMerchantRegistered ? calculateMerchantBonus(isMerchantRegistered).bonusRate : 0);
+  
+  // 총 보너스율 계산 (BigDecimal)
+  const decimalOne = new Decimal(1);
+  const decimalTotalBonusRate = decimalOne
+    .plus(decimalAttendanceBonus)
+    .plus(decimalReferralBonus)
+    .plus(decimalLockupBonus)
+    .plus(decimalMerchantBonus);
+  
+  // 강화된 채굴률 계산 (BigDecimal)
+  const decimalEnhancedRate = decimalBaseRate.times(decimalTotalBonusRate);
+  
+  // 시간당 보상 계산 (BigDecimal)
+  const decimalHourlyReward = decimalEnhancedRate;
+  
+  // 일일 보상 계산 (BigDecimal)
+  const decimalDailyReward = decimalHourlyReward.times(24);
+  
+  return {
+    hourlyReward: decimalHourlyReward,
+    dailyReward: decimalDailyReward,
+    referralBonus: decimalReferralBonus.toNumber(),
+    ui: {
+      attendancePct: decimalAttendanceBonus.times(100).toNumber(),
+      referralPct: decimalReferralBonus.times(100).toNumber(),
+      totalPct: decimalTotalBonusRate.minus(1).times(100).toNumber()
+    }
+  };
+};
+```
+
+### **✅ 누적 보상 계산 함수 (라인 2637-2750)**
+```typescript
+// 🎯 BigDecimal 기반 누적 보상 계산 함수 (완벽한 정밀도)
+const calculateAccumulatedRewardDecimal = (): {
+  elapsedHours: Decimal;
+  totalEnhancedRate: Decimal;
+  accumulatedReward: Decimal;
+  lockupVaultReward: Decimal;
+  referralVaultReward: Decimal;
+  totalAccumulatedReward: Decimal;
+} => {
+  if (!miningStartTime) {
+    return {
+      elapsedHours: new Decimal(0),
+      totalEnhancedRate: new Decimal(0),
+      accumulatedReward: new Decimal(0),
+      lockupVaultReward: new Decimal(0),
+      referralVaultReward: new Decimal(0),
+      totalAccumulatedReward: new Decimal(0)
+    };
+  }
+  
+  // 경과 시간 계산 (BigDecimal)
+  const currentTime = new Date();
+  const elapsedTimeMs = currentTime.getTime() - miningStartTime.getTime();
+  const decimalElapsedTimeMs = new Decimal(elapsedTimeMs);
+  const decimalMsPerHour = new Decimal(1000 * 60 * 60);
+  const decimalElapsedHours = decimalElapsedTimeMs.dividedBy(decimalMsPerHour);
+  
+  // 실시간 마이닝 보상 데이터 가져오기
+  const rewardData = calculateRealTimeMiningRewardDecimal();
+  
+  // 기본 누적 보상 계산 (BigDecimal)
+  const decimalAccumulatedReward = rewardData.hourlyReward.times(decimalElapsedHours);
+  
+  // 락업 보관함 보상 계산 (BigDecimal)
+  const decimalLockupVaultReward = isLockupRegistered ? 
+    decimalAccumulatedReward.times(new Decimal(registeredLockupData.ratio / 100)) : 
+    new Decimal(0);
+  
+  // 추천 보관 BW 계산 (BigDecimal)
+  const decimalReferralVaultReward = referralCount > 0 ? 
+    new Decimal(calculateReferralStorageBW(referralCount)) : 
+    new Decimal(0);
+  
+  // 총 누적 보상 계산 (BigDecimal)
+  const decimalTotalAccumulatedReward = decimalAccumulatedReward
+    .plus(decimalLockupVaultReward)
+    .plus(decimalReferralVaultReward);
+  
+  return {
+    elapsedHours: decimalElapsedHours,
+    totalEnhancedRate: rewardData.hourlyReward,
+    accumulatedReward: decimalAccumulatedReward,
+    lockupVaultReward: decimalLockupVaultReward,
+    referralVaultReward: decimalReferralVaultReward,
+    totalAccumulatedReward: decimalTotalAccumulatedReward
+  };
+};
+```
+
+## ** 10. 상태 관리 변수들**
+
+### **✅ 모달 상태 변수들 (라인 1497-1500)**
+```typescript
+// 🎯 모달 상태 관리
+const [showMiningBonusModal, setShowMiningBonusModal] = useState(false);
+const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+const [showReferralModal, setShowReferralModal] = useState(false);
+const [showLockupModal, setShowLockupModal] = useState(false);
+const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+```
+
+### **✅ 접이식 UI 상태 변수들 (라인 1417-1423)**
+```typescript
+// 🆕 접이식 UI 상태 관리
+const [isReferralBonusExpanded, setIsReferralBonusExpanded] = useState(false);
+
+// 🆕 접이식 UI 토글 함수
+const toggleReferralBonusExpanded = () => {
+  setIsReferralBonusExpanded(!isReferralBonusExpanded);
+};
+```
+
+### **✅ 마이닝 상태 변수들 (라인 917-920)**
+```typescript
+// 🎯 마이닝 상태 관리
+const [isMining, setIsMining] = useState(false);
+const [miningRewards, setMiningRewards] = useState(0);
+const [isMiningActive, setIsMiningActive] = useState(false);
+const [miningStartTime, setMiningStartTime] = useState<Date | null>(null);
+```
+
+### **✅ 보너스 상태 변수들 (라인 1899-1902)**
+```typescript
+// 🗓️ 출석 달력 상태 변수들
+const [attendanceCalendar, setAttendanceCalendar] = useState<{[key: string]: boolean}>({});
+const [currentYear] = useState(new Date().getFullYear());
+const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+const [consecutiveAttendanceDays, setConsecutiveAttendanceDays] = useState<number>(0);
+```
+
+## ** 11. 완전한 소스코드 매핑 요약**
+
+### **✅ 마이닝 보너스 설정 창 전체 구조**
+- **창 시작**: 라인 9023
+- **창 끝**: 라인 9945
+- **전체 크기**: `max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto`
+
+### **✅ 4개 주요 버튼 위치**
+- **출석 보너스**: 라인 9051-9079
+- **추천 보너스**: 라인 9081-9109
+- **락업 보너스 설정**: 라인 9114-9142
+- **가맹점 등록**: 라인 9144-9158
+
+### **✅ 인증된 지갑 주소 텍스트**
+- **위치**: 라인 9168-9173
+- **내용**: "💡 인증된 지갑 주소: {authenticatedWalletAddress || '인증되지 않음'}<br/>창을 닫고 다시 열면 재인증이 필요합니다."
+
+### **✅ 네트워크 연결 상태**
+- **위치**: 라인 6239-6249
+- **내용**: "   연결됨" / "   연결 안됨"
+
+### **✅ 마이닝 상태 확인 창**
+- **시작**: 라인 9254
+- **끝**: 라인 9396
+- **좌측 열**: 라인 9262-9345
+- **우측 열**: 라인 9347-9395
+
+### **✅ 추천 보너스 현황 접이식 창**
+- **시작**: 라인 9550
+- **끝**: 라인 9630
+- **접이식 상태**: `isReferralBonusExpanded` (라인 1418)
+
+### **✅ 실시간 마이닝 보상 창**
+- **시작**: 라인 9719
+- **끝**: 라인 9850
+- **초기화 버튼**: 라인 9762-9803
+
+### **✅ 하단 버튼들**
+- **시작**: 라인 9870
+- **끝**: 라인 9941
+- **마이닝 시작**: 라인 9870-9887
+- **마이닝 정지**: 라인 9889-9917
+- **나의 지갑**: 라인 9919-9928
+- **X닫기**: 라인 9930-9940
+
+### **✅ 모달 창들**
+- **추천 보너스 모달**: 라인 8255-8430
+- **락업 보너스 모달**: 라인 8463-8980
+- **출석 보너스 모달**: 라인 7889-8250
+- **가맹점 등록 모달**: 라인 8984-9020
+
+### **✅ 핵심 함수들**
+- **추천인 추가**: `handleAddReferralDecimal` (라인 2296-2386)
+- **추천인 초기화**: `handleResetReferral` (라인 2224-2257)
+- **기본 락업 초기화**: `handleLockupReset` (라인 2392-2428)
+- **추가 락업 초기화**: `handleSecondLockupReset` (라인 2433-2469)
+- **실시간 보상 계산**: `calculateRealTimeMiningRewardDecimal` (라인 731-809)
+- **누적 보상 계산**: `calculateAccumulatedRewardDecimal` (라인 2637-2750)
+
+**마이닝 보너스 설정 창의 모든 요소와 소스코드 로직이 완전히 분석되었습니다!** 🚀

@@ -1,0 +1,86 @@
+import React, { useState } from 'react';
+import { AttendanceBonusSystem } from './AttendanceSystem';  // 위 클래스 임포트
+
+const App: React.FC = () => {
+  const [system] = useState(new AttendanceBonusSystem('test_user'));
+  const [message, setMessage] = useState<string>('');
+
+  const handleCheck = () => {
+    const result = system.checkAttendance();
+    if (result === 'checked_success') {
+      setMessage('출석 체크 완료!');
+    } else if (result === 'already_checked') {
+      setMessage('이미 체크했습니다.');
+    } else {
+      setMessage('출석 체크 불가능.');
+    }
+  };
+
+  const calendarData = system.getCalendarData(2025, 9);  // 2025년 9월
+  const bonusRate = system.getBonusRate().mul(100).toFixed(1);  // 퍼센트
+  const consecutiveDays = system.getConsecutiveDays();
+
+  return (
+    <div style={{ maxWidth: '400px', margin: 'auto', padding: '20px', background: '#f0f0f0', borderRadius: '10px' }}>
+      <h2 style={{ color: '#6a1b9a' }}>관리자용 출석 보너스</h2>
+      <p>관리자용 출석 및 보너스 시스템</p>
+      <h3 style={{ color: '#2196f3' }}>2025년 9월</h3>
+      <p>오늘: 2025년 9월 21일</p>
+      
+      {/* 요일 헤더 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center' }}>
+        {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
+          <div key={day}>{day}</div>
+        ))}
+      </div>
+      
+      {/* 캘린더 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center' }}>
+        {calendarData.flat().map((item, index) => {
+          if (item.day === 0) return <div key={index} />;
+          const color = item.status === 'blue' ? 'blue' : item.status === 'gray' ? 'gray' : 'red';
+          const background = item.status === 'red' ? 'red' : 'transparent';
+          return (
+            <div
+              key={index}
+              style={{
+                width: '30px',
+                height: '30px',
+                borderRadius: '50%',
+                border: `2px solid ${color}`,
+                background,
+                color: item.status === 'red' ? 'white' : 'black',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '5px',
+              }}
+            >
+              {item.day}
+            </div>
+          );
+        })}
+      </div>
+      
+      <p>이번 달 보너스: 1일</p>  {/* 예시 */}
+      <p>관리가용 연속 출석: {consecutiveDays}일</p>
+      <div style={{ background: '#fff', padding: '10px', borderRadius: '5px', margin: '10px 0' }}>
+        <h3>{bonusRate}%</h3>
+        <p>관리자용 보너스 보나스 적용</p>
+      </div>
+      <p>관리자용 보나스 보나스용</p>
+      <button
+        onClick={handleCheck}
+        style={{ background: '#6a1b9a', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '5px', width: '100%' }}
+      >
+        확인
+      </button>
+      <button style={{ background: 'red', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '5px', marginTop: '10px', width: '100%' }}>
+        닫기
+      </button>
+      {message && <p>{message}</p>}
+    </div>
+  );
+};
+
+export default App;

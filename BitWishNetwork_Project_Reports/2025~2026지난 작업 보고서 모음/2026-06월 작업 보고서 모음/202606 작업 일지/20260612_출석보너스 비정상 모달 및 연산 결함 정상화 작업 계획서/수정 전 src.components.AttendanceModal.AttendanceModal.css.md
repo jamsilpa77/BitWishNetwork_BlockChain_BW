@@ -1,0 +1,411 @@
+/* AttendanceModal.css */
+
+.attendance-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10003;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.attendance-modal {
+    background: rgba(255, 255, 255, 0.85);
+    width: 380px;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+    font-family: 'Inter', 'Noto Sans KR', sans-serif;
+    text-align: center;
+    position: relative;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 90vh;
+    overflow-y: auto;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Dark Mode Support (if parent has dark class, but here we assume light/glass theme primarily) */
+@media (prefers-color-scheme: dark) {
+    .attendance-modal {
+        background: rgba(30, 30, 40, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+
+    .attendance-title {
+        color: #fff !important;
+    }
+
+    .attendance-subtitle {
+        color: #aaa !important;
+    }
+
+    .calendar-section {
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .calendar-year-header,
+    .month-title {
+        color: #fff !important;
+    }
+
+    .bonus-info-box {
+        background: rgba(41, 98, 255, 0.1) !important;
+    }
+
+    .calendar-footer {
+        color: #aaa !important;
+    }
+
+    .bold {
+        color: #fff !important;
+    }
+
+    .status-title {
+        color: #fff !important;
+    }
+
+    .status-description {
+        color: #aaa !important;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px) scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Header */
+.attendance-header {
+    margin-bottom: 20px;
+}
+
+.calendar-icon-wrapper {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    box-shadow: 0 8px 16px rgba(33, 150, 243, 0.15);
+    font-size: 28px;
+}
+
+.attendance-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #1565C0 0%, #42A5F5 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 6px;
+    letter-spacing: -0.5px;
+}
+
+.attendance-subtitle {
+    font-size: 0.9rem;
+    color: #546E7A;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Calendar Section */
+.calendar-section {
+    background: rgba(245, 247, 250, 0.6);
+    border-radius: 20px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.calendar-year-header {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #37474F;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.current-date-banner {
+    background: rgba(33, 150, 243, 0.1);
+    color: #1976D2;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: inline-block;
+}
+
+.month-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 8px;
+}
+
+.nav-btn {
+    background: rgba(255, 255, 255, 0.8);
+    color: #1976D2;
+    border: 1px solid rgba(25, 118, 210, 0.1);
+    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.nav-btn:hover {
+    background: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.month-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #263238;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.weekday-header {
+    font-size: 0.75rem;
+    color: #90A4AE;
+    font-weight: 700;
+    padding: 4px 0;
+    text-transform: uppercase;
+}
+
+.calendar-day {
+    aspect-ratio: 1.5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: default;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    color: #455A64;
+    position: relative;
+}
+
+.calendar-day:not(.empty):hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.calendar-day.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.calendar-day.missed {
+    background: rgba(0, 0, 0, 0.03);
+    color: #B0BEC5;
+    text-decoration: line-through;
+}
+
+.calendar-day.checked {
+    background: linear-gradient(135deg, #FF5252 0%, #FF1744 100%);
+    color: white;
+    box-shadow: 0 4px 10px rgba(255, 23, 68, 0.3);
+    transform: scale(1.05);
+}
+
+.calendar-day.active {
+    background: linear-gradient(135deg, #2979FF 0%, #2962FF 100%);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(41, 98, 255, 0.4);
+    animation: pulse 2s infinite;
+}
+
+.calendar-day.future {
+    color: #CFD8DC;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(41, 98, 255, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(41, 98, 255, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(41, 98, 255, 0);
+    }
+}
+
+.calendar-footer {
+    font-size: 0.85rem;
+    color: #78909C;
+    text-align: center;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.bold {
+    font-weight: 800;
+    color: #263238;
+}
+
+/* Status Section */
+.status-section {
+    margin-bottom: 20px;
+}
+
+.status-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #37474F;
+    margin: 0 0 8px;
+}
+
+.status-indicator {
+    font-size: 1.4rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.status-indicator.on {
+    background: linear-gradient(135deg, #FF1744 0%, #D50000 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 2px 10px rgba(213, 0, 0, 0.2);
+}
+
+.status-indicator.off {
+    background: linear-gradient(135deg, #2979FF 0%, #1565C0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.status-description {
+    font-size: 0.85rem;
+    color: #78909C;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Bonus Info Box */
+.bonus-info-box {
+    background: rgba(33, 150, 243, 0.08);
+    padding: 16px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(33, 150, 243, 0.1);
+}
+
+.bonus-rate {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #2962FF;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+}
+
+.blue-text {
+    font-size: 0.9rem;
+    color: #5C6BC0;
+    font-weight: 600;
+}
+
+.bonus-warning {
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-height: 20px;
+}
+
+.red-text {
+    color: #FF5252;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+/* Footer Buttons */
+.modal-footer {
+    display: flex;
+    gap: 12px;
+}
+
+.confirm-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    background: linear-gradient(135deg, #2962FF 0%, #1565C0 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
+}
+
+.confirm-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(21, 101, 192, 0.4);
+}
+
+.confirm-btn:active {
+    transform: scale(0.98);
+}

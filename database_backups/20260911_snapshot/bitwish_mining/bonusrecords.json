@@ -1,0 +1,347 @@
+[
+  {
+    "_id": "69271ea2f76dd61eafb417dc",
+    "walletAddress": "BW9F5FF090231236037F250A523B4FC320FB44BFA8",
+    "__v": 21,
+    "attendanceHistory": [
+      {
+        "date": "2026-04-05",
+        "checkInTime": "2026-04-05T01:37:53.535Z",
+        "bonusRate": "0.05000000000000000000000000000000000000000000000000",
+        "_id": "69d1bcf1693afba1b3799122"
+      },
+      {
+        "date": "2026-05-01",
+        "checkInTime": "2026-05-01T04:21:09.135Z",
+        "bonusRate": "0.05000000000000000000000000000000000000000000000000",
+        "_id": "69f42a358cb6a070e7092ce9"
+      }
+    ],
+    "lastUpdated": "2025-11-27T02:48:24.142Z",
+    "partnerHistory": [],
+    "referralHistory": [],
+    "updatedAt": "2026-07-30T04:03:13.548Z",
+    "referralBonusStorage": "0",
+    "referralList": [
+      {
+        "childWalletAddress": "BW958ACBEA657953450332FFF0FD66ABB0FA994005",
+        "joinedAt": "2025-12-01T02:03:34.221Z",
+        "accumulatedBonus": "0.094622514583333333333333333333333333333333333336181",
+        "isKycVerified": false,
+        "rewardStatus": "PAID",
+        "_id": "69ca8fc805b1386f425f4e30"
+      },
+      {
+        "childWalletAddress": "BW69527012159E5A3CF2EFB3E07D8DC7FCFA385EF6",
+        "joinedAt": "2025-12-01T02:03:34.245Z",
+        "accumulatedBonus": "0.094622514583333333333333333333333333333333333336181",
+        "isKycVerified": false,
+        "rewardStatus": "PAID",
+        "_id": "69ca8fc805b1386f425f4e38"
+      },
+      {
+        "childWalletAddress": "BW6330A20CAFA9EF6F0203DE34F8C3E3F076C9B0E8",
+        "joinedAt": "2025-12-01T01:09:55.142Z",
+        "accumulatedBonus": "0.09241292083333333333333333333333333333333333333618",
+        "isKycVerified": false,
+        "rewardStatus": "PAID",
+        "_id": "69db0bfd23f91eca01450f53"
+      }
+    ],
+    "referralRewardStorage": "3"
+  },
+  {
+    "_id": "692ceae369df7d5f1d921daa",
+    "walletAddress": "BW6330A20CAFA9EF6F0203DE34F8C3E3F076C9B0E8",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [],
+    "attendanceHistory": [],
+    "createdAt": "2025-12-01T01:09:55.152Z",
+    "updatedAt": "2026-06-03T03:13:19.240Z",
+    "__v": 1
+  },
+  {
+    "_id": "692cf7768c4c0ee9c4eb3865",
+    "walletAddress": "BW958ACBEA657953450332FFF0FD66ABB0FA994005",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "3",
+    "referralList": [
+      {
+        "childWalletAddress": "BWD403933649E57D4B3CDE374F22E83A4E14E0C602",
+        "joinedAt": "2026-04-05T06:07:12.490Z",
+        "accumulatedBonus": "0.006203342361111111111111111111111111111111111111111",
+        "isKycVerified": false,
+        "rewardStatus": "COMPLETED",
+        "_id": "69d1fc10693afba1b37b406e"
+      },
+      {
+        "childWalletAddress": "BWD6CCB861E43DA7B213B9871CEC8C49E0F17577E5",
+        "joinedAt": "2025-12-23T08:20:56.960Z",
+        "accumulatedBonus": "0.006203342361111111111111111111111111111111111111111",
+        "isKycVerified": false,
+        "rewardStatus": "PAID",
+        "_id": "69de3cc774c193179064b9c6"
+      }
+    ],
+    "attendanceHistory": [],
+    "__v": 3,
+    "updatedAt": "2026-06-03T03:12:58.839Z"
+  },
+  {
+    "_id": "692cf7768c4c0ee9c4eb386e",
+    "walletAddress": "BW69527012159E5A3CF2EFB3E07D8DC7FCFA385EF6",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [],
+    "attendanceHistory": [
+      {
+        "date": "2026-04-29",
+        "checkInTime": "2026-04-29T15:08:15.476Z",
+        "bonusRate": "0.05000000000000000000000000000000000000000000000000",
+        "_id": "69f21edfa8e81f7c6ebe7969"
+      }
+    ],
+    "__v": 1,
+    "updatedAt": "2026-06-03T03:12:44.999Z"
+  },
+  {
+    "_id": "694a50e88d4d46142e72be03",
+    "walletAddress": "BWD6CCB861E43DA7B213B9871CEC8C49E0F17577E5",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [],
+    "attendanceHistory": [],
+    "createdAt": "2025-12-23T08:20:56.996Z",
+    "updatedAt": "2026-06-03T03:12:33.783Z",
+    "__v": 0
+  },
+  {
+    "_id": "69a3cf0679a4e7720a35893c",
+    "walletAddress": "BW29DFB93C6DDB4F006C99C37CE85959D2852E9DAC",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [
+      {
+        "childWalletAddress": "BW34FE4528EBDE737100AA8C5F656EB94FBB17A626",
+        "joinedAt": "2026-03-01T11:41:03.381Z",
+        "accumulatedBonus": "0.029296715277777777777777777777777777777777777777778",
+        "isKycVerified": false,
+        "rewardStatus": "PAID",
+        "_id": "69a425cfeb21bd53dff9f503",
+        "is1BWMePaid": true,
+        "is1BWUserPaid": true,
+        "is2PercentMePaid": true,
+        "is2PercentUserPaid": true,
+        "kycDetailStatus": "미승인"
+      }
+    ],
+    "attendanceHistory": [],
+    "createdAt": "2026-03-01T05:30:46.849Z",
+    "updatedAt": "2026-06-03T03:12:23.873Z",
+    "__v": 4
+  },
+  {
+    "_id": "69a425cfeb21bd53dff9f4ff",
+    "walletAddress": "BW34FE4528EBDE737100AA8C5F656EB94FBB17A626",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "6.00",
+    "referralList": [
+      {
+        "childWalletAddress": "BW070DEAB46086F60451C35A5C2CF54C4F0F255E65",
+        "joinedAt": "2026-03-06T02:20:09.602Z",
+        "accumulatedBonus": "0.015730672037037037037037037037037037037037037037038",
+        "isKycVerified": false,
+        "rewardStatus": "PAID",
+        "is1BWMePaid": true,
+        "is1BWUserPaid": true,
+        "is2PercentMePaid": true,
+        "is2PercentUserPaid": true,
+        "kycDetailStatus": "미승인",
+        "_id": "69aa39d90fe7c9639e9438d1"
+      },
+      {
+        "childWalletAddress": "BW5E0B1CAEF16B363FC4D87B46F891B2388AD180D0",
+        "joinedAt": "2026-03-08T03:02:22.917Z",
+        "accumulatedBonus": "0.015730672037037037037037037037037037037037037037038",
+        "isKycVerified": false,
+        "rewardStatus": "COMPLETED",
+        "_id": "69ace6be7a0283606e47a4af"
+      },
+      {
+        "childWalletAddress": "BWDA11F3D3D74ECECF68D42B18F7DE6A922EC33397",
+        "joinedAt": "2026-03-08T03:03:55.236Z",
+        "accumulatedBonus": "0.015730672037037037037037037037037037037037037037038",
+        "isKycVerified": false,
+        "rewardStatus": "COMPLETED",
+        "_id": "69ace71b7a0283606e47a5e4"
+      },
+      {
+        "childWalletAddress": "BWFA3895317A4B1256C49AAA4EBA17F3EC064066D3",
+        "joinedAt": "2026-03-08T03:13:51.130Z",
+        "accumulatedBonus": "0.015730672037037037037037037037037037037037037037038",
+        "isKycVerified": false,
+        "rewardStatus": "COMPLETED",
+        "_id": "69ace96f7a0283606e47acf8"
+      },
+      {
+        "childWalletAddress": "BW8C952623912D1F67CD3E0B62CC722728BBFC771A",
+        "joinedAt": "2026-03-08T04:11:16.358Z",
+        "accumulatedBonus": "0.015730672037037037037037037037037037037037037037038",
+        "isKycVerified": false,
+        "rewardStatus": "COMPLETED",
+        "_id": "69acf6e47a0283606e47be11"
+      }
+    ],
+    "attendanceHistory": [],
+    "createdAt": "2026-03-01T11:41:03.379Z",
+    "updatedAt": "2026-07-30T04:02:53.638Z",
+    "__v": 2
+  },
+  {
+    "_id": "69aa39d90fe7c9639e9438cd",
+    "walletAddress": "BW070DEAB46086F60451C35A5C2CF54C4F0F255E65",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [],
+    "attendanceHistory": [],
+    "createdAt": "2026-03-06T02:20:09.580Z",
+    "updatedAt": "2026-06-03T03:12:03.777Z",
+    "__v": 1
+  },
+  {
+    "_id": "69ace6be7a0283606e47a4a7",
+    "walletAddress": "BW5E0B1CAEF16B363FC4D87B46F891B2388AD180D0",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [],
+    "attendanceHistory": [],
+    "createdAt": "2026-03-08T03:02:22.573Z",
+    "updatedAt": "2026-06-03T03:11:49.734Z",
+    "__v": 0
+  },
+  {
+    "_id": "69ace71a7a0283606e47a5d8",
+    "walletAddress": "BWDA11F3D3D74ECECF68D42B18F7DE6A922EC33397",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [],
+    "attendanceHistory": [],
+    "createdAt": "2026-03-08T03:03:54.921Z",
+    "updatedAt": "2026-06-03T03:11:40.982Z",
+    "__v": 0
+  },
+  {
+    "_id": "69ace96e7a0283606e47aceb",
+    "walletAddress": "BWFA3895317A4B1256C49AAA4EBA17F3EC064066D3",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [],
+    "attendanceHistory": [],
+    "createdAt": "2026-03-08T03:13:50.819Z",
+    "updatedAt": "2026-06-03T03:11:29.982Z",
+    "__v": 0
+  },
+  {
+    "_id": "69acf6e47a0283606e47be05",
+    "walletAddress": "BW8C952623912D1F67CD3E0B62CC722728BBFC771A",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "2",
+    "referralList": [
+      {
+        "childWalletAddress": "BWC19E32B03F98B0AC0794C8B7DE652F7AC7915B68",
+        "joinedAt": "2026-03-13T15:33:15.164Z",
+        "accumulatedBonus": "0.01269536388888888888888888888888888888888888888889",
+        "isKycVerified": false,
+        "rewardStatus": "PAID",
+        "_id": "69f34eae8cb6a070e705b702"
+      }
+    ],
+    "attendanceHistory": [],
+    "createdAt": "2026-03-08T04:11:16.045Z",
+    "updatedAt": "2026-06-03T03:11:05.719Z",
+    "__v": 1
+  },
+  {
+    "_id": "69b42e3b6716f5a1cc9cdea6",
+    "walletAddress": "BWC19E32B03F98B0AC0794C8B7DE652F7AC7915B68",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "2",
+    "referralList": [
+      {
+        "childWalletAddress": "BW546C0A1376B5D8372BC66ACCE44C0751AD3842B6",
+        "joinedAt": "2026-04-04T12:38:29.151Z",
+        "accumulatedBonus": "0.00000000000000000000000000000000000000000000000000",
+        "isKycVerified": false,
+        "rewardStatus": "COMPLETED",
+        "_id": "69d10645693afba1b373edf4"
+      }
+    ],
+    "attendanceHistory": [],
+    "createdAt": "2026-03-13T15:33:15.192Z",
+    "updatedAt": "2026-07-30T04:02:25.891Z",
+    "__v": 2
+  },
+  {
+    "_id": "69d10644693afba1b373ede7",
+    "walletAddress": "BW546C0A1376B5D8372BC66ACCE44C0751AD3842B6",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [],
+    "attendanceHistory": [],
+    "createdAt": "2026-04-04T12:38:28.814Z",
+    "updatedAt": "2026-06-03T03:10:43.822Z",
+    "__v": 3
+  },
+  {
+    "_id": "69d1fc10693afba1b37b405f",
+    "walletAddress": "BWD403933649E57D4B3CDE374F22E83A4E14E0C602",
+    "referralBonusStorage": "0.010512147222222222222222222222222222222222222222222",
+    "referralRewardStorage": "2",
+    "referralList": [
+      {
+        "childWalletAddress": "BWDA1E64F91FC598EE0B358DC5CA4DFDDC506C57DB",
+        "joinedAt": "2026-04-05T11:22:03.201Z",
+        "accumulatedBonus": "0.038660888888888888888888888888888888888888888888895",
+        "isKycVerified": false,
+        "rewardStatus": "PAID",
+        "_id": "69dfa2d756b2ca397949385f"
+      }
+    ],
+    "attendanceHistory": [],
+    "createdAt": "2026-04-05T06:07:12.175Z",
+    "updatedAt": "2026-09-03T02:41:41.145Z",
+    "__v": 1
+  },
+  {
+    "_id": "69d245db693afba1b37d9a7f",
+    "walletAddress": "BWDA1E64F91FC598EE0B358DC5CA4DFDDC506C57DB",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "2",
+    "referralList": [
+      {
+        "childWalletAddress": "BW71C4553632B7A4DA7121E76768F051C1DAE3F608",
+        "joinedAt": "2026-04-29T15:18:47.495Z",
+        "accumulatedBonus": "0.0013696250000000000000000000000000000000000000000001",
+        "isKycVerified": false,
+        "rewardStatus": "PAID",
+        "_id": "69f22157a8e81f7c6ebe888c"
+      }
+    ],
+    "attendanceHistory": [],
+    "createdAt": "2026-04-05T11:22:03.204Z",
+    "updatedAt": "2026-06-03T03:10:20.068Z",
+    "__v": 1
+  },
+  {
+    "_id": "69f22157a8e81f7c6ebe8889",
+    "walletAddress": "BW71C4553632B7A4DA7121E76768F051C1DAE3F608",
+    "referralBonusStorage": "0",
+    "referralRewardStorage": "1",
+    "referralList": [],
+    "attendanceHistory": [],
+    "createdAt": "2026-04-29T15:18:47.492Z",
+    "updatedAt": "2026-07-30T04:02:06.665Z",
+    "__v": 0
+  }
+]

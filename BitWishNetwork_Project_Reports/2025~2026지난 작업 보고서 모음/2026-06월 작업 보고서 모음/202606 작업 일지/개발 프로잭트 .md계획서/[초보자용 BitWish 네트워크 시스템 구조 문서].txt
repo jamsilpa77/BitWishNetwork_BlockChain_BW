@@ -1,0 +1,53 @@
+## [BitWish 네트워크 시스템 구조 문서]
+
+### 1. 핵심 엔진 (server/services/BlockchainService)
+
+시스템의 '심장'입니다. 블록을 만들고, 자산을 계산하는 모든 로직이 여기 있습니다.
+
+* **`BitWishNetworkService.ts`**: **(핵심 1)** 블록 생성(PoW) 및 채굴 보상 지급 로직 담당.
+* **`BlockMonitorService.ts`**: 블록이 잘 생성되고 있는지 실시간으로 감시하는 역할.
+* **`NetworkStatusService.ts`**: **(핵심 2)** 수수료를 6:4로 나누고, 현재 시스템 상태(잔액 등)를 관리.
+* **`WalletService.ts`**: P2P 지갑 생성 및 잔액 조회 관리.
+
+### 2. 마이닝 시스템 (server/controllers & services)
+
+웹에서 사용자가 버튼을 누르면 작동하는 '실행부'입니다.
+
+* **`MiningController.ts`**: **(핵심 3)** 마이닝 시작/종료 버튼의 신호를 받아 서버에 명령을 전달.
+* **`MiningService` 폴더**: 채굴이 실제로 어떻게 진행되는지 정의된 세부 로직들.
+* **`ApiService.ts`**: 외부(웹 페이지)와 데이터를 주고받는 통로.
+
+### 3. 사용자 및 데이터 관리 (server/routes & models)
+
+누가, 얼마나 가졌는지 기록하는 '장부'입니다.
+
+* **`routes` 폴더**: 어떤 주소(URL)로 접속하면 어떤 기능을 할지 정해둔 곳(admin, kyc, mining, referral 등).
+* **`models` 폴더**: 데이터가 DB에 어떤 모양으로 저장될지 정하는 설계도.
+* **`referral.ts`**: 부모-자식 가입(추천인) 시스템 로직.
+
+### 4. 사용자 화면 (src/components)
+
+사용자가 직접 보고 누르는 '얼굴'입니다.
+
+* **`MiningPage`**: 채굴 현황판과 마이닝 시작 버튼이 있는 화면.
+* **`MiningStatusModal`**: 채굴 상태가 실시간으로 나타나는 팝업창.
+* **`MyWalletModal`**: 사용자 지갑 확인 및 P2P 거래 팝업창.
+* **`ReferralModal`**: 추천인 및 보상 확인용 팝업창.
+
+### 5. 보조 도구 (utils, scripts)
+
+시스템을 돕는 '도우미'들입니다.
+
+* **`utils` 폴더**: 정밀한 계산(Decimal.js 등)을 도와주는 도구 상자.
+* **`scripts/SettlementWorker.ts`**: 주기적으로 자산을 정산하는 로직.
+
+---
+
+### **[유용하게 활용하는 팁]**
+
+앞으로 저에게 지시하실 때 이렇게 말씀하시면 저도 바로 알아듣습니다.
+
+* 예: **"마이닝 시작 버튼을 누르면 블록이 생성되게 하려고 해. 1번(BitWishNetworkService.ts)과 3번(MiningController.ts)을 참고해서 코드를 짜줘."**
+* 예: **"수수료 6:4 분배 로직을 2번(NetworkStatusService.ts)에 추가하고 싶어. 어떻게 고치면 될까?"**
+
+이 문서가 있으면 복잡하게 설명 안 하셔도 됩니다. 이제 이 내용을 메모장 등에 복사해두시고, 본격적으로 수정이 필요한 파일(가장 먼저 `BitWishNetworkService.ts`)을 열어서 저한테 보여주시면, 바로 '어느 줄(Line)을 어떻게 고치면 되는지'만 딱 찍어서 알려드리겠습니다. 시작할까요?

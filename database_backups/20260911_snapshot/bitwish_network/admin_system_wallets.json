@@ -1,0 +1,179 @@
+[
+  {
+    "_id": "68eb7e8bba33ce7a822f9a9b",
+    "walletType": "COMMUNITY_70PERCENT",
+    "walletInfo": {
+      "address": "BW_COMMUNITY_70PERCENT_WALLET_ADDRESS_12345678",
+      "name": "회원 마이닝 배분 전용 지갑 (70%)",
+      "purpose": "KYC 승인된 회원에게 월별 순차 마이그레이션",
+      "percentage": 70
+    },
+    "balance": {
+      "initial": "14700000000.00000000",
+      "current": "14700000000.00000000",
+      "distributed": "0.00000000",
+      "pending": "0.00000000"
+    },
+    "transactions": [],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": "68eb7e8bba33ce7a822f9a9c",
+    "walletType": "FOUNDATION_20PERCENT",
+    "walletInfo": {
+      "address": "BW_FOUNDATION_20PERCENT_WALLET_ADDRESS_12345678",
+      "name": "재단/개발팀/운영 전용 지갑 (20%)",
+      "purpose": "플랫폼 개발 및 유지보수, 긴급 비용",
+      "percentage": 20
+    },
+    "balance": {
+      "initial": "4200000000.00000000",
+      "current": "4200000000.00000000",
+      "distributed": "0.00000000",
+      "pending": "0.00000000"
+    },
+    "transactions": [],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": "68eb7e8bba33ce7a822f9a9d",
+    "walletType": "PARTNER_10PERCENT",
+    "walletInfo": {
+      "address": "BW_PARTNER_10PERCENT_WALLET_ADDRESS_12345678",
+      "name": "파트너/상점 전용 지갑 (10%)",
+      "purpose": "가맹점 등록 보상 (시장형 생태계 확장)",
+      "percentage": 10
+    },
+    "balance": {
+      "initial": "2100000000.00000000",
+      "current": "2100000000.00000000",
+      "distributed": "0.00000000",
+      "pending": "0.00000000"
+    },
+    "transactions": [],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": "68eb7e8bba33ce7a822f9a9e",
+    "walletType": "ECOSYSTEM_FEE_70",
+    "walletInfo": {
+      "address": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+      "name": "생태계 조성 수수료 지갑 (70%)",
+      "purpose": "파트너십, 마케팅, 생태계 확장 프로젝트",
+      "percentage": 70
+    },
+    "balance": {
+      "initial": "0.00000000",
+      "current": "0.00280000",
+      "distributed": "0.00280000",
+      "pending": "0.00000000"
+    },
+    "transactions": [
+      {
+        "transactionId": "TX-FEE-ECO-1760322154861",
+        "type": "fee_collection",
+        "amount": "0.00070000",
+        "recipient": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "recipientName": "생태계 조성 지갑",
+        "purpose": "블록 #7 생성 수수료 (70%)",
+        "timestamp": "2025-10-13 02:22:34",
+        "status": "completed"
+      },
+      {
+        "transactionId": "TX-FEE-ECO-1760330043885",
+        "type": "fee_collection",
+        "amount": "0.00070000",
+        "recipient": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "recipientName": "생태계 조성 지갑",
+        "purpose": "블록 #8 생성 수수료 (70%)",
+        "timestamp": "2025-10-13 04:34:03",
+        "status": "completed"
+      },
+      {
+        "transactionId": "TX-FEE-ECO-1760330106516",
+        "type": "fee_collection",
+        "amount": "0.00070000",
+        "recipient": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "recipientName": "생태계 조성 지갑",
+        "purpose": "블록 #9 생성 수수료 (70%)",
+        "timestamp": "2025-10-13 04:35:06",
+        "status": "completed"
+      },
+      {
+        "transactionId": "TX-FEE-ECO-1760335945647",
+        "type": "fee_collection",
+        "amount": "0.00070000",
+        "recipient": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "recipientName": "생태계 조성 지갑",
+        "purpose": "블록 #10 생성 수수료 (70%)",
+        "timestamp": "2025-10-13 06:12:25",
+        "status": "completed"
+      }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-10-13T06:12:25.643Z"
+  },
+  {
+    "_id": "68eb7e8bba33ce7a822f9a9f",
+    "walletType": "DEV_FEE_30",
+    "walletInfo": {
+      "address": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+      "name": "개발팀 운영 수수료 지갑 (30%)",
+      "purpose": "플랫폼 개발, 서버 유지보수, 보안 감사",
+      "percentage": 30
+    },
+    "balance": {
+      "initial": "0.00000000",
+      "current": "0.00120000",
+      "distributed": "0.00120000",
+      "pending": "0.00000000"
+    },
+    "transactions": [
+      {
+        "transactionId": "TX-FEE-DEV-1760322154862",
+        "type": "fee_collection",
+        "amount": "0.00030000",
+        "recipient": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "recipientName": "개발팀 운영 지갑",
+        "purpose": "블록 #7 생성 수수료 (30%)",
+        "timestamp": "2025-10-13 02:22:34",
+        "status": "completed"
+      },
+      {
+        "transactionId": "TX-FEE-DEV-1760330043885",
+        "type": "fee_collection",
+        "amount": "0.00030000",
+        "recipient": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "recipientName": "개발팀 운영 지갑",
+        "purpose": "블록 #8 생성 수수료 (30%)",
+        "timestamp": "2025-10-13 04:34:03",
+        "status": "completed"
+      },
+      {
+        "transactionId": "TX-FEE-DEV-1760330106516",
+        "type": "fee_collection",
+        "amount": "0.00030000",
+        "recipient": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "recipientName": "개발팀 운영 지갑",
+        "purpose": "블록 #9 생성 수수료 (30%)",
+        "timestamp": "2025-10-13 04:35:06",
+        "status": "completed"
+      },
+      {
+        "transactionId": "TX-FEE-DEV-1760335945649",
+        "type": "fee_collection",
+        "amount": "0.00030000",
+        "recipient": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "recipientName": "개발팀 운영 지갑",
+        "purpose": "블록 #10 생성 수수료 (30%)",
+        "timestamp": "2025-10-13 06:12:25",
+        "status": "completed"
+      }
+    ],
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-10-13T06:12:25.643Z"
+  }
+]

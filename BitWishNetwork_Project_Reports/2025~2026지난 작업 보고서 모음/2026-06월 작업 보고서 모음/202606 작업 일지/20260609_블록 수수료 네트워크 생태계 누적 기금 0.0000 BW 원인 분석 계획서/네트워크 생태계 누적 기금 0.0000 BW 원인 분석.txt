@@ -1,0 +1,106 @@
+# 🔍 네트워크 생태계 누적 기금 0.0000 BW 원인 분석 보고서
+
+---
+
+## 1. 핵심 결론 (3줄 요약)
+
+> [!CAUTION]
+> **프론트엔드 UI 값이 하드코딩(고정값)으로 박혀 있어 DB 데이터를 전혀 읽지 않고 있습니다.**
+> 백엔드 `BlockMiningService.ts`는 블록 생성 시 0.001 BW 수수료를 DB에 정상 적립하고 있지만,
+> [ExplorerPage.tsx](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/Explorer/ExplorerPage.tsx#L336-L349)에서 `0.0000`이 **문자열 그대로** 하드코딩되어 있어 화면에 항상 0으로 표시됩니다.
+
+---
+
+## 2. 블록 생성 수수료 (주황색 바) — 0.0000 BW 원인
+
+### ✅ 백엔드: 정상 작동 확인
+
+[BlockMiningService.ts:68-97](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/server/services/BlockMiningService.ts#L68-L97)에서 블록 생성 시마다:
+
+```
+feeAmount = "0.001" BW
+→ splitFee64() → 생태계 기금 60% (0.0006 BW) + 재단 운영비 40% (0.0004 BW)
+→ MongoDB `bitwish_network.network_stats` (id: 'global_fund_stats')에 원자적 누적 저장
+```
+
+**현재 112블록 기준 이론적 누적값:**
+| 항목 | 계산식 | 예상 누적값 |
+|---|---|---|
+| 블록 생성 수수료 총합 | 82블록 × 0.001 BW | ~0.082 BW |
+| 생태계 기금 (60%) | 0.082 × 0.6 | ~0.0492 BW |
+| 재단 운영비 (40%) | 0.082 × 0.4 | ~0.0328 BW |
+
+> (112블록 - 30 오프셋 = 82개의 실제 마이닝 블록)
+
+### ❌ 프론트엔드: 하드코딩 문제 (근본 원인)
+
+[ExplorerPage.tsx:336](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/Explorer/ExplorerPage.tsx#L336):
+```tsx
+<span>0.0000 <small>BW</small></span>  // ← 거래 수수료: 하드코딩
+```
+
+[ExplorerPage.tsx:343](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/Explorer/ExplorerPage.tsx#L343):
+```tsx
+<span>0.0000 <small>BW</small></span>  // ← 블록 생성 수수료: 하드코딩
+```
+
+[ExplorerPage.tsx:349](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/Explorer/ExplorerPage.tsx#L349):
+```tsx
+<span className="neon-gold">0.00000000 <small>BW</small></span>  // ← 총 누적 합계: 하드코딩
+```
+
+**→ API에서 `network_stats` 데이터를 가져오는 코드 자체가 없습니다.**
+
+---
+
+## 3. 파란색/주황색 바 표시 원인
+
+[ExplorerPage.tsx:338](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/Explorer/ExplorerPage.tsx#L338-L345):
+```tsx
+// 파란색 바: 60% 고정
+<div className="gauge-fill eco" style={{ width: '60%' }}></div>
+
+// 주황색 바: 40% 고정  
+<div className="gauge-fill foundation" style={{ width: '40%' }}></div>
+```
+
+**→ 6:4 비율 디자인 목업 상태로 고정**되어 있으며, 실제 수수료 누적 비율과 연동되지 않습니다. 값이 0인데 바가 차 있는 이유는 `width`가 하드코딩 `60%`, `40%`이기 때문입니다.
+
+---
+
+## 4. 거래 수수료 (P2P) — 구현 상태 점검
+
+> [!WARNING]
+> **P2P 거래 수수료 0.01 BW는 현재 미구현 상태입니다.**
+
+### 현재 P2P 송금 코드 ([stats.ts:173-198](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/server/routes/stats.ts#L173-L198)):
+
+```typescript
+// 보내는 사람 잔액에서 amount만 차감 — 수수료 공제 없음
+systemWallets[fromAddress].balance = (parseFloat(currentBalance) - parseFloat(amount)).toString();
+
+// 받는 사람에게 amount 그대로 가산 — 수수료 없이 전액 전달
+systemWallets[toAddress].balance = (...+ parseFloat(amount)).toString();
+```
+
+| 점검 항목 | 상태 |
+|---|---|
+| 0.01 BW 수수료 차감 로직 | ❌ 미구현 |
+| 차감된 수수료 → `network_stats` 기금 풀 적립 | ❌ 미구현 |
+| `splitFee64()`를 통한 6:4 분배 | ❌ 미연결 |
+| API에서 `network_stats` 읽어서 프론트에 전달 | ❌ 미구현 |
+
+---
+
+## 5. 수정 필요 사항 요약
+
+| # | 위치 | 문제 | 수정 내용 |
+|---|---|---|---|
+| 1 | [ExplorerPage.tsx:332-350](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/Explorer/ExplorerPage.tsx#L332-L350) | 기금 값 하드코딩 | API에서 `network_stats` 조회 → state로 바인딩 |
+| 2 | [stats.ts](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/server/routes/stats.ts) `/api/stats/realtime` | 기금 데이터 미반환 | `network_stats` 컬렉션에서 `ecosystemFund`, `foundationFund`, `totalAccumulatedFees` 조회 후 응답에 포함 |
+| 3 | [stats.ts:173-198](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/server/routes/stats.ts#L173-L198) `/transfer` | P2P 수수료 0.01BW 미차감 | 송금 시 0.01BW 추가 차감 → `splitFee64()` → `network_stats` 적립 |
+| 4 | [ExplorerPage.tsx:338,345](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/Explorer/ExplorerPage.tsx#L338) | 게이지 바 width 하드코딩 | 실제 비율 기반 동적 계산으로 변경 |
+
+---
+
+**보고 완료.**

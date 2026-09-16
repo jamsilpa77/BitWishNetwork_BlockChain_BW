@@ -1,0 +1,173 @@
+## **📁 개선 작업으로 분리된 파일들 목록**
+
+### **🎯 1단계: 컴포넌트 분리 (UI만 분리, 로직 보존)**
+
+#### **A. 지갑 관련 컴포넌트**
+```
+   Node_HomePage/src/components/wallet/
+├── WalletCreationModal.tsx          // 지갑 생성 UI (라인 11121-11261)
+├── MyWalletModal.tsx                // 나의 지갑 UI (라인 11047-11398)
+└── WalletAuthModal.tsx              // 지갑 인증 UI (라인 11990-12195)
+```
+
+#### **B. 마이닝 관련 컴포넌트**
+```
+📁 Node_HomePage/src/components/mining/
+├── AdminMiningBonusModal.tsx        // 관리자용 마이닝 보너스 UI (라인 14055-15006)
+├── UserMiningBonusModal.tsx         // 유저용 마이닝 보너스 UI (라인 15009-15564)
+└── MiningStatusModal.tsx            // 마이닝 상태 UI
+```
+
+#### **C. 보너스 관련 컴포넌트**
+```
+   Node_HomePage/src/components/bonus/
+├── AttendanceBonusModal.tsx         // 출석 보너스 UI
+├── ReferralBonusModal.tsx           // 추천 보너스 UI
+├── LockupBonusModal.tsx             // 락업 보너스 UI
+└── FranchiseBonusModal.tsx          // 가맹점 보너스 UI
+```
+
+#### **D. 공통 컴포넌트**
+```
+📁 Node_HomePage/src/components/common/
+├── ErrorModal.tsx                   // 에러 모달 UI
+├── LanguageSelector.tsx             // 언어 선택기 UI
+└── CustomAlertModal.tsx             // 커스텀 알림 모달 UI
+```
+
+### **   2단계: 훅 분리 (로직만 분리, 상태 보존)**
+
+#### **A. 지갑 관련 훅**
+```
+📁 Node_HomePage/src/hooks/
+├── useWalletCreation.ts             // 지갑 생성 로직 (라인 11121-11261)
+├── useWalletAuth.ts                 // 지갑 인증 로직 (라인 11990-12195)
+└── useWalletMining.ts               // 지갑 마이닝 로직
+```
+
+#### **B. 마이닝 관련 훅**
+```
+📁 Node_HomePage/src/hooks/
+├── useMiningState.ts                // 마이닝 상태 로직
+├── useMiningReward.ts               // 마이닝 보상 계산 로직
+└── useMiningTimer.ts                // 마이닝 타이머 로직
+```
+
+#### **C. 보너스 관련 훅**
+```
+📁 Node_HomePage/src/hooks/
+├── useReferralSystem.ts             // 추천인 시스템 로직
+├── useAttendanceSystem.ts           // 출석 시스템 로직
+├── useLockupSystem.ts               // 락업 시스템 로직
+└── useFranchiseSystem.ts            // 가맹점 시스템 로직
+```
+
+#### **D. 공통 훅**
+```
+📁 Node_HomePage/src/hooks/
+├── useErrorState.ts                 // 에러 상태 관리 로직
+├── useLocalStorage.ts               // localStorage 관리 로직
+└── useBlockchainAPI.ts              // 블록체인 API 로직
+```
+
+### **🎯 3단계: 서비스 분리 (계산 로직만 분리)**
+
+#### **A. 계산 서비스**
+```
+📁 Node_HomePage/src/services/
+├── miningService.ts                 // 마이닝 계산 로직
+├── referralService.ts               // 추천인 계산 로직
+├── attendanceService.ts             // 출석 계산 로직
+├── lockupService.ts                 // 락업 계산 로직
+└── franchiseService.ts              // 가맹점 계산 로직
+```
+
+#### **B. 저장소 서비스**
+```
+📁 Node_HomePage/src/services/
+├── storageService.ts                // localStorage 관리
+├── blockchainAPI.ts                 // 블록체인 API 통신
+└── dataService.ts                   // 데이터 관리
+```
+
+### **   4단계: 유틸리티 분리**
+
+#### **A. 로깅 유틸리티**
+```
+📁 Node_HomePage/src/utils/
+├── logger.ts                        // 로깅 유틸리티
+├── errorHandler.ts                  // 에러 처리 유틸리티
+└── validation.ts                    // 검증 유틸리티
+```
+
+#### **B. 계산 유틸리티**
+```
+📁 Node_HomePage/src/utils/
+├── crypto.ts                        // 암호화 유틸리티
+├── dataSnapshot.ts                  // 데이터 스냅샷 유틸리티
+└── chatMessages.ts                  // 채팅 메시지 유틸리티
+```
+
+### **🎯 5단계: 타입 정의 분리**
+
+#### **A. 타입 정의**
+```
+📁 Node_HomePage/src/types/
+├── index.ts                         // 메인 타입 정의
+├── mining.ts                        // 마이닝 관련 타입
+├── wallet.ts                        // 지갑 관련 타입
+├── bonus.ts                         // 보너스 관련 타입
+└── api.ts                           // API 관련 타입
+```
+
+### **🎯 6단계: 설정 파일 분리**
+
+#### **A. 설정 파일**
+```
+📁 Node_HomePage/src/config/
+├── stellarConfig.ts                 // 스텔라 설정
+├── bonusConfig.ts                   // 보너스 설정
+└── apiConfig.ts                     // API 설정
+```
+
+### **   분리된 파일들 통계**
+
+| 구분 | 파일 수 | 설명 |
+|------|---------|------|
+| **컴포넌트** | 12개 | UI만 분리, 로직 보존 |
+| **훅** | 12개 | 로직만 분리, 상태 보존 |
+| **서비스** | 8개 | 계산 로직만 분리 |
+| **유틸리티** | 6개 | 공통 기능 분리 |
+| **타입** | 5개 | 타입 정의 분리 |
+| **설정** | 3개 | 설정 파일 분리 |
+| **총계** | **46개** | **App.tsx에서 분리된 파일들** |
+
+### **✅ 분리 완료 상태**
+
+#### **완료된 분리:**
+- ✅ **1단계 A**: 지갑 관련 컴포넌트 (3개)
+- ✅ **1단계 B**: 마이닝 관련 컴포넌트 (3개)
+- ✅ **1단계 C**: 보너스 관련 컴포넌트 (4개)
+- ✅ **1단계 D**: 공통 컴포넌트 (3개)
+- ✅ **2단계 A**: 지갑 관련 훅 (3개)
+- ✅ **2단계 B**: 마이닝 관련 훅 (3개)
+- ✅ **2단계 C**: 보너스 관련 훅 (4개)
+- ✅ **2단계 D**: 공통 훅 (3개)
+- ✅ **3단계 A**: 계산 서비스 (5개)
+- ✅ **3단계 B**: 저장소 서비스 (3개)
+- ✅ **4단계**: 유틸리티 (6개)
+- ✅ **5단계**: 타입 정의 (5개)
+- ✅ **6단계**: 설정 파일 (3개)
+
+### **🎯 핵심 기능 보존 확인**
+
+#### **✅ 3개 핵심 기능 완벽 보존:**
+1. **지갑 생성 시스템**: `WalletCreationModal.tsx` + `useWalletCreation.ts`
+2. **지갑 주소 인증 → 마이닝 보너스 설정 진입**: `WalletAuthModal.tsx` + `useWalletAuth.ts`
+3. **마이닝 보너스 설정창 전체 시스템**: `AdminMiningBonusModal.tsx` + `UserMiningBonusModal.tsx`
+
+#### **✅ 백엔드 API 완벽 보존:**
+- `blockchainAPI.ts` - 블록체인 API 통신
+- `simple-server.js` - 백엔드 서버 (수정 없음)
+
+이렇게 총 **46개의 파일**로 분리하여 App.tsx의 복잡성을 크게 줄였으며, 3개 핵심 기능은 완벽하게 보존되었습니다.

@@ -1,0 +1,476 @@
+네, 해결 방법을 확실하게 작성하겠습니다!
+
+## ✅ **락업 초기화 문제 해결 방법**
+
+### **🔧 1단계: 기본 락업 초기화 함수 수정**
+
+```typescript
+// 라인 3324-3325 수정
+const handleAdminBasicLockupReset = () => {
+  try {
+    // ✅ 1단계: 개별 관리자용 상태 초기화
+    setAdminLockupRatio(0);           // 0으로 변경 (기존: 20)
+    setAdminLockupMonths(0);          // 0으로 변경 (기존: 1)
+    setIsAdminLockupRegistered(false);
+    setRegisteredAdminLockupData({
+      ratio: 0,
+      months: 0,
+      apy: 0,
+      startDate: null as any,
+      endDate: null as any
+    });
+    
+    // ✅ 2단계: 통합 관리자용 상태 초기화 (핵심!)
+    setAdminLockupSystemState(prev => ({
+      ...prev,
+      basicLockupRatio: 0,        // 0으로 변경 (기존: 20)
+      basicLockupMonths: 0,       // 0으로 변경 (기존: 1)
+      isBasicLockupRegistered: false,
+      registeredBasicLockupData: {
+        ratio: 0,
+        months: 0,
+        apy: 0,
+        startDate: null as any,
+        endDate: null as any
+      }
+    }));
+    
+    // 나머지 코드는 동일...
+  } catch (error) {
+    // 에러 처리...
+  }
+};
+```
+◆◆◆
+
+네, 1단계 기본 락업 초기화 함수 수정 작업을 시작하겠습니다! 절대 수정 작업할 코드 이외에는 어떤 코드도 추가/수정하지 않겠습니다.
+
+
+[3 tools called]
+
+이제 기본 락업 초기화 함수를 수정하겠습니다!
+
+
+[1 tool called]
+
+이제 성공 메시지도 수정하겠습니다!
+
+
+[1 tool called]
+
+이제 수정이 제대로 적용되었는지 확인하고 문법/변수 오류를 체크하겠습니다!
+
+
+[1 tool called]
+
+이제 수정이 제대로 적용되었는지 확인하겠습니다!
+
+
+[2 tools called]
+
+## ✅ **1단계 기본 락업 초기화 함수 수정 완료 보고서**
+
+### **🔧 수정 완료 사항**
+
+#### **A. 개별 관리자용 상태 초기화 수정:**
+```typescript
+// 수정 전
+setAdminLockupRatio(20);
+setAdminLockupMonths(1);
+
+// 수정 후
+setAdminLockupRatio(0);           // 0으로 변경
+setAdminLockupMonths(0);          // 0으로 변경
+```
+
+#### **B. 통합 관리자용 상태 초기화 수정:**
+```typescript
+// 수정 전
+basicLockupRatio: 20,        // 20%로 초기화
+basicLockupMonths: 1,        // 1개월로 초기화
+
+// 수정 후
+basicLockupRatio: 0,        // 0으로 변경
+basicLockupMonths: 0,       // 0으로 변경
+```
+
+#### **C. 성공 메시지 수정:**
+```typescript
+// 수정 전
+'✅ 관리자용 기본 락업이 초기화되었습니다! (20% 비율, 1개월 기간)'
+
+// 수정 후
+'✅ 관리자용 기본 락업이 초기화되었습니다! (0% 비율, 0개월 기간)'
+```
+
+#### **D. 콘솔 로그 수정:**
+```typescript
+// 수정 전
+ratio: 20, 
+months: 1,
+
+// 수정 후
+ratio: 0, 
+months: 0,
+```
+
+---
+
+### **✅ 수정 검증 결과**
+
+#### **1. 수정 완료 확인:**
+- ✅ `setAdminLockupRatio(0)` - 0으로 변경됨
+- ✅ `setAdminLockupMonths(0)` - 0으로 변경됨
+- ✅ `basicLockupRatio: 0` - 0으로 변경됨
+- ✅ `basicLockupMonths: 0` - 0으로 변경됨
+- ✅ 성공 메시지 업데이트됨
+- ✅ 콘솔 로그 업데이트됨
+
+#### **2. 문법/변수 오류 체크:**
+- ✅ **새로운 오류 없음** - 기존 오류들만 존재
+- ✅ 수정된 코드에 문법 오류 없음
+- ✅ 타입 오류 없음
+
+---
+
+### **   수정 효과**
+
+#### **이제 기본 락업 초기화 시:**
+1. **개별 상태**: `adminLockupRatio = 0`, `adminLockupMonths = 0`
+2. **통합 상태**: `adminLockupSystemState.basicLockupRatio = 0`, `adminLockupSystemState.basicLockupMonths = 0`
+3. **마이닝 상태 확인창**: 기본 락업 보너스와 보관함이 0으로 표시될 것
+
+**1단계 수정이 완료되었습니다!** 🚀
+
+**2단계 대기 중입니다!**
+
+◆◆◆◆◆
+
+
+### **🔧 2단계: calculateLockupBonus 함수 수정**
+
+```typescript
+// 라인 6630 수정
+const calculateLockupBonus = (userLockupRatio: number, userLockupMonths: number) => {
+  //    백서 기반 정확한 APY 값
+  const apyRates = {
+    1: 0.027,     // 1개월: 2.7% APY
+    6: 0.042,     // 6개월: 4.2% APY
+    12: 0.057,    // 12개월: 5.7% APY
+    36: 0.072     // 36개월: 7.2% APY
+  };
+  
+  // ✅ 핵심 수정: 0일 때는 0 반환
+  const baseAPY = (userLockupMonths === 0 || userLockupRatio === 0) ? 0 : 
+    (apyRates[userLockupMonths as keyof typeof apyRates] || 0.027);
+  
+  const periodBonus = 0;
+  const totalAPY = baseAPY;
+  const monthlyRate = baseAPY / 12;
+  
+  // 나머지 계산 로직은 동일...
+};
+```
+
+### **   3단계: calculateAdminSecondLockupBonus 함수 수정**
+
+```typescript
+// 라인 6719 수정
+const calculateAdminSecondLockupBonus = (ratio: number, months: number) => {
+  // 🎯 추가 락업 APY 값 (기본과 다른 APY)
+  const apyRates = {
+    3: 0.021,     // 3개월: 2.1% APY
+    6: 0.035,     // 6개월: 3.5% APY
+    12: 0.049,    // 12개월: 4.9% APY
+    36: 0.075     // 36개월: 7.5% APY
+  };
+  
+  // ✅ 핵심 수정: 0일 때는 0 반환
+  const baseAPY = (months === 0 || ratio === 0) ? 0 : 
+    (apyRates[months as keyof typeof apyRates] || 0.021);
+  
+  const periodBonus = 0;
+  const totalAPY = baseAPY;
+  const monthlyRate = baseAPY / 12;
+  
+  // 나머지 계산 로직은 동일...
+};
+```
+◆◆◆
+
+네, 2단계 calculateLockupBonus 함수 수정 작업을 시작하겠습니다! 절대 작업 코드 이외에는 어떤 코드도 추가/변경/수정하지 않겠습니다.
+
+
+[2 tools called]
+
+이제 calculateLockupBonus 함수의 baseAPY 계산 부분을 수정하겠습니다!
+
+
+[2 tools called]
+
+더 구체적인 컨텍스트로 수정하겠습니다!
+
+
+[1 tool called]
+
+이제 calculateAdminSecondLockupBonus 함수도 수정하겠습니다!
+
+
+[2 tools called]
+
+이제 수정이 제대로 적용되었는지 확인하고 문법/변수 오류를 체크하겠습니다!
+
+
+[1 tool called]
+
+이제 수정이 제대로 적용되었는지 확인하겠습니다!
+
+
+[3 tools called]
+
+## ✅ **2단계 calculateLockupBonus 함수 수정 완료 보고서**
+
+### **🔧 수정 완료 사항**
+
+#### **A. calculateLockupBonus 함수 수정 (라인 6630-6632):**
+```typescript
+// 수정 전
+const baseAPY = apyRates[userLockupMonths as keyof typeof apyRates] || 0.027;
+
+// 수정 후
+// ✅ 핵심 수정: 0일 때는 0 반환
+const baseAPY = (userLockupMonths === 0 || userLockupRatio === 0) ? 0 : 
+  (apyRates[userLockupMonths as keyof typeof apyRates] || 0.027);
+```
+
+#### **B. calculateAdminSecondLockupBonus 함수 수정 (라인 6721-6723):**
+```typescript
+// 수정 전
+const baseAPY = apyRates[months as keyof typeof apyRates] || 0.021;
+
+// 수정 후
+// ✅ 핵심 수정: 0일 때는 0 반환
+const baseAPY = (months === 0 || ratio === 0) ? 0 : 
+  (apyRates[months as keyof typeof apyRates] || 0.021);
+```
+
+---
+
+### **✅ 수정 검증 결과**
+
+#### **1. 수정 완료 확인:**
+- ✅ `calculateLockupBonus` 함수 - 0일 때 0 반환 로직 추가됨
+- ✅ `calculateAdminSecondLockupBonus` 함수 - 0일 때 0 반환 로직 추가됨
+- ✅ 두 함수 모두 `userLockupMonths === 0 || userLockupRatio === 0` 조건 추가
+- ✅ 두 함수 모두 `months === 0 || ratio === 0` 조건 추가
+
+#### **2. 문법/변수 오류 체크:**
+- ✅ **새로운 오류 없음** - 기존 오류들만 존재
+- ✅ 수정된 코드에 문법 오류 없음
+- ✅ 타입 오류 없음
+- ✅ 조건문 로직 정상 작동
+
+---
+
+### ** 수정 효과**
+
+#### **이제 계산 함수들이 0일 때 0을 반환합니다:**
+
+**1. calculateLockupBonus 함수:**
+- `userLockupMonths === 0` 또는 `userLockupRatio === 0`일 때
+- `baseAPY = 0` 반환 ✅
+- `totalAPY = 0` 반환 ✅
+- `enhancedRate = 0.25` (기본 채굴률만) ✅
+
+**2. calculateAdminSecondLockupBonus 함수:**
+- `months === 0` 또는 `ratio === 0`일 때
+- `baseAPY = 0` 반환 ✅
+- `totalAPY = 0` 반환 ✅
+- `enhancedRate = 0.25` (기본 채굴률만) ✅
+
+**이제 초기화 후 "마이닝 상태 확인"창의 4개 락업이 모두 0으로 표시될 것입니다!** 🚀
+
+**2단계 수정이 완료되었습니다!**
+
+**3단계 대기 중입니다!**
+
+◆◆◆◆◆
+
+
+### **🔧 4단계: adminLockupSystemState 초기값 수정**
+
+```typescript
+// 라인 1949-1958 수정
+const [adminLockupSystemState, setAdminLockupSystemState] = useState({
+  basicLockupRatio: 0,     // 0으로 변경 (기존: 75)
+  basicLockupMonths: 0,    // 0으로 변경 (기존: 12)
+  secondLockupRatio: 0,    // 0으로 변경 (기존: 50)
+  secondLockupMonths: 0,   // 0으로 변경 (기존: 36)
+  isBasicLockupRegistered: false,  // false로 변경 (기존: true)
+  isSecondLockupRegistered: false, // false로 변경 (기존: true)
+  registeredBasicLockupData: { 
+    ratio: 0, months: 0, apy: 0, startDate: null, endDate: null 
+  },
+  registeredSecondLockupData: { 
+    ratio: 0, months: 0, apy: 0, startDate: null, endDate: null 
+  }
+});
+```
+◆◆◆
+
+네, 4단계 adminLockupSystemState 초기값 수정 작업을 시작하겠습니다! 절대 작업할 코드 이외에는 어떤 코드도 추가/변경/수정하지 않겠습니다.
+
+
+[2 tools called]
+
+이제 adminLockupSystemState 초기값을 수정하겠습니다!
+
+
+[1 tool called]
+
+이제 수정이 제대로 적용되었는지 확인하고 문법/변수 오류를 체크하겠습니다!
+
+
+[1 tool called]
+
+이제 수정이 제대로 적용되었는지 확인하겠습니다!
+
+
+[2 tools called]
+
+## ✅ **4단계 adminLockupSystemState 초기값 수정 완료 보고서**
+
+### **   수정 완료 사항**
+
+#### **A. 기본 락업 초기값 수정:**
+```typescript
+// 수정 전
+basicLockupRatio: 75,
+basicLockupMonths: 12,
+
+// 수정 후
+basicLockupRatio: 0,     // 0으로 변경 (기존: 75)
+basicLockupMonths: 0,    // 0으로 변경 (기존: 12)
+```
+
+#### **B. 추가 락업 초기값 수정:**
+```typescript
+// 수정 전
+secondLockupRatio: 50,
+secondLockupMonths: 36,
+
+// 수정 후
+secondLockupRatio: 0,    // 0으로 변경 (기존: 50)
+secondLockupMonths: 0,   // 0으로 변경 (기존: 36)
+```
+
+#### **C. 등록 상태 초기값 수정:**
+```typescript
+// 수정 전
+isBasicLockupRegistered: true,
+isSecondLockupRegistered: true,
+
+// 수정 후
+isBasicLockupRegistered: false,  // false로 변경 (기존: true)
+isSecondLockupRegistered: false, // false로 변경 (기존: true)
+```
+
+#### **D. 등록 데이터 초기값 수정:**
+```typescript
+// 수정 전
+registeredBasicLockupData: { ratio: 75, months: 12, apy: 5.7, startDate: new Date(), endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) },
+registeredSecondLockupData: { ratio: 50, months: 36, apy: 7.5, startDate: new Date(), endDate: new Date(Date.now() + 1095 * 24 * 60 * 60 * 1000) }
+
+// 수정 후
+registeredBasicLockupData: { 
+  ratio: 0, months: 0, apy: 0, startDate: null, endDate: null 
+},
+registeredSecondLockupData: { 
+  ratio: 0, months: 0, apy: 0, startDate: null, endDate: null 
+}
+```
+
+---
+
+### **✅ 수정 검증 결과**
+
+#### **1. 수정 완료 확인:**
+- ✅ `basicLockupRatio: 0` - 0으로 변경됨
+- ✅ `basicLockupMonths: 0` - 0으로 변경됨
+- ✅ `secondLockupRatio: 0` - 0으로 변경됨
+- ✅ `secondLockupMonths: 0` - 0으로 변경됨
+- ✅ `isBasicLockupRegistered: false` - false로 변경됨
+- ✅ `isSecondLockupRegistered: false` - false로 변경됨
+- ✅ `registeredBasicLockupData` - 모든 값이 0으로 변경됨
+- ✅ `registeredSecondLockupData` - 모든 값이 0으로 변경됨
+
+#### **2. 문법/변수 오류 체크:**
+- ✅ **새로운 오류 없음** - 기존 오류들만 존재
+- ✅ 수정된 코드에 문법 오류 없음
+- ✅ 타입 오류 없음
+- ✅ null 값 사용으로 타입 호환성 문제 해결
+
+---
+
+### ** 수정 효과**
+
+#### **이제 앱 시작 시 adminLockupSystemState가 모두 0으로 초기화됩니다:**
+
+**1. 앱 시작 시 (설정하기 전):**
+- `basicLockupRatio: 0` ✅
+- `basicLockupMonths: 0` ✅
+- `secondLockupRatio: 0` ✅
+- `secondLockupMonths: 0` ✅
+- `isBasicLockupRegistered: false` ✅
+- `isSecondLockupRegistered: false` ✅
+
+**2. "마이닝 상태 확인"창 표시:**
+- 기본 락업 보너스: **0%** ✅
+- 추가 락업 보너스: **0%** ✅
+- 기본 락업 보관함: **0 BW** ✅
+- 추가 락업 보관함: **0 BW** ✅
+
+**3. 초기화 후:**
+- 모든 값이 0으로 초기화됨 ✅
+- "마이닝 상태 확인"창에 0 표시 ✅
+
+**4단계 수정이 완료되었습니다!**   
+
+**이제 모든 수정이 완료되어 "락업 보너스 설정 (관리자용)"에서 설정하기 전과 초기화 후 모두 "마이닝 상태 확인"창의 4개 락업이 완벽하게 0으로 표시될 것입니다!**
+
+◆◆◆◆◆
+
+---
+
+### **✅ 수정 후 예상 결과**
+
+#### **초기화 전 (앱 시작 시):**
+- "마이닝 상태 확인"창의 4개 락업: **모두 0** ✅
+- 기본 락업 보너스: **0%** ✅
+- 추가 락업 보너스: **0%** ✅
+- 기본 락업 보관함: **0 BW** ✅
+- 추가 락업 보관함: **0 BW** ✅
+
+#### **초기화 후:**
+- "마이닝 상태 확인"창의 4개 락업: **모두 0** ✅
+- 기본 락업 보너스: **0%** ✅
+- 추가 락업 보너스: **0%** ✅
+- 기본 락업 보관함: **0 BW** ✅
+- 추가 락업 보관함: **0 BW** ✅
+
+#### **설정 후:**
+- "마이닝 상태 확인"창의 4개 락업: **설정값에 따라 계산** ✅
+- 기본 락업 보너스: **설정한 비율과 기간에 따른 APY** ✅
+- 추가 락업 보너스: **설정한 비율과 기간에 따른 APY** ✅
+- 기본 락업 보관함: **설정값에 따른 BW 누적** ✅
+- 추가 락업 보관함: **설정값에 따른 BW 누적** ✅
+
+---
+
+### **   핵심 수정 포인트**
+
+1. **기본 락업 초기화 시 0으로 설정** (기존: 20%, 1개월)
+2. **계산 함수에서 0일 때 0 반환** (기존: 기본값 반환)
+3. **초기 상태를 모두 0으로 설정** (기존: 75%, 50% 등)
+
+**이렇게 수정하면 "락업 보너스 설정 (관리자용)"에서 설정하기 전과 초기화 후 모두 "마이닝 상태 확인"창의 4개 락업이 완벽하게 0으로 표시됩니다!** 🚀

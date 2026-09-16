@@ -1,0 +1,823 @@
+import React, { useState, useEffect } from 'react';
+import Decimal from 'decimal.js';
+import { useTranslation } from 'react-i18next';
+import { 
+  ReferralModal, 
+  LockupModal, 
+  AttendanceModal, 
+  MerchantModal, 
+  SuccessModal 
+} from '../admin/AdminMiningSettingsModals';
+
+// CSS 애니메이션 스타일
+const styles = `
+  @keyframes fadeIn {
+    from { 
+      opacity: 0; 
+      transform: translateY(-10px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+  
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+  }
+`;
+
+// 스타일 태그 추가
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
+// ==================== 유저 전용 마이닝 보너스 설정 컴포넌트 시작 ====================
+
+interface UserMiningSettingsProps {
+  isMiningActive: boolean;
+  miningSettings: {
+    hashRate: number;
+    difficulty: number;
+    blockReward: number;
+    estimatedTime: number;
+    totalMined: number;
+    isMining: boolean;
+    miningAddress: string;
+    miningStartTime: string | null;
+    lastMinedBlock: number | null;
+  };
+  onStartMining: () => void;
+  onStopMining: () => void;
+  onUpdateMiningStats: (stats: any) => void;
+  authenticatedWalletAddress?: string;
+  onClose?: () => void;
+}
+
+const UserMiningSettings: React.FC<UserMiningSettingsProps> = ({
+  isMiningActive: propIsMiningActive,
+  miningSettings: propMiningSettings,
+  onStartMining,
+  onStopMining,
+  onUpdateMiningStats,
+  authenticatedWalletAddress = '',
+  onClose = () => {}
+}) => {
+  const { t } = useTranslation();
+
+  // ==================== 유저 전용 상태 관리 시작 ====================
+  // 마이닝 상태 (props와 연동)
+  const [isMiningActive, setIsMiningActive] = useState(propIsMiningActive);
+  const [miningStartTime, setMiningStartTime] = useState<Date | null>(
+    propMiningSettings.miningStartTime ? new Date(propMiningSettings.miningStartTime) : null
+  );
+  const [tick, setTick] = useState(0);
+  
+  // props 변경 시 내부 상태 업데이트
+  useEffect(() => {
+    setIsMiningActive(propIsMiningActive);
+    setMiningStartTime(propMiningSettings.miningStartTime ? new Date(propMiningSettings.miningStartTime) : null);
+  }, [propIsMiningActive, propMiningSettings.miningStartTime]);
+
+  // 유저용 초기값 설정 (모든 보너스 0%에서 시작)
+  const [consecutiveAttendanceDays, setConsecutiveAttendanceDays] = useState(0); // 출석 0일에서 시작
+  const [referralCount, setReferralCount] = useState(0); // 추천인 0명에서 시작
+  const [lockupRatio, setLockupRatio] = useState(0); // 락업 0%에서 시작
+  const [secondLockupRatio, setSecondLockupRatio] = useState(0); // 추가 락업 0%에서 시작
+  const [merchantStatus, setMerchantStatus] = useState<'none' | 'pending' | 'approved'>('none'); // 가맹점 미등록 상태
+
+  // 추천인 시스템 상태 (유저용 - 초기값 0)
+  const [referralSystemState, setReferralSystemState] = useState({
+    referralBonusRate: 0,
+    additionalBonusRate: 0,
+    cumulativeBonusRate: 0,
+    totalBonusRate: 0,
+    referrerAddress: '',
+    segmentInfo: [] as any[]
+  });
+
+  // 출석 달력
+  const [attendanceCalendar, setAttendanceCalendar] = useState<Record<string, boolean>>({});
+
+  // 락업 설정 (유저용 - 초기값 0)
+  const [lockupSettings, setLockupSettings] = useState({
+    ratio: 0,
+    period: 0,
+    isRegistered: false
+  });
+
+  const [secondLockupSettings, setSecondLockupSettings] = useState({
+    ratio: 0,
+    period: 0,
+    isRegistered: false
+  });
+
+  // 모달 상태
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [showLockupModal, setShowLockupModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showMerchantModal, setShowMerchantModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showReferralBonusDisplay, setShowReferralBonusDisplay] = useState(false);
+  const [showMiningStopStatus, setShowMiningStopStatus] = useState(false);
+
+  // 메시지 상태
+  const [successMessage, setSuccessMessage] = useState('');
+  const [referralBonusData, setReferralBonusData] = useState<any>(null);
+
+  // 접이식 UI 상태
+  const [isReferralBonusExpanded, setIsReferralBonusExpanded] = useState(false);
+  // ==================== 유저 전용 상태 관리 끝 ====================
+
+  // ==================== 유틸리티 함수들 시작 ====================
+  const getKoreanTime = () => {
+    const now = new Date();
+    const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    return koreanTime;
+  };
+
+  const formatDateKey = (year: number, month: number, day: number) => {
+    return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  };
+
+  const isAttendanceTimeValid = () => {
+    const koreanTime = getKoreanTime();
+    const hours = koreanTime.getHours();
+    return hours >= 9;
+  };
+
+  const isAttendanceBonusTimeValid = () => {
+    const koreanTime = getKoreanTime();
+    const hours = koreanTime.getHours();
+    const minutes = koreanTime.getMinutes();
+    const seconds = koreanTime.getSeconds();
+    
+    if (hours >= 9) {
+      return false;
+    }
+    return true;
+  };
+
+  const calculateAttendanceBonus = (days: number) => {
+    if (days <= 0) return { bonusRate: 0, message: '' };
+    if (days <= 7) return { bonusRate: 0.05, message: '5% 보너스' };
+    if (days <= 14) return { bonusRate: 0.10, message: '10% 보너스' };
+    if (days <= 30) return { bonusRate: 0.15, message: '15% 보너스' };
+    if (days <= 60) return { bonusRate: 0.20, message: '20% 보너스' };
+    if (days <= 90) return { bonusRate: 0.25, message: '25% 보너스' };
+    return { bonusRate: 0.30, message: '30% 보너스' };
+  };
+
+  const calculateConsecutiveDaysFromCalendar = (calendar: Record<string, boolean>, currentDate: Date) => {
+    const dates = Object.keys(calendar).sort();
+    if (dates.length === 0) return 0;
+
+    let consecutiveDays = 0;
+    const today = new Date(currentDate);
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = dates.length - 1; i >= 0; i--) {
+      const date = new Date(dates[i]);
+      date.setHours(0, 0, 0, 0);
+      
+      const diffTime = today.getTime() - date.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === consecutiveDays) {
+        consecutiveDays++;
+      } else {
+        break;
+      }
+    }
+
+    return consecutiveDays;
+  };
+  // ==================== 유틸리티 함수들 끝 ====================
+
+  // ==================== 유저 전용 마이닝 함수들 시작 ====================
+  const calculateRealTimeMiningRewardDecimal = () => {
+    if (!isMiningActive || !miningStartTime) {
+      return {
+        hourlyReward: new Decimal(0),
+        dailyReward: new Decimal(0),
+        totalBonusRate: new Decimal(0)
+      };
+    }
+
+    // 유저용 기본 보상 (0.25 BW/시간, 6.0 BW/일)
+    const baseHourlyReward = new Decimal(0.25);
+    const baseDailyReward = new Decimal(6.0);
+
+    // 유저용 초기값: 모든 보너스 0%에서 시작
+    const attendanceBonus = (consecutiveAttendanceDays > 0 && isAttendanceBonusTimeValid()) ? 
+      new Decimal(calculateAttendanceBonus(consecutiveAttendanceDays).bonusRate) : 
+      new Decimal(0);
+
+    const referralBonus = new Decimal(0);
+    const additionalReferralBonus = new Decimal(referralSystemState.additionalBonusRate || 0);
+
+    const lockupBonus = lockupRatio > 0 ? 
+      new Decimal(lockupRatio / 100).dividedBy(new Decimal(12)) : 
+      new Decimal(0);
+
+    const secondLockupBonus = secondLockupRatio > 0 ? 
+      new Decimal(secondLockupRatio / 100).dividedBy(new Decimal(12)) : 
+      new Decimal(0);
+
+    const merchantBonus = merchantStatus === 'approved' ? new Decimal(0.25) : new Decimal(0);
+
+    const totalBonusRate = attendanceBonus
+      .plus(referralBonus)
+      .plus(additionalReferralBonus)
+      .plus(lockupBonus)
+      .plus(secondLockupBonus)
+      .plus(merchantBonus);
+
+    const enhancedHourlyReward = baseHourlyReward.times(new Decimal(1).plus(totalBonusRate));
+    const enhancedDailyReward = baseDailyReward.times(new Decimal(1).plus(totalBonusRate));
+
+    return {
+      hourlyReward: enhancedHourlyReward,
+      dailyReward: enhancedDailyReward,
+      totalBonusRate: totalBonusRate
+    };
+  };
+
+  const calculateAccumulatedRewardDecimal = () => {
+    if (!isMiningActive || !miningStartTime) {
+      return new Decimal(0);
+    }
+
+    const now = new Date();
+    const elapsedTime = now.getTime() - miningStartTime.getTime();
+    const elapsedHours = new Decimal(elapsedTime).dividedBy(new Decimal(1000 * 60 * 60));
+
+    const rewardData = calculateRealTimeMiningRewardDecimal();
+    const accumulatedReward = rewardData.hourlyReward.times(elapsedHours);
+
+    return accumulatedReward;
+  };
+
+  const handleMiningStart = async () => {
+    try {
+      // App.tsx의 onStartMining 함수 호출
+      onStartMining();
+      
+      // 내부 상태도 업데이트
+      setIsMiningActive(true);
+      setMiningStartTime(new Date());
+      setTick(prevTick => prevTick + 1);
+      
+      console.log(t('mining.startSuccess'));
+    } catch (error) {
+      console.error('❌ 마이닝 시작 중 오류:', error);
+      alert(t('mining.startError') + ': ' + (error instanceof Error ? error.message : t('mining.unknownError')));
+    }
+  };
+
+  const handleMiningStop = async () => {
+    try {
+      // App.tsx의 onStopMining 함수 호출
+      onStopMining();
+      
+      // 내부 상태도 업데이트
+      setIsMiningActive(false);
+      setMiningStartTime(null);
+      setTick(0);
+      
+      console.log(t('mining.stopSuccess'));
+    } catch (error) {
+      console.error('❌ 마이닝 정지 중 오류:', error);
+      alert(t('mining.stopError') + ': ' + (error instanceof Error ? error.message : t('mining.unknownError')));
+    }
+  };
+  // ==================== 유저 전용 마이닝 함수들 끝 ====================
+
+  // ==================== 출석 관련 함수들 시작 ====================
+  const handleAttendanceCheck = async () => {
+    if (!isAttendanceTimeValid()) {
+      alert(t('mining.attendanceTimeLimit'));
+      return;
+    }
+
+    try {
+      const today = new Date();
+      const dateKey = formatDateKey(today.getFullYear(), today.getMonth() + 1, today.getDate());
+      
+      if (attendanceCalendar[dateKey]) {
+        alert(t('mining.alreadyAttended'));
+        return;
+      }
+
+      const response = await fetch('http://localhost:4001/attendance/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: authenticatedWalletAddress,
+          date: dateKey
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(t('mining.attendanceCheckComplete'), data);
+        
+        setAttendanceCalendar(prev => ({
+          ...prev,
+          [dateKey]: true
+        }));
+        
+        const newConsecutiveDays = calculateConsecutiveDaysFromCalendar({
+          ...attendanceCalendar,
+          [dateKey]: true
+        }, today);
+        
+        setConsecutiveAttendanceDays(newConsecutiveDays);
+        
+        setSuccessMessage(t('mining.attendanceSuccess', { days: newConsecutiveDays }));
+        setShowSuccessModal(true);
+        
+      } else {
+        const errorData = await response.json();
+        console.error('❌ 출석 체크 실패:', errorData);
+        alert(t('mining.attendanceFailed') + ': ' + errorData.message);
+      }
+    } catch (error) {
+      console.error('❌ 출석 체크 중 오류:', error);
+      alert(t('mining.attendanceError') + ': ' + (error instanceof Error ? error.message : t('mining.unknownError')));
+    }
+  };
+
+  const getAttendanceCalendarStatus = (year: number, month: number, day: number) => {
+    const koreanTime = getKoreanTime();
+    const hours = koreanTime.getHours();
+    const minutes = koreanTime.getMinutes();
+    const seconds = koreanTime.getSeconds();
+    const currentDate = new Date();
+    const isToday = currentDate.getFullYear() === year && currentDate.getMonth() === month - 1 && currentDate.getDate() === day;
+    const dateKey = formatDateKey(year, month, day);
+    const isAttended = attendanceCalendar[dateKey];
+
+    if (isAttended) {
+      return 'attended';
+    } else if (isToday && (hours > 9 || (hours === 9 && minutes >= 0 && seconds >= 0))) {
+      return 'active';
+    } else {
+      return 'inactive';
+    }
+  };
+
+  const getAttendanceStatusDisplay = () => {
+    const koreanTime = getKoreanTime();
+    const hours = koreanTime.getHours();
+    const minutes = koreanTime.getMinutes();
+    const seconds = koreanTime.getSeconds();
+
+    if (hours >= 9) {
+      return false;
+    } else {
+      return {
+        status: 'active',
+        message: t('mining.attendanceActive', { days: consecutiveAttendanceDays }),
+        color: 'text-green-500'
+      };
+    }
+  };
+  // ==================== 출석 관련 함수들 끝 ====================
+
+  // ==================== 락업 관련 함수들 시작 ====================
+  const handleBasicLockupSubmit = async () => {
+    try {
+      const response = await fetch('http://localhost:4001/lockup/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: authenticatedWalletAddress,
+          ratio: lockupSettings.ratio,
+          period: lockupSettings.period
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(t('mining.basicLockupRegisterComplete'), data);
+        
+        setLockupRatio(lockupSettings.ratio);
+        setLockupSettings(prev => ({ ...prev, isRegistered: true }));
+        
+        setSuccessMessage(t('mining.basicLockupSuccess', { ratio: lockupSettings.ratio, period: lockupSettings.period }));
+        setShowSuccessModal(true);
+        
+      } else {
+        const errorData = await response.json();
+        console.error('❌ 기본 락업 등록 실패:', errorData);
+        alert(t('mining.basicLockupFailed') + ': ' + errorData.message);
+      }
+    } catch (error) {
+      console.error('❌ 기본 락업 등록 중 오류:', error);
+      alert(t('mining.basicLockupError') + ': ' + (error instanceof Error ? error.message : t('mining.unknownError')));
+    }
+  };
+
+  const handleSecondLockupSubmit = async () => {
+    try {
+      const response = await fetch('http://localhost:4001/second-lockup/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: authenticatedWalletAddress,
+          ratio: secondLockupSettings.ratio,
+          period: secondLockupSettings.period
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(t('mining.secondLockupRegisterComplete'), data);
+        
+        setSecondLockupRatio(secondLockupSettings.ratio);
+        setSecondLockupSettings(prev => ({ ...prev, isRegistered: true }));
+        
+        setSuccessMessage(t('mining.secondLockupSuccess', { ratio: secondLockupSettings.ratio, period: secondLockupSettings.period }));
+        setShowSuccessModal(true);
+        
+      } else {
+        const errorData = await response.json();
+        console.error('❌ 추가 락업 등록 실패:', errorData);
+        alert(t('mining.secondLockupFailed') + ': ' + errorData.message);
+      }
+    } catch (error) {
+      console.error('❌ 추가 락업 등록 중 오류:', error);
+      alert(t('mining.secondLockupError') + ': ' + (error instanceof Error ? error.message : t('mining.unknownError')));
+    }
+  };
+  // ==================== 락업 관련 함수들 끝 ====================
+
+  // ==================== 접이식 UI 함수들 시작 ====================
+  const toggleReferralBonusExpanded = () => {
+    setIsReferralBonusExpanded(!isReferralBonusExpanded);
+  };
+  // ==================== 접이식 UI 함수들 끝 ====================
+
+  // ==================== useEffect 시작 ====================
+  useEffect(() => {
+    const checkConsecutiveDays = () => {
+      const now = new Date();
+      const resetTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+      
+      const koreanTime = getKoreanTime();
+      const hours = koreanTime.getHours();
+      const minutes = koreanTime.getMinutes();
+      const seconds = koreanTime.getSeconds();
+      
+      if (hours === 9 && minutes === 0 && seconds === 0) {
+        console.log(t('mining.attendanceResetStart'));
+        setConsecutiveAttendanceDays(0);
+        console.log(t('mining.attendanceResetComplete'));
+      }
+      
+      const dates = Object.keys(attendanceCalendar).sort();
+      if (dates.length === 0) {
+        setConsecutiveAttendanceDays(0);
+        return;
+      }
+      
+      const lastAttendanceDate = new Date(dates[dates.length - 1]);
+      const diffTime = now.getTime() - lastAttendanceDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 1) {
+        setConsecutiveAttendanceDays(0);
+        console.log(t('mining.consecutiveReset'));
+      } else {
+        const consecutiveDays = calculateConsecutiveDaysFromCalendar(attendanceCalendar, now);
+        setConsecutiveAttendanceDays(consecutiveDays);
+        console.log(t('mining.attendanceUpdate', { days: consecutiveDays }));
+      }
+    };
+
+    if (isMiningActive && miningStartTime) {
+      checkConsecutiveDays();
+    }
+  }, [attendanceCalendar, isMiningActive, miningStartTime]);
+
+  useEffect(() => {
+    if (isMiningActive && miningStartTime) {
+      const interval = setInterval(() => {
+        setTick(prevTick => prevTick + 1);
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isMiningActive, miningStartTime]);
+  // ==================== useEffect 끝 ====================
+
+  // ==================== 렌더링 시작 ====================
+  return (
+    <>
+      {/* 메인 마이닝 보너스 설정 창 */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="p-4">
+            {/* 헤더 */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">⚙️ {t('mining.userSettings')}</h2>
+              <button 
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* 고정 메시지 */}
+            <div className="mb-8">
+              <p className="text-gray-700 text-center">
+                {t('mining.createWalletAndNode')} {t('mining.description')}
+              </p>
+            </div>
+
+            {/* 인증된 지갑 주소 표시 */}
+            {authenticatedWalletAddress && (
+              <div className="mb-6 p-4 bg-green-100 border border-green-300 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-700 font-semibold">{t('mining.authenticatedWallet')}</p>
+                    <p className="text-xs text-green-600 font-mono">{authenticatedWalletAddress}</p>
+                  </div>
+                  <div className="text-green-600 text-xl">✅</div>
+                </div>
+              </div>
+            )}
+
+            {/* 4개 보너스 버튼 */}
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              {/* 추천 보너스 버튼 */}
+              <button
+                onClick={() => setShowReferralModal(true)}
+                className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-lg hover:shadow-lg transition-all duration-200 text-lg"
+              >
+                👥 {t('mining.referralBonus')}
+              </button>
+
+              {/* 락업 보너스 버튼 */}
+              <button
+                onClick={() => {
+                  if (!authenticatedWalletAddress) {
+                    alert(t('mining.walletRequired'));
+                    return;
+                  }
+                  if (!isMiningActive) {
+                    alert(t('mining.miningRequired'));
+                    return;
+                  }
+                  setShowLockupModal(true);
+                }}
+                className="px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg transition-all duration-200 text-lg"
+              >
+                🔒 {t('mining.lockupBonus')}
+              </button>
+
+              {/* 출석 보너스 버튼 */}
+              <button
+                onClick={() => setShowAttendanceModal(true)}
+                className="px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg hover:shadow-lg transition-all duration-200 text-lg"
+              >
+                📅 {t('mining.attendanceBonus')}
+              </button>
+
+              {/* 가맹점 보너스 버튼 */}
+              <button
+                onClick={() => setShowMerchantModal(true)}
+                className="px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold rounded-lg hover:shadow-lg transition-all duration-200 text-lg"
+              >
+                🏪 {t('mining.merchantBonus')}
+              </button>
+            </div>
+
+            {/* 마이닝 상태 확인 창 */}
+            {isMiningActive && (
+              <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 mb-6">
+                <h3 className="text-lg font-bold text-blue-700 text-center mb-3">{t('mining.statusCheck')}</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {calculateRealTimeMiningRewardDecimal().hourlyReward.toFixed(8)} BW
+                    </div>
+                    <p className="text-blue-700">{t('mining.hourlyReward')}</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {calculateRealTimeMiningRewardDecimal().dailyReward.toFixed(8)} BW
+                    </div>
+                    <p className="text-blue-700">{t('mining.dailyReward')}</p>
+                  </div>
+                </div>
+                
+                {/* 보너스 상세 정보 */}
+                <div className="mt-4 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span>{t('mining.attendanceBonus')}:</span>
+                    <span className="font-semibold">
+                      {consecutiveAttendanceDays > 0 && isAttendanceBonusTimeValid() ? 
+                        `${(calculateAttendanceBonus(consecutiveAttendanceDays).bonusRate * 100).toFixed(1)}%` : 
+                        '0%'
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('mining.referralBonus')}:</span>
+                    <span className="font-semibold">
+                      {((referralSystemState.referralBonusRate || 0) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('mining.lockupBonus')}:</span>
+                    <span className="font-semibold">
+                      {lockupRatio > 0 ? `${((lockupRatio / 100) / 12 * 100).toFixed(3)}%` : '0%'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('mining.secondLockupBonus')}:</span>
+                    <span className="font-semibold">
+                      {secondLockupRatio > 0 ? `${((secondLockupRatio / 100) / 12 * 100).toFixed(3)}%` : '0%'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t('mining.merchantBonus')}:</span>
+                    <span className="font-semibold">
+                      {merchantStatus === 'approved' ? '25%' : '0%'}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* 락업 금고 정보 */}
+                {(lockupRatio > 0 || secondLockupRatio > 0) && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 mb-2">🔒 {t('mining.lockupVault')}</h4>
+                    <div className="space-y-1 text-xs">
+                      {lockupRatio > 0 && (
+                        <div className="flex justify-between">
+                          <span>{t('mining.basicLockup')}:</span>
+                          <span className="font-semibold">{lockupRatio}% ({lockupSettings.period}{t('mining.months')})</span>
+                        </div>
+                      )}
+                      {secondLockupRatio > 0 && (
+                        <div className="flex justify-between">
+                          <span>{t('mining.additionalLockup')}:</span>
+                          <span className="font-semibold">{secondLockupRatio}% ({secondLockupSettings.period}{t('mining.months')})</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 실시간 마이닝 보상 창 (관리자 전용 초기화 버튼 제거) */}
+            {isMiningActive && miningStartTime && (() => {
+              const rewardData = calculateRealTimeMiningRewardDecimal();
+              const accumulatedReward = calculateAccumulatedRewardDecimal();
+              const totalElapsedTime = Date.now() - miningStartTime.getTime();
+              
+              return (
+                <div className="bg-green-100 border border-green-300 rounded-lg p-3 mt-4">
+                  {/* 관리자 전용 초기화 버튼 제거됨 */}
+                  
+                  <h3 className="text-lg font-bold text-green-700 text-center mb-3">{t('mining.realtimeReward')}</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-green-600">
+                        {accumulatedReward.toFixed(8)} BW
+                      </div>
+                      <p className="text-sm text-green-700">{t('mining.accumulatedReward')}</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-green-600">
+                        {(() => {
+                          const decimalTotalElapsedTime = new Decimal(totalElapsedTime);
+                          const decimalHours = decimalTotalElapsedTime.dividedBy(new Decimal(1000 * 60 * 60)).floor();
+                          const decimalMinutes = decimalTotalElapsedTime.dividedBy(new Decimal(1000 * 60)).modulo(new Decimal(60)).floor();
+                          const decimalSeconds = decimalTotalElapsedTime.dividedBy(new Decimal(1000)).modulo(new Decimal(60)).floor();
+                          
+                          return `${decimalHours.toString().padStart(2, '0')}:${decimalMinutes.toString().padStart(2, '0')}:${decimalSeconds.toString().padStart(2, '0')}`;
+                        })()}
+                      </div>
+                      <p className="text-sm text-green-700">{t('mining.elapsedTime')}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 하단 버튼들 */}
+            <div className="flex flex-wrap gap-3 justify-center mt-8">
+              {/* 마이닝 시작 (보너스 적용) 버튼 */}
+              <button 
+                onClick={handleMiningStart}
+                className="px-4 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                ⚡ {t('mining.startMining')}
+              </button>
+              
+              {/* 마이닝 정지 버튼 */}
+              <button 
+                onClick={handleMiningStop}
+                className="px-4 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+              >
+                ⏹️ {t('mining.stopMining')}
+              </button>
+              
+              {/* 나의 지갑 버튼 */}
+              <button 
+                onClick={() => {
+                  onClose();
+                  // setSeedPhrase('');
+                  // setShowMyWallet(true);
+                }}
+                className="px-4 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                🔑 {t('wallet.myWallet')}
+              </button>
+              
+              {/* X닫기 버튼 */}
+              <button 
+                onClick={() => {
+                  onClose();
+                  setShowMiningStopStatus(false);
+                }}
+                className="px-4 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                ❌ {t('common.close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 모든 모달들 (관리자 전용 기능 제거) */}
+      <ReferralModal
+        isOpen={showReferralModal}
+        onClose={() => setShowReferralModal(false)}
+        authenticatedWalletAddress={authenticatedWalletAddress}
+        referralCount={referralCount}
+        referralSystemState={referralSystemState}
+        onAddReferral={() => {}} // 유저용에서는 빈 함수
+        onResetReferral={() => {}} // 유저용에서는 빈 함수
+        onToggleExpanded={toggleReferralBonusExpanded}
+        isExpanded={isReferralBonusExpanded}
+      />
+
+      <LockupModal
+        isOpen={showLockupModal}
+        onClose={() => setShowLockupModal(false)}
+        lockupSettings={lockupSettings}
+        secondLockupSettings={secondLockupSettings}
+        onBasicLockupSubmit={handleBasicLockupSubmit}
+        onSecondLockupSubmit={handleSecondLockupSubmit}
+        onBasicLockupReset={() => {}} // 유저용에서는 빈 함수
+        onSecondLockupReset={() => {}} // 유저용에서는 빈 함수
+        onLockupSettingsChange={(field, value) => 
+          setLockupSettings(prev => ({ ...prev, [field]: value }))
+        }
+        onSecondLockupSettingsChange={(field, value) => 
+          setSecondLockupSettings(prev => ({ ...prev, [field]: value }))
+        }
+        showBasicLockupResetModal={false} // 유저용에서는 항상 false
+        showSecondLockupResetModal={false} // 유저용에서는 항상 false
+        onShowBasicLockupResetModal={() => {}} // 유저용에서는 빈 함수
+        onShowSecondLockupResetModal={() => {}} // 유저용에서는 빈 함수
+      />
+
+      <AttendanceModal
+        isOpen={showAttendanceModal}
+        onClose={() => setShowAttendanceModal(false)}
+        consecutiveAttendanceDays={consecutiveAttendanceDays}
+        attendanceCalendar={attendanceCalendar}
+        onAttendanceCheck={handleAttendanceCheck}
+        getAttendanceCalendarStatus={getAttendanceCalendarStatus}
+        getAttendanceStatusDisplay={getAttendanceStatusDisplay}
+        currentYear={new Date().getFullYear()}
+        currentMonth={new Date().getMonth() + 1}
+      />
+
+      <MerchantModal
+        isOpen={showMerchantModal}
+        onClose={() => setShowMerchantModal(false)}
+        merchantStatus={merchantStatus}
+      />
+
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        message={successMessage}
+      />
+    </>
+  );
+  // ==================== 렌더링 끝 ====================
+};
+
+export default UserMiningSettings;
+// ==================== 유저 전용 마이닝 보너스 설정 컴포넌트 끝 ====================

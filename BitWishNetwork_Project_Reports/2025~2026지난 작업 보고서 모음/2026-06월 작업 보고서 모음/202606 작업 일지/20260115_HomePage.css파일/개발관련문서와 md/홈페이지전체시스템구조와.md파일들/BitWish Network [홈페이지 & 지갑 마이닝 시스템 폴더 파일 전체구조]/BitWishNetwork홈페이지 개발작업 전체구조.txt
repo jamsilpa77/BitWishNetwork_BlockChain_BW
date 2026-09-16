@@ -1,0 +1,40 @@
+### **1단계: 홈페이지 기본 구조**
+```
+src/
+├── App.tsx                    # 메인 라우팅
+├── pages/
+│   ├── HomePage.tsx          # 홈페이지
+│   ├── BlockExplorer.tsx     # 블록 익스플로러
+│   └── Navigation.tsx        # 네비게이션 메뉴
+```
+
+### **2단계: 지갑 시스템 (4-5개 파일)**
+```
+src/components/wallet/
+├── WalletCreation.tsx        # 지갑 생성
+├── WalletBalance.tsx         # 잔액 표시
+├── WalletTransaction.tsx     # 거래 처리
+├── WalletSettings.tsx        # 설정 관리
+└── WalletRecovery.tsx        # 복구 기능
+```
+
+### **3단계: 마이닝 시스템 (완전 분리)**
+```
+src/pages/mining/
+├── UserMiningPage.tsx        # 유저 마이닝 페이지
+└── AdminMiningPage.tsx       # 관리자 마이닝 페이지
+
+src/components/mining/user/
+├── UserAttendanceBonus.tsx   # 유저 출석보너스
+├── UserReferralBonus.tsx     # 유저 추천보너스
+├── UserLockupBonus.tsx       # 유저 락업보너스
+├── UserPartnerBonus.tsx      # 유저 가맹점보너스
+└── UserHalvingSystem.tsx     # 유저 반감기
+
+src/components/mining/admin/
+├── AdminAttendanceBonus.tsx  # 관리자 출석보너스
+├── AdminReferralBonus.tsx    # 관리자 추천보너스
+├── AdminLockupBonus.tsx      # 관리자 락업보너스
+├── AdminPartnerBonus.tsx     # 관리자 가맹점보너스
+└── AdminHalvingSystem.tsx    # 관리자 반감기
+```

@@ -1,0 +1,104 @@
+[
+  {
+    "_id": "68e9e58933a6ca0f8e3cd2cc",
+    "address": "BitWish-Foundation",
+    "balance": "4200000000",
+    "nonce": 0,
+    "createdAt": 1760159113316,
+    "lastActivity": 1780626460521,
+    "isActive": true,
+    "codeHash": "",
+    "storageRoot": "",
+    "isContract": false
+  },
+  {
+    "_id": "6a1924f1baea6606aa796273",
+    "address": "BW71C4553632B7A4DA7121E76768F051C1DAE3F608",
+    "balance": "14950",
+    "nonce": 0,
+    "createdAt": 1780032753715,
+    "lastActivity": 1785384205050,
+    "isActive": true,
+    "codeHash": "",
+    "storageRoot": "",
+    "isContract": false
+  },
+  {
+    "_id": "6a192525baea6606aa796275",
+    "address": "BW34FE4528EBDE737100AA8C5F656EB94FBB17A626",
+    "balance": "18400",
+    "nonce": 0,
+    "createdAt": 1780032805088,
+    "lastActivity": 1785383898533,
+    "isActive": true,
+    "codeHash": "",
+    "storageRoot": "",
+    "isContract": false
+  },
+  {
+    "_id": "6a193a95baea6606aa796277",
+    "address": "BW29DFB93C6DDB4F006C99C37CE85959D2852E9DAC",
+    "balance": "0",
+    "nonce": 0,
+    "createdAt": 1780038293490,
+    "lastActivity": 1780626460515,
+    "isActive": true,
+    "codeHash": "",
+    "storageRoot": "",
+    "isContract": false
+  },
+  {
+    "_id": "6a1964c9baea6606aa796279",
+    "address": "BW9F5FF090231236037F250A523B4FC320FB44BFA8",
+    "balance": "21350",
+    "nonce": 0,
+    "createdAt": 1780049097380,
+    "lastActivity": 1785384054996,
+    "isActive": true,
+    "codeHash": "",
+    "storageRoot": "",
+    "isContract": false
+  },
+  {
+    "_id": "6a1a5f9820c53b7fe605bc4e",
+    "address": "BitWish-Miner-Pool",
+    "balance": "13650000000",
+    "lastActivity": 1780626460519,
+    "codeHash": "",
+    "storageRoot": "",
+    "isContract": false
+  },
+  {
+    "_id": "6a1a5f9820c53b7fe605bc4f",
+    "address": "BitWish-Partner-Pool",
+    "balance": "3150000000",
+    "lastActivity": 1780626460520,
+    "codeHash": "",
+    "storageRoot": "",
+    "isContract": false
+  },
+  {
+    "_id": "6a22c1801eac100afb262629",
+    "address": "BWC19E32B03F98B0AC0794C8B7DE652F7AC7915B68",
+    "balance": "17050",
+    "nonce": 0,
+    "createdAt": 1780662656557,
+    "lastActivity": 1785383824841,
+    "isActive": true,
+    "codeHash": "",
+    "storageRoot": "",
+    "isContract": false
+  },
+  {
+    "_id": "6a966147bc314a1039e707af",
+    "address": "BWD403933649E57D4B3CDE374F22E83A4E14E0C602",
+    "balance": "3250",
+    "nonce": 0,
+    "createdAt": 1788240198386,
+    "lastActivity": 1789126377354,
+    "isActive": true,
+    "codeHash": "",
+    "storageRoot": "",
+    "isContract": false
+  }
+]

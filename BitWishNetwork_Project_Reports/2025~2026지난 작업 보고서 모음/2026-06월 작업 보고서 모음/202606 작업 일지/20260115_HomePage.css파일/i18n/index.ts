@@ -1,0 +1,1712 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+
+const resources = {
+  ko: {
+    translation: {
+      // BitWish 번역 추가
+      bitwish: {
+        wallet: {
+          auth: {
+            title: "BitWish 지갑 인증",
+            subtitle: "BitWish Network 지갑으로 로그인하세요",
+            infoTitle: "BitWish 지갑 정보 입력",
+            infoDescription: "BitWish 지갑 주소와 비밀번호를 입력하세요",
+            addressLabel: "BitWish 지갑 주소",
+            addressPlaceholder: "BW + 40자리 16진수 주소를 입력하세요 (총 42자리)",
+            passwordLabel: "비밀번호",
+            passwordPlaceholder: "지갑 비밀번호를 입력하세요",
+            button: "BitWish 지갑 인증",
+            authenticating: "BitWish 지갑 인증 중...",
+            help: "BitWish 지갑 인증 도움말",
+            changePassword: "비밀번호 변경",
+            setupSecondPassword: "2차 비밀번호 설정하기",
+            success: {
+              authenticated: "BitWish 지갑 인증 성공"
+            }
+          },
+          changePasswordModal: {
+            title: "BitWish 비밀번호 변경",
+            description: "기존 비밀번호를 새로운 비밀번호로 변경하세요",
+            walletAddressLabel: "BitWish 지갑 주소",
+            currentPasswordLabel: "기존 비밀번호",
+            newPasswordLabel: "새 비밀번호",
+            confirmPasswordLabel: "새 비밀번호 확인",
+            currentPasswordPlaceholder: "기존 비밀번호를 입력하세요",
+            newPasswordPlaceholder: "새 비밀번호를 입력하세요",
+            confirmPasswordPlaceholder: "새 비밀번호를 다시 입력하세요",
+            cancelButton: "취소",
+            confirmButton: "확인",
+            changingButton: "변경 중...",
+            error: {
+              walletAddressRequired: "지갑 주소가 필요합니다.",
+              currentPasswordRequired: "기존 비밀번호가 필요합니다.",
+              newPasswordRequired: "새 비밀번호가 필요합니다.",
+              confirmPasswordRequired: "새 비밀번호 확인이 필요합니다.",
+              passwordsDoNotMatch: "새 비밀번호와 확인 비밀번호가 일치하지 않습니다.",
+              passwordTooShort: "새 비밀번호는 최소 8자 이상이어야 합니다.",
+              invalidAddressFormat: "올바른 BitWish 지갑 주소 형식이 아닙니다.",
+              changeFailed: "비밀번호 변경에 실패했습니다.",
+              changeError: "비밀번호 변경 중 오류가 발생했습니다."
+            },
+            success: {
+              changeComplete: "비밀번호가 성공적으로 변경되었습니다."
+            }
+          },
+          secondPassword: {
+            title: "BitWish 2차 비밀번호 설정",
+            description: "BitWish 지갑 주소와 강력한 비밀번호를 설정하여 보안을 강화하세요.",
+            walletAddressLabel: "BitWish 지갑 주소",
+            walletAddressPlaceholder: "BW + 40자리 16진수 주소를 입력하세요 (총 42자리)",
+            walletAddressExample: "예: BW1234567890ABCDEF1234567890ABCDEF12345678",
+            passwordLabel: "비밀번호",
+            passwordPlaceholder: "새로운 비밀번호를 입력하세요",
+            confirmPasswordLabel: "비밀번호 확인",
+            confirmPasswordPlaceholder: "비밀번호를 다시 입력하세요",
+            cancelButton: "취소",
+            confirmButton: "확인",
+            settingButton: "설정 중...",
+            securityNoticeTitle: "보안 안내:",
+            securityNotice1: "비밀번호는 PBKDF2 + 솔팅으로 암호화됩니다",
+            securityNotice2: "100,000회 반복 해싱으로 보안을 강화합니다",
+            securityNotice3: "비밀번호는 서버에 저장되지 않습니다",
+            error: {
+              walletAddressRequired: "지갑 주소를 입력해주세요.",
+              passwordRequired: "비밀번호를 입력해주세요.",
+              passwordMismatch: "비밀번호가 일치하지 않습니다.",
+              alreadyExists: "이미 비밀번호가 설정되어 있습니다. 비밀번호 초기화 버튼을 사용하여 초기화 후 다시 설정해주세요.",
+              setupFailed: "비밀번호 설정에 실패했습니다.",
+              setupError: "비밀번호 설정 중 오류가 발생했습니다."
+            },
+            success: {
+              setupComplete: "2차 비밀번호가 성공적으로 설정되었습니다."
+            }
+          },
+          create: {
+            title: "BitWish 지갑 생성",
+            description: "완전한 독립성을 가진 BitWish Network 지갑을 생성하세요",
+            infoTitle: "BitWish 지갑 정보 입력",
+            infoDescription: "BitWish-256 암호화로 보호되는 안전한 지갑을 생성합니다",
+            walletNameLabel: "지갑 이름 (선택사항)",
+            walletNamePlaceholder: "My BitWish Wallet",
+            passwordLabel: "비밀번호 입력",
+            passwordPlaceholder: "8자리 이상의 안전한 비밀번호를 입력하세요",
+            confirmPasswordLabel: "비밀번호 확인",
+            confirmPasswordPlaceholder: "비밀번호를 다시 입력하세요",
+            button: "BitWish 지갑 생성",
+            creating: "BitWish 지갑 생성 중...",
+            error: "BitWish 지갑 생성에 실패했습니다. 다시 시도해주세요.",
+            step2: {
+              title: "시드문구 확인",
+              description: "다음 24단어를 안전한 곳에 저장하세요",
+              selected: "선택된 단어",
+              verifyButton: "검증 완료",
+              copySeed: "시드문구 복사",
+              nextButton: "다음 단계",
+              copySuccess: "시드문구가 복사되었습니다",
+              copyError: "복사에 실패했습니다",
+              seedCopied: "시드문구가 복사되었습니다",
+              seedCopyFailed: "시드문구 복사에 실패했습니다"
+            },
+            step3: {
+              title: "보안 검증 단어 확인",
+              description: "다음 4개 단어를 순서대로 입력하여 지갑 보안을 확인하세요",
+              wordLabel: "{position}번째 단어",
+              wordPlaceholder: "단어를 입력하세요",
+              invalidWord: "올바른 단어가 아닙니다",
+              verifyButton: "검증 완료"
+            },
+            step4: {
+              title: "BitWish 지갑 생성 완료",
+              description: "지갑이 성공적으로 생성되었습니다. 안전하게 보관하세요",
+              walletName: "지갑 이름",
+              defaultWalletName: "나의 BitWish 지갑",
+              address: "지갑 주소",
+              qrCode: "QR 코드",
+              completeButton: "지갑 생성 완료"
+            }
+          },
+          seedPhrase: {
+            title: "BitWish 시드문구 인증",
+            subtitle: "BitWish 지갑에 접근하기 위해 시드문구를 입력하세요",
+            inputTitle: "BitWish 시드문구 입력",
+            label: "24단어 시드문구",
+            placeholder: "24단어 시드문구를 공백으로 구분하여 입력하세요",
+            note: "정확히 24단어를 입력해야 합니다",
+            trimInfo: "시드문구 입력 시 앞뒤 공백이 자동으로 제거됩니다.",
+            authenticate: "BitWish 지갑 인증",
+            authenticating: "인증 중...",
+            success: "BitWish 지갑 인증이 완료되었습니다.",
+            error: "BitWish 지갑 인증 중 오류가 발생했습니다.",
+            invalid: "유효하지 않은 시드문구입니다. 24단어를 정확히 입력해주세요.",
+            mismatch: "시드문구가 지갑 주소와 일치하지 않습니다. 공백이나 오타를 확인해주세요.",
+            invalidWallet: "유효하지 않은 BitWish 지갑입니다",
+            help: "BitWish 시드문구 인증 도움말"
+          }
+        }
+      },
+      // 메인 네비게이션
+      navigation: {
+        bwMainnet: "BW 메인넷",
+        bwExplorer: "블록 익스플로러",
+        bwNode: "노드",
+        bwCommunity: "커뮤니티",
+        bwDashboard: "대시보드"
+      },
+      // 홈페이지
+      home: {
+        title: "BitWish Network",
+        subtitle: "독립적인 Layer 1 블록체인 플랫폼",
+        description: "안전하고 빠르며 글로벌한 디지털 자산 거래를 위한 차세대 블록체인 네트워크",
+        networkStatus: {
+          title: "BitWish Network 현황",
+          bitwish: "BitWish 독립 블록체인",
+          consensus: "SCP + PoW 합의 프로토콜",
+          network: "P2P 네트워크 구조"
+        },
+        blockchain: {
+          realTimeStatus: "실시간 블록체인 상태",
+          status: "블록체인 상태",
+          checkStatus: "실시간 블록체인 상태를 확인하세요",
+          checkRealTimeStatus: "실시간 블록체인 상태를 확인하세요",
+          lastUpdate: "마지막 업데이트",
+          totalSupply: "BitWish 총 공급량",
+          currentSupply: "현재 발행량",
+          miningBonus: "마이닝 & 보너스",
+          totalIssuance: "총 발행량",
+          totalIssuance210Billion: "총 발행량 (210억개)",
+          bitwishTotalSupply: "BitWish 총 공급량",
+          currentIssuance: "현재 발행량",
+          realTimeBlockchainData: "실시간 블록체인 데이터",
+          remainingIssuance: "잔여 발행량",
+          issuanceRate: "발행률",
+          totalBlocks: "총 블록",
+          generatedBlocks: "생성된 블록",
+          networkStatus: "네트워크 상태",
+          realTimeConnection: "실시간 연결",
+          refreshStatus: "상태 새로고침"
+        },
+        features: {
+          title: 'BitWish Network 핵심 기능',
+          seedPhrase: '24단어 시드문구 자동 생성',
+          bitwish: 'BitWish 독립 블록체인 기반',
+          security: '보안',
+          securityDescription: 'BitWish-256 암호화와 24단어 시드문구로 최고 수준의 보안을 제공합니다',
+          fast: '빠른 속도',
+          fastDescription: '초당 수천 건의 트랜잭션을 처리하는 고성능 블록체인 네트워크입니다',
+          global: '글로벌',
+          globalDescription: '전 세계 어디서나 안전하고 빠른 디지털 자산 거래를 지원합니다',
+          mining: 'PoW 마이닝 시스템'
+        },
+        quickAccess: {
+          title: '빠른 접근',
+          explorer: '블록 익스플로러',
+          explorerDescription: 'BitWish 블록체인 탐색',
+          dashboard: '대시보드',
+          dashboardDescription: '네트워크 통계 확인',
+          whitepaper: '백서',
+          whitepaperDescription: '기술 문서 읽기',
+          community: '커뮤니티',
+          communityDescription: '커뮤니티 참여하기'
+        }
+      },
+      // 보안 경고 메시지
+      security: {
+        passwordFailure: {
+          attempt1: '비밀번호가 일치하지 않습니다. (1/5회 실패)',
+          attempt2: '비밀번호가 일치하지 않습니다. (2/5회 실패)',
+          attempt3: '⚠️ 경고: 비밀번호가 일치하지 않습니다. (3/5회 실패) - 2회 남음',
+          attempt4: '🚨 주의: 비밀번호가 일치하지 않습니다. (4/5회 실패) - 1회 남음, 실패 시 15분 차단',
+          attempt5: '🔒 계정 차단: 비밀번호 5회 연속 실패로 15분간 차단되었습니다.',
+          attempt10: '🚫 계정 블랙리스트: 비밀번호 10회 연속 실패로 24시간 차단되었습니다.',
+          retryAfter: '{{minutes}}분 후 다시 시도하세요.',
+          ipBlocked: 'IP 주소가 차단되었습니다. {{hours}}시간 후 자동 해제됩니다.'
+        }
+      },
+      // 지갑 관련
+      wallet: {
+        title: '마이닝을 위해 지갑을 생성하세요',
+        create: '지갑 생성',
+        myWallet: '나의 지갑',
+        auth: '지갑 인증',
+        secondPassword: '2차 비밀번호 설정',
+        changePassword: '비밀번호 변경',
+        address: '지갑 주소',
+        balance: '잔액',
+        transactions: '거래 내역',
+        security: '보안 설정',
+        created: {
+          successTitle: 'BitWish 지갑 생성 완료',
+          successMessage: '새로운 BitWish 지갑이 성공적으로 생성되었습니다.'
+        },
+        newWallet: {
+          successTitle: '새 지갑 생성 완료',
+          successMessage: '새로운 BitWish 지갑이 성공적으로 생성되었습니다. 기존 자산은 영원히 소각되었습니다.'
+        },
+        passwordReset: {
+          button: '2차 비밀번호 초기화',
+          confirmTitle: '2차 비밀번호 초기화',
+          confirmMessage: '2차 비밀번호 설정을 초기화 하시겠습니까?',
+          confirmDetail: '초기화 후에는 새로운 2차 비밀번호를 다시 설정해야 합니다.',
+          successTitle: '초기화 완료',
+          successMessage: '2차 비밀번호가 초기화 되었습니다. 2차 비밀번호를 다시 설정 하시기 바랍니다.',
+          errorOccurred: '2차 비밀번호 초기화 중 오류가 발생했습니다.'
+        },
+        availableNote: '인증 완료 후 락업 해제된 수량',
+        send: '송금하기',
+        sendAddress: '받는 주소',
+        sendAddressPlaceholder: 'BW...',
+        sendAmount: '송금 금액',
+        sendAmountPlaceholder: '0.0000',
+        fee: '수수료: 0.01 BW',
+        sendMemo: '메모 (선택)',
+        sendMemoPlaceholder: '메모를 입력하세요',
+        otpCode: 'OTP 6자리 코드',
+        otpCodePlaceholder: '123456',
+        cancel: '취소'
+      },
+      // 지갑 인증
+      walletAuth: {
+        setupSecondPassword: '2차 비밀번호 설정하기'
+      },
+      // 시드문구 관련
+      seedPhrase: {
+        verification: '시드문구 확인',
+        record24WordsSafely: '24개 단어를 안전한 곳에 기록하세요',
+        next: '다음',
+        copy: '복사',
+        copied: '복사됨',
+        accessWalletWithSeedPhrase: '시드 문구로 지갑에 접근하세요'
+      },
+      auth: {
+        logoutTitle: '로그아웃',
+        logoutMessage: '성공적으로 로그아웃되었습니다.'
+      },
+      // BW 마이닝 시스템
+      bwMining: {
+        title: 'BW 포인트 마이닝 시스템',
+        bitwishToken: 'BitWish 토큰 정보',
+        currentBWPoints: '현재 BW포인트',
+        totalSupply: '총 발행량',
+        bitwishNote: 'BitWish는 완전히 독립적인 Layer 1 블록체인입니다.',
+        miningRewards: '마이닝 보상',
+        attendanceBonus: '출석 보너스',
+        referralBonus: '추천 보너스',
+        lockupBonus: '락업 보너스',
+        merchantBonus: '상점 보너스'
+      },
+      // 일반적인 메시지
+      common: {
+        loading: '로딩 중...',
+        error: '오류가 발생했습니다',
+        success: '성공',
+        cancel: '취소',
+        confirm: '확인',
+        save: '저장',
+        delete: '삭제',
+        edit: '편집',
+        close: '닫기',
+        back: '뒤로',
+        next: '다음',
+        previous: '이전',
+        submit: '제출',
+        reset: '초기화',
+        search: '검색',
+        filter: '필터',
+        sort: '정렬',
+        refresh: '새로고침',
+        copy: '복사',
+        paste: '붙여넣기',
+        cut: '잘라내기',
+        select: '선택',
+        all: '전체',
+        none: '없음',
+        yes: '예',
+        no: '아니오',
+        ok: '확인',
+        apply: '적용',
+        clear: '지우기',
+        remove: '제거',
+        add: '추가',
+        create: '생성',
+        createWallet: '지갑 만들기',
+        createNewWallet: '새 지갑 만들기',
+        myWallet: '나의 지갑',
+        update: '업데이트',
+        view: '보기',
+        details: '세부사항',
+        info: '정보',
+        warning: '경고',
+        notice: '알림',
+        noUpdate: '업데이트 없음',
+        seedPhraseLostTitle: '시드문구를 분실하셨나요?',
+        seedPhraseLostWarning: '새 지갑을 만들시면 이전 지갑은 더 이상 사용 하실 수 없습니다.',
+        irreversibleConsequence1: '기존 지갑의 모든 BW 자산이 영원히 소각됩니다',
+        irreversibleConsequence2: '기존 채굴/보상 이력이 모두 사라집니다',
+        irreversibleConsequence3: '새 지갑은 0 BW부터 다시 시작됩니다',
+        irreversibleConsequence4: '이전 지갑 주소는 영원히 접근할 수 없습니다',
+        // 나의 지갑 페이지
+        overview: '개요',
+        transactions: '거래내역',
+        settings: '설정',
+        security: '보안',
+        receive: '송금받기',
+        send: '송금하기',
+        sendAddress: '받는 주소',
+        sendAddressPlaceholder: 'BW...',
+        sendAmount: '송금 금액',
+        sendAmountPlaceholder: '0.0000',
+        fee: '수수료: 0.01 BW',
+        sendMemo: '메모 (선택)',
+        sendMemoPlaceholder: '메모를 입력하세요',
+        otpCode: 'OTP 6자리 코드',
+        otpCodePlaceholder: '123456',
+        otpSetup: 'OTP 설정',
+        kycApplication: 'KYC 신청',
+        address: '지갑 주소',
+        balance: '잔액',
+        myBW: '나의 BW',
+        realTimeTotal: '실시간 총 보유량',
+        availableAmount: '사용 가능 금액',
+        afterAuthUnlock: '인증 완료 후 락업 해제된 수량',
+        referralBonus: '추천 보너스',
+        referralCumulativeReward: '추천인 누적 보상',
+        referralCumulativeBonus: '추천인 누적 보너스',
+        vault: '보관함',
+        referralKycMigrationNote: '추천인이 KYC통과하면 사용 가능 금액으로 15일 후 마이그레이션 됩니다.',
+        walletInfo: '지갑 정보',
+        referralCode: '추천 코드',
+        qrCode: 'QR 코드',
+        qrCodeDescription: 'QR 코드를 스캔하여 지갑 주소를 공유하세요.'
+      },
+      // 블록체인
+      blockchain: {
+        realTimeStatus: '실시간 블록체인 상태',
+        checkRealTimeStatus: '실시간 블록체인 상태를 확인하세요',
+        lastUpdate: '마지막 업데이트',
+        totalIssuance210Billion: '총 발행량 (210억개)',
+        bitwishTotalSupply: 'BitWish 총 공급량',
+        currentIssuance: '현재 발행량',
+        realTimeBlockchainData: '실시간 블록체인 데이터',
+        remainingIssuance: '잔여 발행량',
+        issuanceRate: '발행률',
+        totalBlocks: '총 블록',
+        generatedBlocks: '생성된 블록',
+        networkStatus: '네트워크 상태',
+        realTimeConnection: '실시간 연결',
+        refreshStatus: '상태 새로고침'
+      },
+      // 마이닝
+      mining: {
+        bonus: '마이닝 & 보너스',
+        status: '마이닝 상태',
+        totalRewards: '총 보상',
+        startTime: '시작 시간',
+        duration: '지속 시간',
+        rate: '마이닝 비율'
+      },
+      // 푸터
+      footer: {
+        company: '회사',
+        description: 'BitWish Network는 독립적인 Layer 1 블록체인 플랫폼으로, 안전하고 빠르며 글로벌한 디지털 자산 거래를 지원합니다.',
+        products: '제품',
+        bwMainnet: 'BW 메인넷',
+        bwNode: 'BW 노드',
+        bwWallet: 'BW 지갑',
+        community: '커뮤니티',
+        bwCommunity: 'BW 커뮤니티',
+        developerDocs: '개발자 문서',
+        supportCenter: '지원 센터',
+        companyInfo: '회사 정보',
+        about: '회사 소개',
+        careers: '채용 정보',
+        contact: '연락처',
+        copyright: '© 2024 BitWish Network. All rights reserved.'
+      }
+    }
+  },
+  en: {
+    translation: {
+      // BitWish translations
+      bitwish: {
+        wallet: {
+          auth: {
+            title: "BitWish Wallet Authentication",
+            subtitle: "Login with your BitWish Network wallet",
+            infoTitle: "Enter BitWish Wallet Information",
+            infoDescription: "Enter your BitWish wallet address and password",
+            addressLabel: "BitWish Wallet Address",
+            addressPlaceholder: "Enter BW + 40 hex digits address (42 characters total)",
+            passwordLabel: "Password",
+            passwordPlaceholder: "Enter your wallet password",
+            button: "Authenticate BitWish Wallet",
+            authenticating: "Authenticating BitWish wallet...",
+            help: "BitWish Wallet Authentication Help",
+            changePassword: "Change Password",
+            setupSecondPassword: "Setup Second Password",
+            success: {
+              authenticated: "BitWish wallet authentication successful"
+            }
+          },
+          changePasswordModal: {
+            title: "BitWish Password Change",
+            description: "Change your existing password to a new password",
+            walletAddressLabel: "BitWish Wallet Address",
+            currentPasswordLabel: "Current Password",
+            newPasswordLabel: "New Password",
+            confirmPasswordLabel: "Confirm New Password",
+            currentPasswordPlaceholder: "Enter current password",
+            newPasswordPlaceholder: "Enter new password",
+            confirmPasswordPlaceholder: "Enter new password again",
+            cancelButton: "Cancel",
+            confirmButton: "Confirm",
+            changingButton: "Changing...",
+            error: {
+              walletAddressRequired: "Wallet address is required.",
+              currentPasswordRequired: "Current password is required.",
+              newPasswordRequired: "New password is required.",
+              confirmPasswordRequired: "New password confirmation is required.",
+              passwordsDoNotMatch: "New password and confirmation password do not match.",
+              passwordTooShort: "New password must be at least 8 characters.",
+              invalidAddressFormat: "Invalid BitWish wallet address format.",
+              changeFailed: "Password change failed.",
+              changeError: "Error occurred while changing password."
+            },
+            success: {
+              changeComplete: "Password changed successfully."
+            }
+          },
+          secondPassword: {
+            title: "BitWish Second Password Setup",
+            description: "Enhance security by setting up a BitWish wallet address and strong password.",
+            walletAddressLabel: "BitWish Wallet Address",
+            walletAddressPlaceholder: "Enter BW + 40 hex digits address (42 characters total)",
+            walletAddressExample: "Example: BW1234567890ABCDEF1234567890ABCDEF12345678",
+            passwordLabel: "Password",
+            passwordPlaceholder: "Enter new password",
+            confirmPasswordLabel: "Confirm Password",
+            confirmPasswordPlaceholder: "Enter password again",
+            cancelButton: "Cancel",
+            confirmButton: "Confirm",
+            settingButton: "Setting...",
+            securityNoticeTitle: "Security Notice:",
+            securityNotice1: "Password is encrypted with PBKDF2 + salting",
+            securityNotice2: "Security enhanced with 100,000 iterations of hashing",
+            securityNotice3: "Password is not stored on server",
+            error: {
+              walletAddressRequired: "Please enter wallet address.",
+              passwordRequired: "Please enter password.",
+              passwordMismatch: "Passwords do not match.",
+              alreadyExists: "Password already set. Please use password reset button to reset and set again.",
+              setupFailed: "Password setup failed.",
+              setupError: "Error occurred during password setup."
+            },
+            success: {
+              setupComplete: "Second password set up successfully."
+            }
+          },
+          create: {
+            title: "BitWish Wallet Creation",
+            description: "Create a BitWish Network wallet with complete independence",
+            infoTitle: "Enter BitWish Wallet Information",
+            infoDescription: "Create a secure wallet protected by BitWish-256 encryption",
+            walletNameLabel: "Wallet Name (Optional)",
+            walletNamePlaceholder: "My BitWish Wallet",
+            passwordLabel: "Enter Password",
+            passwordPlaceholder: "Enter a secure password with at least 8 characters",
+            confirmPasswordLabel: "Confirm Password",
+            confirmPasswordPlaceholder: "Enter password again",
+            button: "Create BitWish Wallet",
+            creating: "Creating BitWish wallet...",
+            error: "Failed to create BitWish wallet. Please try again.",
+            step2: {
+              title: "Verify Seed Phrase",
+              description: "Save the following 24 words in a safe place",
+              selected: "Selected Words",
+              verifyButton: "Verification Complete",
+              copySeed: "Copy Seed Phrase",
+              nextButton: "Next Step",
+              copySuccess: "Seed phrase copied successfully",
+              copyError: "Failed to copy",
+              seedCopied: "Seed phrase copied",
+              seedCopyFailed: "Failed to copy seed phrase"
+            },
+            step3: {
+              title: "Security Verification Word Confirmation",
+              description: "Enter the following 4 words in order to verify wallet security",
+              wordLabel: "{position}th word",
+              wordPlaceholder: "Enter the word",
+              invalidWord: "Incorrect word",
+              verifyButton: "Complete Verification"
+            },
+            step4: {
+              title: "BitWish Wallet Creation Complete",
+              description: "Wallet created successfully. Keep it safe",
+              walletName: "Wallet Name",
+              defaultWalletName: "My BitWish Wallet",
+              address: "Wallet Address",
+              qrCode: "QR Code",
+              completeButton: "Wallet Creation Complete"
+            }
+          },
+          seedPhrase: {
+            title: "BitWish Seed Phrase Authentication",
+            subtitle: "Enter your seed phrase to access your BitWish wallet",
+            inputTitle: "BitWish Seed Phrase Input",
+            label: "24-word Seed Phrase",
+            placeholder: "Enter your 24-word seed phrase separated by spaces",
+            note: "You must enter exactly 24 words",
+            trimInfo: "Leading and trailing spaces are automatically removed when entering seed phrase.",
+            authenticate: "BitWish Wallet Authentication",
+            authenticating: "Authenticating...",
+            success: "BitWish wallet authentication completed successfully.",
+            error: "An error occurred during BitWish wallet authentication.",
+            invalid: "Invalid seed phrase. Please enter exactly 24 words.",
+            mismatch: "Seed phrase does not match wallet address. Please check for spaces or typos.",
+            invalidWallet: "Invalid BitWish wallet",
+            help: "BitWish Seed Phrase Authentication Help"
+          }
+        }
+      },
+      // Main navigation
+      navigation: {
+        bwMainnet: "BW Mainnet",
+        bwExplorer: "Block Explorer",
+        bwNode: "Node",
+        bwCommunity: "Community",
+        bwDashboard: "Dashboard"
+      },
+      // Homepage
+      home: {
+        title: "BitWish Network",
+        subtitle: "Independent Layer 1 Blockchain Platform",
+        description: "Next-generation blockchain network for secure, fast, and global digital asset transactions",
+        networkStatus: {
+          title: "BitWish Network Status",
+          bitwish: "BitWish Independent Blockchain",
+          consensus: "SCP + PoW Consensus Protocol",
+          network: "P2P Network Structure"
+        },
+        blockchain: {
+          realTimeStatus: "Real-time Blockchain Status",
+          status: "Blockchain Status",
+          checkStatus: "Check real-time blockchain status",
+          checkRealTimeStatus: "Check real-time blockchain status",
+          lastUpdate: "Last Update",
+          totalSupply: "BitWish Total Supply",
+          currentSupply: "Current Issuance",
+          miningBonus: "Mining & Bonus",
+          totalIssuance: "Total Issuance",
+          totalIssuance210Billion: "Total Issuance (21 Billion)",
+          bitwishTotalSupply: "BitWish Total Supply",
+          currentIssuance: "Current Issuance",
+          realTimeBlockchainData: "Real-time Blockchain Data",
+          remainingIssuance: "Remaining Issuance",
+          issuanceRate: "Issuance Rate",
+          totalBlocks: "Total Blocks",
+          generatedBlocks: "Generated Blocks",
+          networkStatus: "Network Status",
+          realTimeConnection: "Real-time Connection",
+          refreshStatus: "Refresh Status"
+        },
+        features: {
+          title: 'BitWish Network Core Features',
+          seedPhrase: '24-word seed phrase auto generation',
+          bitwish: 'BitWish independent blockchain based',
+          security: 'Security',
+          securityDescription: 'Provides the highest level of security with BitWish-256 encryption and 24-word seed phrase',
+          fast: 'Fast Speed',
+          fastDescription: 'High-performance blockchain network that processes thousands of transactions per second',
+          global: 'Global',
+          globalDescription: 'Supports safe and fast digital asset transactions worldwide',
+          mining: 'PoW mining system'
+        },
+        quickAccess: {
+          title: 'Quick Access',
+          explorer: 'Block Explorer',
+          explorerDescription: 'Explore BitWish blockchain',
+          dashboard: 'Dashboard',
+          dashboardDescription: 'View network statistics',
+          whitepaper: 'Whitepaper',
+          whitepaperDescription: 'Read technical documentation',
+          community: 'Community',
+          communityDescription: 'Join the community'
+        }
+      },
+      // Wallet related
+      wallet: {
+        title: 'Create a wallet for mining',
+        create: 'Create Wallet',
+        myWallet: 'My Wallet',
+        auth: 'Wallet Authentication',
+        secondPassword: 'Second Password Setup',
+        changePassword: 'Change Password',
+        address: 'Wallet Address',
+        balance: 'Balance',
+        transactions: 'Transaction History',
+        security: 'Security Settings',
+        created: {
+          successTitle: 'BitWish Wallet Created',
+          successMessage: 'Your new BitWish wallet has been successfully created.'
+        },
+        newWallet: {
+          successTitle: 'New Wallet Created',
+          successMessage: 'Your new BitWish wallet has been successfully created. Previous assets are permanently burned.'
+        },
+        passwordReset: {
+          button: 'Reset Second Password',
+          confirmTitle: 'Reset Second Password',
+          confirmMessage: 'Would you like to reset the second password?',
+          confirmDetail: 'After resetting, you will need to set up a new second password.',
+          successTitle: 'Reset Complete',
+          successMessage: 'The second password has been reset. Please set up a new second password.',
+          errorOccurred: 'An error occurred while resetting second password.'
+        },
+        availableNote: 'Amount unlocked after authentication',
+        send: 'Send',
+        sendAddress: 'Recipient Address',
+        sendAddressPlaceholder: 'BW...',
+        sendAmount: 'Send Amount',
+        sendAmountPlaceholder: '0.0000',
+        fee: 'Fee: 0.01 BW',
+        sendMemo: 'Memo (Optional)',
+        sendMemoPlaceholder: 'Enter memo',
+        otpCode: 'OTP 6-digit Code',
+        otpCodePlaceholder: '123456',
+        cancel: 'Cancel'
+      },
+      // Wallet Auth
+      walletAuth: {
+        setupSecondPassword: 'Setup Second Password'
+      },
+      // Seed phrase related
+      seedPhrase: {
+        verification: 'Seed Phrase Verification',
+        record24WordsSafely: 'Record the 24 words in a safe place',
+        next: 'Next',
+        copy: 'Copy',
+        copied: 'Copied',
+        accessWalletWithSeedPhrase: 'Access wallet with seed phrase'
+      },
+      auth: {
+        logoutTitle: 'Logout',
+        logoutMessage: 'Successfully logged out.'
+      },
+      // Security warning messages
+      security: {
+        passwordFailure: {
+          attempt1: 'Incorrect password. (1/5 attempts failed)',
+          attempt2: 'Incorrect password. (2/5 attempts failed)',
+          attempt3: '⚠️ Warning: Incorrect password. (3/5 attempts failed) - 2 remaining',
+          attempt4: '🚨 Caution: Incorrect password. (4/5 attempts failed) - 1 remaining, 15-min lockout on next failure',
+          attempt5: '🔒 Account Locked: 15-minute lockout due to 5 consecutive failures.',
+          attempt10: '🚫 Account Blacklisted: 24-hour lockout due to 10 consecutive failures.',
+          retryAfter: 'Please try again after {{minutes}} minutes.',
+          ipBlocked: 'Your IP address has been blocked. It will be automatically released after {{hours}} hours.'
+        }
+      },
+      // BW Mining System
+      bwMining: {
+        title: 'BW Point Mining System',
+        bitwishToken: 'BitWish Token Info',
+        currentBWPoints: 'Current BW Points',
+        totalSupply: 'Total Supply',
+        bitwishNote: 'BitWish is a completely independent Layer 1 blockchain.',
+        miningRewards: 'Mining Rewards',
+        attendanceBonus: 'Attendance Bonus',
+        referralBonus: 'Referral Bonus',
+        lockupBonus: 'Lockup Bonus',
+        merchantBonus: 'Merchant Bonus'
+      },
+      // Common messages
+      common: {
+        loading: 'Loading...',
+        error: 'An error occurred',
+        success: 'Success',
+        cancel: 'Cancel',
+        confirm: 'Confirm',
+        save: 'Save',
+        delete: 'Delete',
+        edit: 'Edit',
+        close: 'Close',
+        back: 'Back',
+        next: 'Next',
+        previous: 'Previous',
+        submit: 'Submit',
+        reset: 'Reset',
+        search: 'Search',
+        filter: 'Filter',
+        sort: 'Sort',
+        refresh: 'Refresh',
+        copy: 'Copy',
+        paste: 'Paste',
+        cut: 'Cut',
+        select: 'Select',
+        all: 'All',
+        none: 'None',
+        yes: 'Yes',
+        no: 'No',
+        ok: 'OK',
+        apply: 'Apply',
+        clear: 'Clear',
+        remove: 'Remove',
+        add: 'Add',
+        create: 'Create',
+        createWallet: 'Create Wallet',
+        createNewWallet: 'Create New Wallet',
+        myWallet: 'My Wallet',
+        update: 'Update',
+        view: 'View',
+        details: 'Details',
+        info: 'Info',
+        warning: 'Warning',
+        notice: 'Notice',
+        noUpdate: 'No Update',
+        seedPhraseLostTitle: 'Lost your seed phrase?',
+        seedPhraseLostWarning: 'If you create a new wallet, you will no longer be able to use your previous wallet.',
+        irreversibleConsequence1: 'All BW assets in the existing wallet will be permanently burned',
+        irreversibleConsequence2: 'All existing mining/reward history will be lost',
+        irreversibleConsequence3: 'New wallet will start from 0 BW',
+        irreversibleConsequence4: 'Previous wallet address will be permanently inaccessible',
+        // My Wallet Page
+        overview: 'Overview',
+        transactions: 'Transactions',
+        settings: 'Settings',
+        security: 'Security',
+        receive: 'Receive',
+        send: 'Send',
+        sendAddress: 'Recipient Address',
+        sendAddressPlaceholder: 'BW...',
+        sendAmount: 'Send Amount',
+        sendAmountPlaceholder: '0.0000',
+        fee: 'Fee: 0.01 BW',
+        sendMemo: 'Memo (Optional)',
+        sendMemoPlaceholder: 'Enter memo',
+        otpCode: 'OTP 6-digit Code',
+        otpCodePlaceholder: '123456',
+        otpSetup: 'OTP Setup',
+        kycApplication: 'KYC Application',
+        address: 'Wallet Address',
+        balance: 'Balance',
+        myBW: 'My BW',
+        realTimeTotal: 'Real-Time Total Holdings',
+        availableAmount: 'Available Amount',
+        afterAuthUnlock: 'Amount unlocked after authentication',
+        referralBonus: 'Referral Bonus',
+        referralCumulativeReward: 'Cumulative Referral Rewards',
+        referralCumulativeBonus: 'Cumulative Referral Bonus',
+        vault: 'Vault',
+        referralKycMigrationNote: 'After the referrer passes KYC, it will be migrated to the available amount after 15 days.',
+        walletInfo: 'Wallet Information',
+        referralCode: 'Referral Code',
+        qrCode: 'QR Code',
+        qrCodeDescription: 'Scan the QR code to share your wallet address.'
+      },
+      // Blockchain
+      blockchain: {
+        realTimeStatus: 'Real-time Blockchain Status',
+        checkRealTimeStatus: 'Check real-time blockchain status',
+        lastUpdate: 'Last Update',
+        totalIssuance210Billion: 'Total Issuance (21 Billion)',
+        bitwishTotalSupply: 'BitWish Total Supply',
+        currentIssuance: 'Current Issuance',
+        realTimeBlockchainData: 'Real-time Blockchain Data',
+        remainingIssuance: 'Remaining Issuance',
+        issuanceRate: 'Issuance Rate',
+        totalBlocks: 'Total Blocks',
+        generatedBlocks: 'Generated Blocks',
+        networkStatus: 'Network Status',
+        realTimeConnection: 'Real-time Connection',
+        refreshStatus: 'Refresh Status'
+      },
+      // Mining
+      mining: {
+        bonus: 'Mining & Bonus',
+        status: 'Mining Status',
+        totalRewards: 'Total Rewards',
+        startTime: 'Start Time',
+        duration: 'Duration',
+        rate: 'Mining Rate'
+      },
+      // Footer
+      footer: {
+        company: 'Company',
+        description: 'BitWish Network is an independent Layer 1 blockchain platform that supports secure, fast, and global digital asset transactions.',
+        products: 'Products',
+        bwMainnet: 'BW Mainnet',
+        bwNode: 'BW Node',
+        bwWallet: 'BW Wallet',
+        community: 'Community',
+        bwCommunity: 'BW Community',
+        developerDocs: 'Developer Docs',
+        supportCenter: 'Support Center',
+        companyInfo: 'Company Info',
+        about: 'About',
+        careers: 'Careers',
+        contact: 'Contact',
+        copyright: '© 2024 BitWish Network. All rights reserved.'
+      }
+    }
+  },
+  ja: {
+    translation: {
+      // BitWish translations
+      bitwish: {
+        wallet: {
+          auth: {
+            title: "BitWishウォレット認証",
+            subtitle: "BitWish Networkウォレットでログインしてください",
+            infoTitle: "BitWishウォレット情報入力",
+            infoDescription: "BitWishウォレットアドレスとパスワードを入力してください",
+            addressLabel: "BitWishウォレットアドレス",
+            addressPlaceholder: "BW + 40桁16進数アドレスを入力してください（合計42桁）",
+            passwordLabel: "パスワード",
+            passwordPlaceholder: "ウォレットパスワードを入力してください",
+            button: "BitWishウォレット認証",
+            authenticating: "BitWishウォレット認証中...",
+            help: "BitWishウォレット認証ヘルプ",
+            changePassword: "パスワード変更",
+            setupSecondPassword: "第二パスワード設定",
+            success: {
+              authenticated: "BitWishウォレット認証成功"
+            }
+          },
+          changePasswordModal: {
+            title: "BitWishパスワード変更",
+            description: "既存のパスワードを新しいパスワードに変更してください",
+            walletAddressLabel: "BitWishウォレットアドレス",
+            currentPasswordLabel: "現在のパスワード",
+            newPasswordLabel: "新しいパスワード",
+            confirmPasswordLabel: "新しいパスワード確認",
+            currentPasswordPlaceholder: "現在のパスワードを入力してください",
+            newPasswordPlaceholder: "新しいパスワードを入力してください",
+            confirmPasswordPlaceholder: "新しいパスワードを再入力してください",
+            cancelButton: "キャンセル",
+            confirmButton: "確認",
+            changingButton: "変更中...",
+            error: {
+              walletAddressRequired: "ウォレットアドレスが必要です。",
+              currentPasswordRequired: "現在のパスワードが必要です。",
+              newPasswordRequired: "新しいパスワードが必要です。",
+              confirmPasswordRequired: "新しいパスワード確認が必要です。",
+              passwordsDoNotMatch: "新しいパスワードと確認パスワードが一致しません。",
+              passwordTooShort: "新しいパスワードは8文字以上である必要があります。",
+              invalidAddressFormat: "正しいBitWishウォレットアドレス形式ではありません。",
+              changeFailed: "パスワード変更に失敗しました。",
+              changeError: "パスワード変更中にエラーが発生しました。"
+            },
+            success: {
+              changeComplete: "パスワードが正常に変更されました。"
+            }
+          },
+          secondPassword: {
+            title: "BitWish第二パスワード設定",
+            description: "BitWishウォレットアドレスと強力なパスワードを設定してセキュリティを強化してください。",
+            walletAddressLabel: "BitWishウォレットアドレス",
+            walletAddressPlaceholder: "BW + 40桁16進数アドレスを入力してください（合計42桁）",
+            walletAddressExample: "例: BW1234567890ABCDEF1234567890ABCDEF12345678",
+            passwordLabel: "パスワード",
+            passwordPlaceholder: "新しいパスワードを入力してください",
+            confirmPasswordLabel: "パスワード確認",
+            confirmPasswordPlaceholder: "パスワードを再入力してください",
+            cancelButton: "キャンセル",
+            confirmButton: "確認",
+            settingButton: "設定中...",
+            securityNoticeTitle: "セキュリティ注意事項:",
+            securityNotice1: "パスワードはPBKDF2 + ソルトで暗号化されます",
+            securityNotice2: "100,000回の反復ハッシュでセキュリティを強化します",
+            securityNotice3: "パスワードはサーバーに保存されません",
+            error: {
+              walletAddressRequired: "ウォレットアドレスを入力してください。",
+              passwordRequired: "パスワードを入力してください。",
+              passwordMismatch: "パスワードが一致しません。",
+              alreadyExists: "すでにパスワードが設定されています。パスワードリセットボタンを使用してリセット後、再度設定してください。",
+              setupFailed: "パスワード設定に失敗しました。",
+              setupError: "パスワード設定中にエラーが発生しました。"
+            },
+            success: {
+              setupComplete: "第二パスワードが正常に設定されました。"
+            }
+          },
+          create: {
+            title: "BitWishウォレット作成",
+            description: "完全な独立性を持つBitWish Networkウォレットを作成してください",
+            infoTitle: "BitWishウォレット情報入力",
+            infoDescription: "BitWish-256暗号化で保護される安全なウォレットを作成します",
+            walletNameLabel: "ウォレット名（オプション）",
+            walletNamePlaceholder: "My BitWish Wallet",
+            passwordLabel: "パスワード入力",
+            passwordPlaceholder: "8文字以上の安全なパスワードを入力してください",
+            confirmPasswordLabel: "パスワード確認",
+            confirmPasswordPlaceholder: "パスワードを再入力してください",
+            button: "BitWishウォレット作成",
+            creating: "BitWishウォレット作成中...",
+            error: "BitWishウォレット作成に失敗しました。再試行してください。",
+            step2: {
+              title: "シードフレーズ確認",
+              description: "次の24語を安全な場所に保存してください",
+              selected: "選択された単語",
+              verifyButton: "検証完了",
+              copySeed: "シードフレーズコピー",
+              nextButton: "次のステップ",
+              copySuccess: "シードフレーズがコピーされました",
+              copyError: "コピーに失敗しました",
+              seedCopied: "シードフレーズがコピーされました",
+              seedCopyFailed: "シードフレーズのコピーに失敗しました"
+            },
+            step3: {
+              title: "セキュリティ検証ワード確認",
+              description: "次の4つの単語を順番に入力してウォレットのセキュリティを確認してください",
+              wordLabel: "{position}番目の単語",
+              wordPlaceholder: "単語を入力してください",
+              invalidWord: "正しい単語ではありません",
+              verifyButton: "検証完了"
+            },
+            step4: {
+              title: "BitWishウォレット作成完了",
+              description: "ウォレットが正常に作成されました。安全に保管してください",
+              walletName: "ウォレット名",
+              defaultWalletName: "私のBitWishウォレット",
+              address: "ウォレットアドレス",
+              qrCode: "QRコード",
+              completeButton: "ウォレット作成完了"
+            }
+          },
+          seedPhrase: {
+            title: "BitWishシードフレーズ認証",
+            subtitle: "BitWishウォレットにアクセスするためにシードフレーズを入力してください",
+            inputTitle: "BitWishシードフレーズ入力",
+            label: "24語のシードフレーズ",
+            placeholder: "24語のシードフレーズをスペースで区切って入力してください",
+            note: "正確に24語を入力する必要があります",
+            trimInfo: "シードフレーズ入力時に前後のスペースは自動的に削除されます。",
+            authenticate: "BitWishウォレット認証",
+            authenticating: "認証中...",
+            success: "BitWishウォレット認証が完了しました。",
+            error: "BitWishウォレット認証中にエラーが発生しました。",
+            invalid: "無効なシードフレーズです。正確に24語を入力してください。",
+            mismatch: "シードフレーズがウォレットアドレスと一致しません。スペースやタイプミスを確認してください。",
+            invalidWallet: "無効なBitWishウォレットです",
+            help: "BitWishシードフレーズ認証ヘルプ"
+          }
+        }
+      },
+      // Main navigation
+      navigation: {
+        bwMainnet: "BW メインネット",
+        bwExplorer: "ブロックエクスプローラー",
+        bwNode: "ノード",
+        bwCommunity: "コミュニティ",
+        bwDashboard: "ダッシュボード"
+      },
+      // Homepage
+      home: {
+        title: "BitWish Network",
+        subtitle: "独立したLayer 1ブロックチェーンプラットフォーム",
+        description: "安全で高速でグローバルなデジタル資産取引のための次世代ブロックチェーンネットワーク",
+        networkStatus: {
+          title: "BitWish Network現況",
+          bitwish: "BitWish独立ブロックチェーン",
+          consensus: "SCP + PoWコンセンサスプロトコル",
+          network: "P2Pネットワーク構造"
+        },
+        blockchain: {
+          realTimeStatus: "リアルタイムブロックチェーン状態",
+          status: "ブロックチェーン状態",
+          checkStatus: "リアルタイムブロックチェーン状態を確認してください",
+          checkRealTimeStatus: "リアルタイムブロックチェーン状態を確認してください",
+          lastUpdate: "最終更新",
+          totalSupply: "BitWish総供給量",
+          currentSupply: "現在の発行量",
+          miningBonus: "マイニング&ボーナス",
+          totalIssuance: "総発行量",
+          totalIssuance210Billion: "総発行量（210億個）",
+          bitwishTotalSupply: "BitWish総供給量",
+          currentIssuance: "現在の発行量",
+          realTimeBlockchainData: "リアルタイムブロックチェーンデータ",
+          remainingIssuance: "残余発行量",
+          issuanceRate: "発行率",
+          totalBlocks: "総ブロック",
+          generatedBlocks: "生成されたブロック",
+          networkStatus: "ネットワーク状態",
+          realTimeConnection: "リアルタイム接続",
+          refreshStatus: "状態更新"
+        },
+        features: {
+          title: 'BitWish Network核心機能',
+          seedPhrase: '24語シードフレーズ自動生成',
+          bitwish: 'BitWish独立ブロックチェーンベース',
+          security: 'セキュリティ',
+          securityDescription: 'BitWish-256暗号化と24語シードフレーズで最高レベルのセキュリティを提供します',
+          fast: '高速',
+          fastDescription: '毎秒数千件のトランザクションを処理する高性能ブロックチェーンネットワークです',
+          global: 'グローバル',
+          globalDescription: '世界中どこでも安全で高速なデジタル資産取引をサポートします',
+          mining: 'PoWマイニングシステム'
+        },
+        quickAccess: {
+          title: 'クイックアクセス',
+          explorer: 'ブロックエクスプローラー',
+          explorerDescription: 'BitWishブロックチェーンを探索',
+          dashboard: 'ダッシュボード',
+          dashboardDescription: 'ネットワーク統計を表示',
+          whitepaper: 'ホワイトペーパー',
+          whitepaperDescription: '技術文書を読む',
+          community: 'コミュニティ',
+          communityDescription: 'コミュニティに参加'
+        }
+      },
+      // Wallet related
+      wallet: {
+        title: 'マイニング用ウォレットを作成',
+        create: 'ウォレット作成',
+        myWallet: 'マイウォレット',
+        auth: 'ウォレット認証',
+        secondPassword: '第二パスワード設定',
+        changePassword: 'パスワード変更',
+        address: 'ウォレットアドレス',
+        balance: '残高',
+        transactions: '取引履歴',
+        security: 'セキュリティ設定',
+        created: {
+          successTitle: 'BitWishウォレット作成完了',
+          successMessage: '新しいBitWishウォレットが正常に作成されました。'
+        },
+        newWallet: {
+          successTitle: '新規ウォレット作成完了',
+          successMessage: '新しいBitWishウォレットが正常に作成されました。以前の資産は永久に焼却されました。'
+        },
+        passwordReset: {
+          button: '第二パスワードリセット',
+          confirmTitle: '第二パスワードリセット',
+          confirmMessage: '第二パスワード設定をリセットしますか？',
+          confirmDetail: 'リセット後は、新しい第二パスワードを再設定する必要があります。',
+          successTitle: 'リセット完了',
+          successMessage: '第二パスワードがリセットされました。新しい第二パスワードを設定してください。',
+          errorOccurred: '第二パスワードリセット中にエラーが発生しました。'
+        },
+        availableNote: '認証完了後ロックアップ解除数量',
+        send: '送金',
+        sendAddress: '受取アドレス',
+        sendAddressPlaceholder: 'BW...',
+        sendAmount: '送金金額',
+        sendAmountPlaceholder: '0.0000',
+        fee: '手数料: 0.01 BW',
+        sendMemo: 'メモ (任意)',
+        sendMemoPlaceholder: 'メモを入力してください',
+        otpCode: 'OTP 6桁コード',
+        otpCodePlaceholder: '123456',
+        cancel: 'キャンセル'
+      },
+      // Wallet Auth
+      walletAuth: {
+        setupSecondPassword: '第二パスワード設定'
+      },
+      // Seed phrase related
+      seedPhrase: {
+        verification: 'シードフレーズ確認',
+        record24WordsSafely: '24語を安全な場所に記録してください',
+        next: '次へ',
+        copy: 'コピー',
+        copied: 'コピー済み',
+        accessWalletWithSeedPhrase: 'シードフレーズでウォレットにアクセス'
+      },
+      auth: {
+        logoutTitle: 'ログアウト',
+        logoutMessage: 'ログアウトに成功しました。'
+      },
+      // BW Mining System
+      bwMining: {
+        title: 'BWポイントマイニングシステム',
+        bitwishToken: 'BitWishトークン情報',
+        currentBWPoints: '現在のBWポイント',
+        totalSupply: '総供給量',
+        bitwishNote: 'BitWishは完全に独立したLayer 1ブロックチェーンです。',
+        miningRewards: 'マイニング報酬',
+        attendanceBonus: '出席ボーナス',
+        referralBonus: '紹介ボーナス',
+        lockupBonus: 'ロックアップボーナス',
+        merchantBonus: '店舗ボーナス'
+      },
+      // Common messages
+      common: {
+        loading: '読み込み中...',
+        error: 'エラーが発生しました',
+        success: '成功',
+        cancel: 'キャンセル',
+        confirm: '確認',
+        save: '保存',
+        delete: '削除',
+        edit: '編集',
+        close: '閉じる',
+        back: '戻る',
+        next: '次へ',
+        previous: '前へ',
+        submit: '送信',
+        reset: 'リセット',
+        search: '検索',
+        filter: 'フィルター',
+        sort: '並び替え',
+        refresh: '更新',
+        copy: 'コピー',
+        paste: '貼り付け',
+        cut: '切り取り',
+        select: '選択',
+        all: 'すべて',
+        none: 'なし',
+        yes: 'はい',
+        no: 'いいえ',
+        ok: 'OK',
+        apply: '適用',
+        clear: 'クリア',
+        remove: '削除',
+        add: '追加',
+        create: '作成',
+        createWallet: 'ウォレット作成',
+        createNewWallet: '新しいウォレット作成',
+        myWallet: 'マイウォレット',
+        update: '更新',
+        view: '表示',
+        details: '詳細',
+        info: '情報',
+        warning: '警告',
+        notice: 'お知らせ',
+        noUpdate: '更新なし',
+        seedPhraseLostTitle: 'シードフレーズを紛失しましたか？',
+        seedPhraseLostWarning: '新しいウォレットを作成すると、以前のウォレットは使用できなくなります。',
+        irreversibleConsequence1: '既存のウォレットのすべてのBW資産が永久に焼却されます',
+        irreversibleConsequence2: '既存のマイニング/報酬履歴がすべて失われます',
+        irreversibleConsequence3: '新しいウォレットは0 BWから再開されます',
+        irreversibleConsequence4: '以前のウォレットアドレスは永久にアクセスできなくなります',
+        // マイウォレットページ
+        overview: '概要',
+        transactions: '取引履歴',
+        settings: '設定',
+        security: 'セキュリティ',
+        receive: '受取',
+        send: '送金',
+        sendAddress: '受取アドレス',
+        sendAddressPlaceholder: 'BW...',
+        sendAmount: '送金金額',
+        sendAmountPlaceholder: '0.0000',
+        fee: '手数料: 0.01 BW',
+        sendMemo: 'メモ (任意)',
+        sendMemoPlaceholder: 'メモを入力してください',
+        otpCode: 'OTP 6桁コード',
+        otpCodePlaceholder: '123456',
+        otpSetup: 'OTP設定',
+        kycApplication: 'KYC申請',
+        address: 'ウォレットアドレス',
+        balance: '残高',
+        myBW: '私のBW',
+        realTimeTotal: 'リアルタイム総保有量',
+        availableAmount: '利用可能額',
+        afterAuthUnlock: '認証完了後ロックアップ解除数量',
+        referralBonus: '紹介ボーナス',
+        referralCumulativeReward: '紹介累計報酬',
+        referralCumulativeBonus: '紹介累計ボーナス',
+        vault: '保管庫',
+        referralKycMigrationNote: '紹介者がKYC通過後、15日後に利用可能金額に移行されます。',
+        walletInfo: 'ウォレット情報',
+        referralCode: '紹介コード',
+        qrCode: 'QRコード',
+        qrCodeDescription: 'QRコードをスキャンしてウォレットアドレスを共有してください。'
+      },
+      // Security warning messages
+      security: {
+        passwordFailure: {
+          attempt1: 'パスワードが一致しません。(1/5回失敗)',
+          attempt2: 'パスワードが一致しません。(2/5回失敗)',
+          attempt3: '⚠️ 警告: パスワードが一致しません。(3/5回失敗) - 残り2回',
+          attempt4: '🚨 注意: パスワードが一致しません。(4/5回失敗) - 残り1回、失敗時15分ロック',
+          attempt5: '🔒 アカウントロック: 5回連続失敗により15分間ロックされました。',
+          attempt10: '🚫 アカウントブラックリスト: 10回連続失敗により24時間ロックされました。',
+          retryAfter: '{{minutes}}分後に再試行してください。',
+          ipBlocked: 'IPアドレスがブロックされました。{{hours}}時間後に自動解除されます。'
+        }
+      },
+      // Blockchain
+      blockchain: {
+        realTimeStatus: 'リアルタイムブロックチェーン状態',
+        checkRealTimeStatus: 'リアルタイムブロックチェーン状態を確認してください',
+        lastUpdate: '最終更新',
+        totalIssuance210Billion: '総発行量（210億個）',
+        bitwishTotalSupply: 'BitWish総供給量',
+        currentIssuance: '現在の発行量',
+        realTimeBlockchainData: 'リアルタイムブロックチェーンデータ',
+        remainingIssuance: '残余発行量',
+        issuanceRate: '発行率',
+        totalBlocks: '総ブロック',
+        generatedBlocks: '生成されたブロック',
+        networkStatus: 'ネットワーク状態',
+        realTimeConnection: 'リアルタイム接続',
+        refreshStatus: '状態更新'
+      },
+      // Mining
+      mining: {
+        bonus: 'マイニング&ボーナス',
+        status: 'マイニング状態',
+        totalRewards: '総報酬',
+        startTime: '開始時間',
+        duration: '持続時間',
+        rate: 'マイニング比率'
+      },
+      // Footer
+      footer: {
+        company: '会社',
+        description: 'BitWish Networkは独立したLayer 1ブロックチェーンプラットフォームで、安全で高速でグローバルなデジタル資産取引をサポートします。',
+        products: '製品',
+        bwMainnet: 'BW メインネット',
+        bwNode: 'BW ノード',
+        bwWallet: 'BW ウォレット',
+        community: 'コミュニティ',
+        bwCommunity: 'BW コミュニティ',
+        developerDocs: '開発者ドキュメント',
+        supportCenter: 'サポートセンター',
+        companyInfo: '会社情報',
+        about: '会社紹介',
+        careers: '採用情報',
+        contact: '連絡先',
+        copyright: '© 2024 BitWish Network. All rights reserved.'
+      }
+    }
+  },
+  zh: {
+    translation: {
+      // BitWish translations
+      bitwish: {
+        wallet: {
+          auth: {
+            title: "BitWish钱包认证",
+            subtitle: "使用您的BitWish Network钱包登录",
+            infoTitle: "输入BitWish钱包信息",
+            infoDescription: "请输入您的BitWish钱包地址和密码",
+            addressLabel: "BitWish钱包地址",
+            addressPlaceholder: "输入BW + 40位十六进制地址（总共42位）",
+            passwordLabel: "密码",
+            passwordPlaceholder: "请输入钱包密码",
+            button: "BitWish钱包认证",
+            authenticating: "BitWish钱包认证中...",
+            help: "BitWish钱包认证帮助",
+            changePassword: "更改密码",
+            setupSecondPassword: "设置第二密码",
+            success: {
+              authenticated: "BitWish钱包认证成功"
+            }
+          },
+          changePasswordModal: {
+            title: "BitWish密码更改",
+            description: "将现有密码更改为新密码",
+            walletAddressLabel: "BitWish钱包地址",
+            currentPasswordLabel: "当前密码",
+            newPasswordLabel: "新密码",
+            confirmPasswordLabel: "确认新密码",
+            currentPasswordPlaceholder: "请输入当前密码",
+            newPasswordPlaceholder: "请输入新密码",
+            confirmPasswordPlaceholder: "请再次输入新密码",
+            cancelButton: "取消",
+            confirmButton: "确认",
+            changingButton: "更改中...",
+            error: {
+              walletAddressRequired: "需要钱包地址。",
+              currentPasswordRequired: "需要当前密码。",
+              newPasswordRequired: "需要新密码。",
+              confirmPasswordRequired: "需要新密码确认。",
+              passwordsDoNotMatch: "新密码和确认密码不匹配。",
+              passwordTooShort: "新密码必须至少8个字符。",
+              invalidAddressFormat: "BitWish钱包地址格式不正确。",
+              changeFailed: "密码更改失败。",
+              changeError: "更改密码时发生错误。"
+            },
+            success: {
+              changeComplete: "密码更改成功。"
+            }
+          },
+          secondPassword: {
+            title: "BitWish第二密码设置",
+            description: "通过设置BitWish钱包地址和强密码来增强安全性。",
+            walletAddressLabel: "BitWish钱包地址",
+            walletAddressPlaceholder: "输入BW + 40位十六进制地址（总共42位）",
+            walletAddressExample: "例如: BW1234567890ABCDEF1234567890ABCDEF12345678",
+            passwordLabel: "密码",
+            passwordPlaceholder: "请输入新密码",
+            confirmPasswordLabel: "确认密码",
+            confirmPasswordPlaceholder: "请再次输入密码",
+            cancelButton: "取消",
+            confirmButton: "确认",
+            settingButton: "设置中...",
+            securityNoticeTitle: "安全须知:",
+            securityNotice1: "密码使用PBKDF2 + 盐值加密",
+            securityNotice2: "通过100,000次迭代哈希增强安全性",
+            securityNotice3: "密码不存储在服务器上",
+            error: {
+              walletAddressRequired: "请输入钱包地址。",
+              passwordRequired: "请输入密码。",
+              passwordMismatch: "密码不匹配。",
+              alreadyExists: "密码已设置。请使用密码重置按钮重置后重新设置。",
+              setupFailed: "密码设置失败。",
+              setupError: "密码设置过程中发生错误。"
+            },
+            success: {
+              setupComplete: "第二密码设置成功。"
+            }
+          },
+          create: {
+            title: "BitWish钱包创建",
+            description: "创建具有完全独立性的BitWish Network钱包",
+            infoTitle: "输入BitWish钱包信息",
+            infoDescription: "创建受BitWish-256加密保护的安全钱包",
+            walletNameLabel: "钱包名称（可选）",
+            walletNamePlaceholder: "My BitWish Wallet",
+            passwordLabel: "输入密码",
+            passwordPlaceholder: "请输入至少8个字符的安全密码",
+            confirmPasswordLabel: "确认密码",
+            confirmPasswordPlaceholder: "请再次输入密码",
+            button: "创建BitWish钱包",
+            creating: "创建BitWish钱包中...",
+            error: "BitWish钱包创建失败。请重试。",
+            step2: {
+              title: "验证种子短语",
+              description: "请将以下24个单词保存在安全的地方",
+              selected: "已选择的单词",
+              verifyButton: "验证完成",
+              copySeed: "复制种子短语",
+              nextButton: "下一步",
+              copySuccess: "种子短语已复制成功",
+              copyError: "复制失败",
+              seedCopied: "种子短语已复制",
+              seedCopyFailed: "种子短语复制失败"
+            },
+            step3: {
+              title: "安全验证词确认",
+              description: "按顺序输入以下4个单词以验证钱包安全性",
+              wordLabel: "第{position}个单词",
+              wordPlaceholder: "输入单词",
+              invalidWord: "单词不正确",
+              verifyButton: "完成验证"
+            },
+            step4: {
+              title: "BitWish钱包创建完成",
+              description: "钱包创建成功。请妥善保管",
+              walletName: "钱包名称",
+              defaultWalletName: "我的BitWish钱包",
+              address: "钱包地址",
+              qrCode: "二维码",
+              completeButton: "钱包创建完成"
+            }
+          },
+          seedPhrase: {
+            title: "BitWish种子短语认证",
+            subtitle: "输入您的种子短语以访问您的BitWish钱包",
+            inputTitle: "BitWish种子短语输入",
+            label: "24个单词的种子短语",
+            placeholder: "输入您的24个单词种子短语，用空格分隔",
+            note: "您必须输入恰好24个单词",
+            trimInfo: "输入种子短语时前后空格会自动删除。",
+            authenticate: "BitWish钱包认证",
+            authenticating: "认证中...",
+            success: "BitWish钱包认证成功完成。",
+            error: "BitWish钱包认证过程中发生错误。",
+            invalid: "无效的种子短语。请准确输入24个单词。",
+            mismatch: "种子短语与钱包地址不匹配。请检查空格或拼写错误。",
+            invalidWallet: "无效的BitWish钱包",
+            help: "BitWish种子短语认证帮助"
+          }
+        }
+      },
+      // Main navigation
+      navigation: {
+        bwMainnet: "BW 主网",
+        bwExplorer: "区块浏览器",
+        bwNode: "节点",
+        bwCommunity: "社区",
+        bwDashboard: "仪表板"
+      },
+      // Homepage
+      home: {
+        title: "BitWish Network",
+        subtitle: "独立的Layer 1区块链平台",
+        description: "用于安全、快速和全球数字资产交易的下一代区块链网络",
+        networkStatus: {
+          title: "BitWish Network现况",
+          bitwish: "BitWish独立区块链",
+          consensus: "SCP + PoW共识协议",
+          network: "P2P网络结构"
+        },
+        blockchain: {
+          realTimeStatus: "实时区块链状态",
+          status: "区块链状态",
+          checkStatus: "查看实时区块链状态",
+          checkRealTimeStatus: "查看实时区块链状态",
+          lastUpdate: "最后更新",
+          totalSupply: "BitWish总供应量",
+          currentSupply: "当前发行量",
+          miningBonus: "挖矿与奖励",
+          totalIssuance: "总发行量",
+          totalIssuance210Billion: "总发行量（210亿个）",
+          bitwishTotalSupply: "BitWish总供应量",
+          currentIssuance: "当前发行量",
+          realTimeBlockchainData: "实时区块链数据",
+          remainingIssuance: "剩余发行量",
+          issuanceRate: "发行率",
+          totalBlocks: "总区块",
+          generatedBlocks: "生成的区块",
+          networkStatus: "网络状态",
+          realTimeConnection: "实时连接",
+          refreshStatus: "刷新状态"
+        },
+        features: {
+          title: 'BitWish Network核心功能',
+          seedPhrase: '24词种子短语自动生成',
+          bitwish: 'BitWish独立区块链基础',
+          security: '安全',
+          securityDescription: '通过BitWish-256加密和24词种子短语提供最高级别的安全性',
+          fast: '快速',
+          fastDescription: '每秒处理数千笔交易的高性能区块链网络',
+          global: '全球化',
+          globalDescription: '在全球任何地方支持安全快速的数字资产交易',
+          mining: 'PoW挖矿系统'
+        },
+        quickAccess: {
+          title: '快速访问',
+          explorer: '区块浏览器',
+          explorerDescription: '探索BitWish区块链',
+          dashboard: '仪表板',
+          dashboardDescription: '查看网络统计',
+          whitepaper: '白皮书',
+          whitepaperDescription: '阅读技术文档',
+          community: '社区',
+          communityDescription: '加入社区'
+        }
+      },
+      // Wallet related
+      wallet: {
+        title: '为挖矿创建钱包',
+        create: '创建钱包',
+        myWallet: '我的钱包',
+        auth: '钱包认证',
+        secondPassword: '第二密码设置',
+        changePassword: '更改密码',
+        address: '钱包地址',
+        balance: '余额',
+        transactions: '交易记录',
+        security: '安全设置',
+        created: {
+          successTitle: 'BitWish钱包创建完成',
+          successMessage: '您的新BitWish钱包已成功创建。'
+        },
+        newWallet: {
+          successTitle: '新钱包创建完成',
+          successMessage: '您的新BitWish钱包已成功创建。以前的资产已永久销毁。'
+        },
+        passwordReset: {
+          button: '重置第二密码',
+          confirmTitle: '重置第二密码',
+          confirmMessage: '是否要重置第二密码设置？',
+          confirmDetail: '重置后需要重新设置新的第二密码。',
+          successTitle: '重置完成',
+          successMessage: '第二密码已重置。请重新设置新的第二密码。',
+          errorOccurred: '重置第二密码时发生错误。'
+        },
+        availableNote: '认证完成后解锁数量',
+        send: '发送',
+        sendAddress: '接收地址',
+        sendAddressPlaceholder: 'BW...',
+        sendAmount: '发送金额',
+        sendAmountPlaceholder: '0.0000',
+        fee: '手续费: 0.01 BW',
+        sendMemo: '备注 (可选)',
+        sendMemoPlaceholder: '请输入备注',
+        otpCode: 'OTP 6位代码',
+        otpCodePlaceholder: '123456',
+        cancel: '取消'
+      },
+      // Wallet Auth
+      walletAuth: {
+        setupSecondPassword: '第二密码设置'
+      },
+      // Seed phrase related
+      seedPhrase: {
+        verification: '种子短语验证',
+        record24WordsSafely: '请将24个单词记录在安全的地方',
+        next: '下一步',
+        copy: '复制',
+        copied: '已复制',
+        accessWalletWithSeedPhrase: '使用种子短语访问钱包'
+      },
+      auth: {
+        logoutTitle: '登出',
+        logoutMessage: '成功登出。'
+      },
+      // Security warning messages
+      security: {
+        passwordFailure: {
+          attempt1: '密码不匹配。(1/5次失败)',
+          attempt2: '密码不匹配。(2/5次失败)',
+          attempt3: '⚠️ 警告: 密码不匹配。(3/5次失败) - 剩余2次',
+          attempt4: '🚨 注意: 密码不匹配。(4/5次失败) - 剩余1次，失败将锁定15分钟',
+          attempt5: '🔒 账户锁定: 连续5次失败，已锁定15分钟。',
+          attempt10: '🚫 账户黑名单: 连续10次失败，已锁定24小时。',
+          retryAfter: '请在{{minutes}}分钟后重试。',
+          ipBlocked: 'IP地址已被封锁。{{hours}}小时后自动解除。'
+        }
+      },
+      // BW Mining System
+      bwMining: {
+        title: 'BW积分挖矿系统',
+        bitwishToken: 'BitWish代币信息',
+        currentBWPoints: '当前BW积分',
+        totalSupply: '总供应量',
+        bitwishNote: 'BitWish是完全独立的Layer 1区块链。',
+        miningRewards: '挖矿奖励',
+        attendanceBonus: '出勤奖励',
+        referralBonus: '推荐奖励',
+        lockupBonus: '锁定奖励',
+        merchantBonus: '商家奖励'
+      },
+      // Common messages
+      common: {
+        loading: '加载中...',
+        error: '发生错误',
+        success: '成功',
+        cancel: '取消',
+        confirm: '确认',
+        save: '保存',
+        delete: '删除',
+        edit: '编辑',
+        close: '关闭',
+        back: '返回',
+        next: '下一步',
+        previous: '上一步',
+        submit: '提交',
+        reset: '重置',
+        search: '搜索',
+        filter: '过滤',
+        sort: '排序',
+        refresh: '刷新',
+        copy: '复制',
+        paste: '粘贴',
+        cut: '剪切',
+        select: '选择',
+        all: '全部',
+        none: '无',
+        yes: '是',
+        no: '否',
+        ok: '确定',
+        apply: '应用',
+        clear: '清除',
+        remove: '移除',
+        add: '添加',
+        create: '创建',
+        createWallet: '创建钱包',
+        createNewWallet: '创建新钱包',
+        myWallet: '我的钱包',
+        update: '更新',
+        view: '查看',
+        details: '详情',
+        info: '信息',
+        warning: '警告',
+        notice: '通知',
+        noUpdate: '无更新',
+        seedPhraseLostTitle: '丢失了您的种子短语？',
+        seedPhraseLostWarning: '如果创建新钱包，您将无法再使用以前的钱包。',
+        irreversibleConsequence1: '现有钱包中的所有BW资产将被永久销毁',
+        irreversibleConsequence2: '所有现有的挖矿/奖励历史将丢失',
+        irreversibleConsequence3: '新钱包将从0 BW重新开始',
+        irreversibleConsequence4: '以前的钱包地址将永久无法访问',
+        // 我的钱包页面
+        overview: '概览',
+        transactions: '交易记录',
+        settings: '设置',
+        security: '安全',
+        receive: '接收',
+        send: '发送',
+        sendAddress: '接收地址',
+        sendAddressPlaceholder: 'BW...',
+        sendAmount: '发送金额',
+        sendAmountPlaceholder: '0.0000',
+        fee: '手续费: 0.01 BW',
+        sendMemo: '备注 (可选)',
+        sendMemoPlaceholder: '请输入备注',
+        otpCode: 'OTP 6位代码',
+        otpCodePlaceholder: '123456',
+        otpSetup: 'OTP设置',
+        kycApplication: 'KYC申请',
+        address: '钱包地址',
+        balance: '余额',
+        myBW: '我的BW',
+        realTimeTotal: '实时总持有量',
+        availableAmount: '可用金额',
+        afterAuthUnlock: '认证完成后解锁数量',
+        referralBonus: '推荐奖金',
+        referralCumulativeReward: '推荐人累计奖励',
+        referralCumulativeBonus: '推荐人累计奖金',
+        vault: '保管库',
+        referralKycMigrationNote: '推荐人通过KYC后，将在15天后迁移到可用金额。',
+        walletInfo: '钱包信息',
+        referralCode: '推荐码',
+        qrCode: 'QR码',
+        qrCodeDescription: '扫描QR码以共享您的钱包地址。'
+      },
+      // Blockchain
+      blockchain: {
+        realTimeStatus: '实时区块链状态',
+        checkRealTimeStatus: '查看实时区块链状态',
+        lastUpdate: '最后更新',
+        totalIssuance210Billion: '总发行量（210亿个）',
+        bitwishTotalSupply: 'BitWish总供应量',
+        currentIssuance: '当前发行量',
+        realTimeBlockchainData: '实时区块链数据',
+        remainingIssuance: '剩余发行量',
+        issuanceRate: '发行率',
+        totalBlocks: '总区块',
+        generatedBlocks: '生成的区块',
+        networkStatus: '网络状态',
+        realTimeConnection: '实时连接',
+        refreshStatus: '刷新状态'
+      },
+      // Mining
+      mining: {
+        bonus: '挖矿与奖励',
+        status: '挖矿状态',
+        totalRewards: '总奖励',
+        startTime: '开始时间',
+        duration: '持续时间',
+        rate: '挖矿比率'
+      },
+      // Footer
+      footer: {
+        company: '公司',
+        description: 'BitWish Network是独立的Layer 1区块链平台，支持安全、快速和全球数字资产交易。',
+        products: '产品',
+        bwMainnet: 'BW 主网',
+        bwNode: 'BW 节点',
+        bwWallet: 'BW 钱包',
+        community: '社区',
+        bwCommunity: 'BW 社区',
+        developerDocs: '开发者文档',
+        supportCenter: '支持中心',
+        companyInfo: '公司信息',
+        about: '关于我们',
+        careers: '招聘信息',
+        contact: '联系方式',
+        copyright: '© 2024 BitWish Network. All rights reserved.'
+      }
+    }
+  }
+};
+
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: 'ko',
+    debug: false,
+    interpolation: {
+      escapeValue: false
+    }
+  });
+
+export default i18n;

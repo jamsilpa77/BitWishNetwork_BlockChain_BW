@@ -1,0 +1,245 @@
+죄송합니다! 제가 완전히 잘못 분석했습니다.
+
+
+[2 tools called]
+
+# **❌ 락업 보너스 분리 문제 발견 보고서**
+
+## **❌ 심각한 문제 발견**
+
+**관리자용과 유저용이 락업 보너스에서 공통 변수를 사용하고 있습니다!**
+
+### **❌ 공통 변수 사용 문제**
+
+**관리자용 마이닝 보상 계산 (754라인)**:
+```typescript
+const decimalLockupBonus = (isLockupRegistered && lockupRatio > 0) ? 
+  new Decimal(calculateLockupBonus(lockupRatio, lockupMonths).totalAPY) : 
+  new Decimal(0);
+```
+
+**유저용 마이닝 보상 계산 (3389라인)**:
+```typescript
+const decimalLockupBonus = (isLockupRegistered && lockupRatio > 0) ? 
+  new Decimal(calculateLockupBonus(lockupRatio, lockupMonths).totalAPY) : 
+  new Decimal(0);
+```
+
+### **❌ 동일한 변수들**
+- `isLockupRegistered` - 공통 변수
+- `lockupRatio` - 공통 변수  
+- `lockupMonths` - 공통 변수
+
+## **❌ 결과**
+
+**유저용에서 락업 설정 등록 시 관리자용에도 동시에 적용됨!**
+
+완전히 분리되어야 하는데 공통 변수를 사용하고 있어서 분리가 안되어 있습니다.
+
+## **✅ 해결 필요**
+
+**유저용 전용 락업 변수 필요**:
+- `userIsLockupRegistered`
+- `userLockupRatio` 
+- `userLockupMonths`
+
+**관리자용 전용 락업 변수 필요**:
+- `adminIsLockupRegistered`
+- `adminLockupRatio`
+- `adminLockupMonths`
+
+**결론**: 락업 보너스가 완전히 분리되지 않아서 유저용 설정이 관리자용에도 영향을 주고 있습니다.
+
+◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆
+
+# ** 락업 보너스 완전 분리 수정 코드**
+
+## *1️⃣ 유저용 락업 변수 추가**
+
+**위치**: 유저용 상태 변수 선언 부분
+```typescript
+// 🎯 유저용 락업 상태 관리 (관리자용과 완전 분리)
+const [userIsLockupRegistered, setUserIsLockupRegistered] = useState(() => {
+  try {
+    const savedState = localStorage.getItem('userLockupState');
+    if (savedState) {
+      const userLockupState = JSON.parse(savedState);
+      return userLockupState.userIsLockupRegistered || false;
+    }
+  } catch (error) {
+    console.error('❌ 유저용 락업 등록 상태 초기화 실패:', error);
+  }
+  return false;
+});
+
+const [userLockupRatio, setUserLockupRatio] = useState(() => {
+  try {
+    const savedState = localStorage.getItem('userLockupState');
+    if (savedState) {
+      const userLockupState = JSON.parse(savedState);
+      return userLockupState.userLockupRatio || 20;
+    }
+  } catch (error) {
+    console.error('❌ 유저용 락업 비율 초기화 실패:', error);
+  }
+  return 20;
+});
+
+const [userLockupMonths, setUserLockupMonths] = useState(() => {
+  try {
+    const savedState = localStorage.getItem('userLockupState');
+    if (savedState) {
+      const userLockupState = JSON.parse(savedState);
+      return userLockupState.userLockupMonths || 1;
+    }
+  } catch (error) {
+    console.error('❌ 유저용 락업 기간 초기화 실패:', error);
+  }
+  return 1;
+});
+```
+
+## **2️⃣ 관리자용 락업 변수 추가**
+
+**위치**: 관리자용 상태 변수 선언 부분
+```typescript
+// 🎯 관리자용 락업 상태 관리 (유저용과 완전 분리)
+const [adminIsLockupRegistered, setAdminIsLockupRegistered] = useState(() => {
+  try {
+    const savedState = localStorage.getItem('adminLockupState');
+    if (savedState) {
+      const adminLockupState = JSON.parse(savedState);
+      return adminLockupState.adminIsLockupRegistered || false;
+    }
+  } catch (error) {
+    console.error('❌ 관리자용 락업 등록 상태 초기화 실패:', error);
+  }
+  return false;
+});
+
+const [adminLockupRatio, setAdminLockupRatio] = useState(() => {
+  try {
+    const savedState = localStorage.getItem('adminLockupState');
+    if (savedState) {
+      const adminLockupState = JSON.parse(savedState);
+      return adminLockupState.adminLockupRatio || 20;
+    }
+  } catch (error) {
+    console.error('❌ 관리자용 락업 비율 초기화 실패:', error);
+  }
+  return 20;
+});
+
+const [adminLockupMonths, setAdminLockupMonths] = useState(() => {
+  try {
+    const savedState = localStorage.getItem('adminLockupState');
+    if (savedState) {
+      const adminLockupState = JSON.parse(savedState);
+      return adminLockupState.adminLockupMonths || 1;
+    }
+  } catch (error) {
+    console.error('❌ 관리자용 락업 기간 초기화 실패:', error);
+  }
+  return 1;
+});
+```
+
+## **3️⃣ 유저용 마이닝 보상 계산 함수 수정**
+
+**위치**: 3389라인
+```typescript
+// 수정 전
+const decimalLockupBonus = (isLockupRegistered && lockupRatio > 0) ? 
+  new Decimal(calculateLockupBonus(lockupRatio, lockupMonths).totalAPY) : 
+  new Decimal(0);
+
+// 수정 후
+const decimalLockupBonus = (userIsLockupRegistered && userLockupRatio > 0) ? 
+  new Decimal(calculateLockupBonus(userLockupRatio, userLockupMonths).totalAPY) : 
+  new Decimal(0);
+```
+
+## **4️⃣ 관리자용 마이닝 보상 계산 함수 수정**
+
+**위치**: 837라인
+```typescript
+// 수정 전
+const decimalLockupBonus = (isLockupRegistered && lockupRatio > 0) ? 
+  new Decimal(calculateLockupBonus(lockupRatio, lockupMonths).totalAPY) : 
+  new Decimal(0);
+
+// 수정 후
+const decimalLockupBonus = (adminIsLockupRegistered && adminLockupRatio > 0) ? 
+  new Decimal(calculateLockupBonus(adminLockupRatio, adminLockupMonths).totalAPY) : 
+  new Decimal(0);
+```
+
+## **5️⃣ 유저용 useEffect 의존성 배열 수정**
+
+**위치**: 2572라인
+```typescript
+// 수정 전
+}, [userIsMiningActive, userMiningStartTime, userMiningStopTime, userMiningRewards]);
+
+// 수정 후
+}, [userIsMiningActive, userMiningStartTime, userMiningStopTime, userMiningRewards, userReferralCount, userLockupRatio, userLockupMonths]);
+```
+
+## **6️⃣ 관리자용 useEffect 의존성 배열 수정**
+
+**위치**: 5010라인
+```typescript
+// 수정 전
+}, [isMiningActive, miningStartTime, adminReferralCount, adminConsecutiveAttendanceDays, lockupRatio, lockupMonths, isMerchantRegistered]);
+
+// 수정 후
+}, [isMiningActive, miningStartTime, adminReferralCount, adminConsecutiveAttendanceDays, adminLockupRatio, adminLockupMonths, isMerchantRegistered]);
+```
+
+## **7️⃣ 유저용 락업 데이터 저장 함수 추가**
+
+```typescript
+const saveUserLockupState = () => {
+  try {
+    const userLockupData = {
+      userIsLockupRegistered,
+      userLockupRatio,
+      userLockupMonths,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('userLockupState', JSON.stringify(userLockupData));
+    console.log('✅ 유저용 락업 상태 저장 완료:', userLockupData);
+  } catch (error) {
+    console.error('❌ 유저용 락업 상태 저장 오류:', error);
+  }
+};
+```
+
+## **8️⃣ 관리자용 락업 데이터 저장 함수 추가**
+
+```typescript
+const saveAdminLockupState = () => {
+  try {
+    const adminLockupData = {
+      adminIsLockupRegistered,
+      adminLockupRatio,
+      adminLockupMonths,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('adminLockupState', JSON.stringify(adminLockupData));
+    console.log('✅ 관리자용 락업 상태 저장 완료:', adminLockupData);
+  } catch (error) {
+    console.error('❌ 관리자용 락업 상태 저장 오류:', error);
+  }
+};
+```
+
+---
+
+**✅ 수정 완료 후 결과:**
+- **유저용과 관리자용 락업 보너스 완전 분리**
+- **각각 독립적인 localStorage 사용**
+- **유저용 락업 설정이 관리자용에 영향 없음**
+
+◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆
+

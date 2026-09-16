@@ -1,0 +1,192 @@
+[
+  {
+    "_id": "68eb81706f78c441a1d87fa7",
+    "blockNumber": 1,
+    "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000001",
+    "previousHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "creator": {
+      "walletAddress": "GENESIS_BLOCK_CREATOR",
+      "miningStartTime": "2025-01-01 00:00:00"
+    },
+    "blockFee": {
+      "amount": "0.00000000",
+      "distributed": true,
+      "ecosystemShare": "0.00000000",
+      "devTeamShare": "0.00000000"
+    },
+    "transactions": [],
+    "timestamp": "2025-01-01 00:00:00",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": "68eb81706f78c441a1d87fa8",
+    "blockNumber": 2,
+    "blockHash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+    "previousHash": "0x0000000000000000000000000000000000000000000000000000000000000001",
+    "creator": {
+      "walletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+      "miningStartTime": "2025-01-12 14:30:22"
+    },
+    "blockFee": {
+      "amount": "0.00100000",
+      "distributed": true,
+      "ecosystemShare": "0.00070000",
+      "devTeamShare": "0.00030000"
+    },
+    "transactions": [],
+    "timestamp": "2025-01-12 14:30:22",
+    "createdAt": "2025-01-12T14:30:22.000Z"
+  },
+  {
+    "_id": "68eb81706f78c441a1d87fa9",
+    "blockNumber": 3,
+    "blockHash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "previousHash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+    "creator": {
+      "walletAddress": "BWD961BB460B70E2BFE25D3E6B8070593A4107A541",
+      "miningStartTime": "2025-01-13 10:15:30"
+    },
+    "blockFee": {
+      "amount": "0.00100000",
+      "distributed": true,
+      "ecosystemShare": "0.00070000",
+      "devTeamShare": "0.00030000"
+    },
+    "transactions": [],
+    "timestamp": "2025-01-13 10:15:30",
+    "createdAt": "2025-01-13T10:15:30.000Z"
+  },
+  {
+    "_id": "68ec602c789dfa6f9a3c996f",
+    "blockNumber": 4,
+    "blockHash": "0x199db57ad2f028db6a18a55200000000000000000000000000000000000",
+    "previousHash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "creator": {
+      "walletAddress": "BWTEST1760321580294",
+      "miningStartTime": "2025-10-13 02:13:00"
+    },
+    "blockFee": {
+      "amount": "0.00100000",
+      "distributed": false,
+      "ecosystemShare": "0.00070000",
+      "devTeamShare": "0.00030000"
+    },
+    "transactions": [],
+    "timestamp": "2025-10-13 02:13:00",
+    "createdAt": "2025-10-13T02:13:00.326Z"
+  },
+  {
+    "_id": "68ec6194789dfa6f9a3c9971",
+    "blockNumber": 5,
+    "blockHash": "0x199db5d2c7b265a0c940caeb00000000000000000000000000000000000",
+    "previousHash": "0x199db57ad2f028db6a18a55200000000000000000000000000000000000",
+    "creator": {
+      "walletAddress": "BWTEST1760321940585",
+      "miningStartTime": "2025-10-13 02:19:00"
+    },
+    "blockFee": {
+      "amount": "0.00100000",
+      "distributed": false,
+      "ecosystemShare": "0.00070000",
+      "devTeamShare": "0.00030000"
+    },
+    "transactions": [],
+    "timestamp": "2025-10-13 02:19:00",
+    "createdAt": "2025-10-13T02:19:00.601Z"
+  },
+  {
+    "_id": "68ec61e0789dfa6f9a3c9973",
+    "blockNumber": 6,
+    "blockHash": "0x199db5e5410d9a3c1fae8d3500000000000000000000000000000000000",
+    "previousHash": "0x199db5d2c7b265a0c940caeb00000000000000000000000000000000000",
+    "creator": {
+      "walletAddress": "BWTEST1760322016256",
+      "miningStartTime": "2025-10-13 02:20:16"
+    },
+    "blockFee": {
+      "amount": "0.00100000",
+      "distributed": false,
+      "ecosystemShare": "0.00070000",
+      "devTeamShare": "0.00030000"
+    },
+    "transactions": [],
+    "timestamp": "2025-10-13 02:20:16",
+    "createdAt": "2025-10-13T02:20:16.270Z"
+  },
+  {
+    "_id": "68ec626a06f41e2e9c333b92",
+    "blockNumber": 7,
+    "blockHash": "0x199db60716a0b25e103c079200000000000000000000000000000000000",
+    "previousHash": "0x199db5e5410d9a3c1fae8d3500000000000000000000000000000000000",
+    "creator": {
+      "walletAddress": "BWTEST1760322154838",
+      "miningStartTime": "2025-10-13 02:22:34"
+    },
+    "blockFee": {
+      "amount": "0.00100000",
+      "distributed": true,
+      "ecosystemShare": "0.00070000",
+      "devTeamShare": "0.00030000"
+    },
+    "transactions": [],
+    "timestamp": "2025-10-13 02:22:34",
+    "createdAt": "2025-10-13T02:22:34.856Z"
+  },
+  {
+    "_id": "68ec813bc0103e071f06c2c1",
+    "blockNumber": 8,
+    "blockHash": "0x199dbd8d1eb83c74c890b19a00000000000000000000000000000000000",
+    "previousHash": "0x199db60716a0b25e103c079200000000000000000000000000000000000",
+    "creator": {
+      "walletAddress": "BWTEST20251013133403",
+      "miningStartTime": "2025-10-13 04:34:03"
+    },
+    "blockFee": {
+      "amount": "0.00100000",
+      "distributed": true,
+      "ecosystemShare": "0.00070000",
+      "devTeamShare": "0.00030000"
+    },
+    "transactions": [],
+    "timestamp": "2025-10-13 04:34:03",
+    "createdAt": "2025-10-13T04:34:03.880Z"
+  },
+  {
+    "_id": "68ec817ac0103e071f06c2c5",
+    "blockNumber": 9,
+    "blockHash": "0x199dbd9c692e56a2d4ff97f700000000000000000000000000000000000",
+    "previousHash": "0x199dbd8d1eb83c74c890b19a00000000000000000000000000000000000",
+    "creator": {
+      "walletAddress": "BWTEST20251013133506",
+      "miningStartTime": "2025-10-13 04:35:06"
+    },
+    "blockFee": {
+      "amount": "0.00100000",
+      "distributed": true,
+      "ecosystemShare": "0.00070000",
+      "devTeamShare": "0.00030000"
+    },
+    "transactions": [],
+    "timestamp": "2025-10-13 04:35:06",
+    "createdAt": "2025-10-13T04:35:06.512Z"
+  },
+  {
+    "_id": "68ec9849f6b07250eae90e1f",
+    "blockNumber": 10,
+    "blockHash": "0x199dc32dfad6cee3d15f57af00000000000000000000000000000000000",
+    "previousHash": "0x199dbd9c692e56a2d4ff97f700000000000000000000000000000000000",
+    "creator": {
+      "walletAddress": "BWTEST20251013151225",
+      "miningStartTime": "2025-10-13 06:12:25"
+    },
+    "blockFee": {
+      "amount": "0.00100000",
+      "distributed": true,
+      "ecosystemShare": "0.00070000",
+      "devTeamShare": "0.00030000"
+    },
+    "transactions": [],
+    "timestamp": "2025-10-13 06:12:25",
+    "createdAt": "2025-10-13T06:12:25.643Z"
+  }
+]

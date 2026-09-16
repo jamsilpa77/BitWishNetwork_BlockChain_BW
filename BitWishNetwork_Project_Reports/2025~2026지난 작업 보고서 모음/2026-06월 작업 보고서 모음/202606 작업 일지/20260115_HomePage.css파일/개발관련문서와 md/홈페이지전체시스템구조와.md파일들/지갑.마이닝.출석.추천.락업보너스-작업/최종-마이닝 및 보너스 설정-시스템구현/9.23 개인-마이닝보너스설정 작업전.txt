@@ -1,0 +1,221 @@
+import Decimal from "decimal.js";
+
+// 🎯 정밀도 설정
+const PRECISION_CONFIG = {
+  DISPLAY_PRECISION: 8,
+  UI_PRECISION: 2,
+  CALCULATION_PRECISION: 16
+};
+
+// 🎯 마이닝 계산 결과 타입 정의
+export interface MiningRewardData {
+  baseRate: number;
+  attendanceBonus: number;
+  referralBonus: number;
+  lockupBonus: number;
+  merchantBonus: number;
+  totalBonusRate: number;
+  totalEnhancedRate: number;
+  hourlyReward: number;
+  dailyReward: number;
+  monthlyReward: number;
+  yearlyReward: number;
+  ui: {
+    attendancePct: number;
+    referralPct: number;
+    lockupPct: number;
+    additionalLockupPct?: number;
+    merchantPct: number;
+    totalPct: number;
+    totalBonusPct: number;
+    lockupVaultBW: number;
+    additionalLockupVaultBW: number;
+    referralStorageBW: number;
+  };
+}
+
+// 🎯 마이닝 서비스 클래스
+export class MiningService {
+  // 🎯 유저용 실시간 마이닝 보상 계산 (BigDecimal 기반)
+  static calculateUserRealTimeMiningReward(params: {
+    userConsecutiveAttendanceDays: number;
+    userReferralCount: number;
+    userLockupRatio: number;
+    userLockupMonths: number;
+    isUserLockupRegistered: boolean;
+    userIsMerchantRegistered: boolean;
+    isUserAttendanceBonusTimeValid: () => boolean;
+    calculateUserAttendanceBonus: (days: number) => {bonusRate: number};
+    calculateUserReferralBonusDecimal: (count: number) => any;
+    calculateLockupBonus: (ratio: number, months: number) => {totalAPY: number};
+    calculateMerchantBonus: (isRegistered: boolean) => {bonusRate: number};
+  }): MiningRewardData {
+    // 기본 채굴률 (BigDecimal)
+    const decimalBaseRate = new Decimal(0.25);
+    
+    // 출석 보너스 (BigDecimal) - 시간 제한 적용
+    const decimalAttendanceBonus = (params.userConsecutiveAttendanceDays > 0 && params.isUserAttendanceBonusTimeValid()) ? 
+      new Decimal(params.calculateUserAttendanceBonus(params.userConsecutiveAttendanceDays).bonusRate) : 
+      new Decimal(0);
+    
+    // 유저용 추천인 보너스 (BigDecimal 기반)
+    const userReferralBonusData = params.calculateUserReferralBonusDecimal(params.userReferralCount);
+    const decimalUserReferralBonus = userReferralBonusData.totalBonusRate;
+    
+    // 락업 보너스 (BigDecimal) - 등록된 경우에만 계산
+    const decimalLockupBonus = (params.isUserLockupRegistered && params.userLockupRatio > 0) ? 
+      new Decimal(params.calculateLockupBonus(params.userLockupRatio, params.userLockupMonths).totalAPY) : 
+      new Decimal(0);
+    
+    // 가맹점 보너스 (BigDecimal)
+    const decimalMerchantBonus = new Decimal(params.userIsMerchantRegistered ? params.calculateMerchantBonus(params.userIsMerchantRegistered).bonusRate : 0);
+    
+    // 총 보너스율 계산 (BigDecimal)
+    const decimalOne = new Decimal(1);
+    const decimalTotalBonusRate = decimalOne
+      .plus(decimalAttendanceBonus)
+      .plus(decimalUserReferralBonus)
+      .plus(decimalLockupBonus)
+      .plus(decimalMerchantBonus);
+    
+    // 강화된 채굴률 계산 (BigDecimal)
+    const decimalTotalEnhancedRate = decimalBaseRate.times(decimalTotalBonusRate);
+    
+    // 시간당/일일/월간/연간 보상 계산 (BigDecimal)
+    const decimalHourlyReward = decimalTotalEnhancedRate;
+    const decimalDailyReward = decimalHourlyReward.times(24);
+    const decimalMonthlyReward = decimalDailyReward.times(30);
+    const decimalYearlyReward = decimalMonthlyReward.times(12);
+    
+    return {
+      baseRate: decimalBaseRate.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      attendanceBonus: decimalAttendanceBonus.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      referralBonus: decimalUserReferralBonus.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      lockupBonus: decimalLockupBonus.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      merchantBonus: decimalMerchantBonus.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      totalBonusRate: decimalTotalBonusRate.minus(decimalOne).toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      totalEnhancedRate: decimalTotalEnhancedRate.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      hourlyReward: decimalHourlyReward.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      dailyReward: decimalDailyReward.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      monthlyReward: decimalMonthlyReward.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      yearlyReward: decimalYearlyReward.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      ui: {
+        attendancePct: decimalAttendanceBonus.times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        referralPct: decimalUserReferralBonus.times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        lockupPct: decimalLockupBonus.times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        merchantPct: decimalMerchantBonus.times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        totalPct: decimalTotalBonusRate.minus(decimalOne).times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        totalBonusPct: decimalTotalBonusRate.minus(decimalOne).times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        lockupVaultBW: new Decimal(0).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        additionalLockupVaultBW: new Decimal(0).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        referralStorageBW: new Decimal(0).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber()
+      }
+    };
+  }
+
+  // 🎯 관리자용 실시간 마이닝 보상 계산 (BigDecimal 기반)
+  static calculateAdminRealTimeMiningReward(params: {
+    adminConsecutiveAttendanceDays: number;
+    adminReferralCount: number;
+    adminLockupSystemState: any;
+    adminIsMerchantRegistered: boolean;
+    isAdminAttendanceBonusTimeValid: () => boolean;
+    calculateAdminAttendanceBonus: (days: number) => {bonusRate: number};
+    calculateAdminReferralBonusDecimal: (count: number) => any;
+    calculateLockupBonus: (ratio: number, months: number) => {totalAPY: number};
+    calculateAdminSecondLockupBonus: (ratio: number, months: number) => {totalAPY: number};
+    calculateMerchantBonus: (isRegistered: boolean) => {bonusRate: number};
+    calculateAdminBasicLockupVault: () => number;
+    calculateAdminSecondLockupVault: () => number;
+  }): MiningRewardData {
+    // 기본 채굴률 (BigDecimal)
+    const decimalBaseRate = new Decimal(0.25);
+    
+    // 출석 보너스 (BigDecimal) - 시간 제한 적용
+    const decimalAttendanceBonus = (params.adminConsecutiveAttendanceDays > 0 && params.isAdminAttendanceBonusTimeValid()) ? 
+      new Decimal(params.calculateAdminAttendanceBonus(params.adminConsecutiveAttendanceDays).bonusRate) : 
+      new Decimal(0);
+    
+    // 관리자용 추천인 보너스 (BigDecimal 기반)
+    const adminReferralData = params.calculateAdminReferralBonusDecimal(params.adminReferralCount);
+    const decimalReferralBonus = adminReferralData.cumulativeBonusRate;
+    
+    // 관리자용 락업 보너스 (BigDecimal 기반)
+    const adminBasicLockupData = params.calculateLockupBonus(params.adminLockupSystemState.basicLockupRatio, params.adminLockupSystemState.basicLockupMonths);
+    const adminSecondLockupData = params.calculateAdminSecondLockupBonus(params.adminLockupSystemState.secondLockupRatio, params.adminLockupSystemState.secondLockupMonths);
+    const decimalLockupBonus = new Decimal(adminBasicLockupData.totalAPY).plus(new Decimal(adminSecondLockupData.totalAPY));
+    
+    // 관리자용 추가 락업 보너스 (BigDecimal 기반)
+    const decimalAdditionalLockupBonus = new Decimal(adminSecondLockupData.totalAPY);
+    
+    // 가맹점 보너스 (BigDecimal)
+    const decimalMerchantBonus = new Decimal(params.calculateMerchantBonus(params.adminIsMerchantRegistered).bonusRate);
+    
+    // 총 보너스율 계산 (BigDecimal)
+    const decimalOne = new Decimal(1);
+    const decimalTotalBonusRate = decimalOne
+      .plus(decimalAttendanceBonus)
+      .plus(decimalReferralBonus)
+      .plus(decimalLockupBonus)
+      .plus(decimalAdditionalLockupBonus)
+      .plus(decimalMerchantBonus);
+    
+    // 강화된 채굴률 계산 (BigDecimal)
+    const decimalTotalEnhancedRate = decimalBaseRate.times(decimalTotalBonusRate);
+    
+    // 시간당/일일/월간/연간 보상 계산 (BigDecimal)
+    const decimalHourlyReward = decimalTotalEnhancedRate;
+    const decimalDailyReward = decimalHourlyReward.times(24);
+    const decimalMonthlyReward = decimalDailyReward.times(30);
+    const decimalYearlyReward = decimalMonthlyReward.times(12);
+    
+    return {
+      baseRate: decimalBaseRate.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      attendanceBonus: decimalAttendanceBonus.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      referralBonus: decimalReferralBonus.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      lockupBonus: decimalLockupBonus.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      merchantBonus: decimalMerchantBonus.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      totalBonusRate: decimalTotalBonusRate.minus(decimalOne).toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      totalEnhancedRate: decimalTotalEnhancedRate.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      hourlyReward: decimalHourlyReward.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      dailyReward: decimalDailyReward.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      monthlyReward: decimalMonthlyReward.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      yearlyReward: decimalYearlyReward.toDecimalPlaces(PRECISION_CONFIG.DISPLAY_PRECISION).toNumber(),
+      ui: {
+        attendancePct: decimalAttendanceBonus.times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        referralPct: adminReferralData.cumulativeBonusRate.times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        lockupPct: decimalLockupBonus.times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        additionalLockupPct: decimalAdditionalLockupBonus.times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        merchantPct: decimalMerchantBonus.times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        totalPct: decimalTotalBonusRate.minus(decimalOne).times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        totalBonusPct: decimalTotalBonusRate.minus(decimalOne).times(100).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        lockupVaultBW: new Decimal(params.calculateAdminBasicLockupVault()).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        additionalLockupVaultBW: new Decimal(params.calculateAdminSecondLockupVault()).toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber(),
+        referralStorageBW: adminReferralData.instantBonus.toDecimalPlaces(PRECISION_CONFIG.UI_PRECISION).toNumber()
+      }
+    };
+  }
+
+  // 🎯 정밀도 검증
+  static validatePrecision(expected: number, actual: number, tolerance: number = 0.0001): boolean {
+    const decimalExpected = new Decimal(expected);
+    const decimalActual = new Decimal(actual);
+    const decimalTolerance = new Decimal(tolerance);
+    const decimalError = decimalExpected.minus(decimalActual).abs();
+    return decimalError.lte(decimalTolerance);
+  }
+
+  // 🎯 부동소수점 오차 분석
+  static analyzeFloatingPointError(value: number, precision: number): void {
+    const decimal = new Decimal(value);
+    const rounded = decimal.toDecimalPlaces(precision);
+    const error = decimal.minus(rounded).abs();
+    
+    console.log(`🔍 부동소수점 오차 분석:`, {
+      원본값: value,
+      반올림값: rounded.toNumber(),
+      오차: error.toNumber(),
+      정밀도: precision
+    });
+  }
+}

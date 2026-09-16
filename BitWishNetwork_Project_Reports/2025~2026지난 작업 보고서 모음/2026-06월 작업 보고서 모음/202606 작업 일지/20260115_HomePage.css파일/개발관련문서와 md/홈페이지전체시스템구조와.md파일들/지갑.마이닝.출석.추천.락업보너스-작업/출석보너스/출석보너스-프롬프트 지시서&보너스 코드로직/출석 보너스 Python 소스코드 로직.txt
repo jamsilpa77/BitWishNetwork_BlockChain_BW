@@ -1,0 +1,219 @@
+from datetime import datetime, timedelta, date
+import calendar
+
+# 출석 보너스 시스템 클래스 (보고서와 문서 기반 로직 구현)
+class AttendanceBonusSystem:
+    """
+    출석 보너스 시스템 구조:
+    - 출석 체크 시간: 오전 9시 ~ 다음 날 오전 8:59:59 (24시간 창)
+    - 유예 기간: 미체크 시 추가 24시간 (총 48시간) 연속성 유지 기회
+    - 색상 상태: 파란색(활성), 회색(비활성), 빨간색(완료)
+    - 보너스 초기화: 매일 오전 9시 보너스 0% 리셋 (연속성은 유지)
+    - 연속성 상실: 유예 기간 만료 시 0으로 초기화
+    - 보너스 테이블: 문서 기반
+    """
+    def __init__(self, user_id, current_datetime=None):
+        self.user_id = user_id
+        self.current_datetime = current_datetime if current_datetime else datetime.now()
+        self.attendance_history = {}  # key: 'YYYY-MM-DD', value: 'checked'
+        self.consecutive_days = 0
+        self.last_checked_date = None
+        self.bonus_rate = 0.0
+        self.base_mining_rate = 0.25  # BW/시간
+        self.bonus_tiers = [  # (min_days, rate, increased_rate)
+            (30, 0.17, 0.2925),
+            (29, 0.12, 0.28),
+            (22, 0.068, 0.267),
+            (15, 0.05, 0.2625),
+            (8, 0.035, 0.25875),
+            (1, 0.02, 0.255),
+            (0, 0.0, 0.25)
+        ]
+
+    def get_day_key(self, d: date) -> str:
+        return d.strftime('%Y-%m-%d')
+
+    def get_day_start(self, d: date) -> datetime:
+        return datetime(d.year, d.month, d.day, 9, 0, 0)
+
+    def get_initial_window_end(self, d: date) -> datetime:
+        next_day = d + timedelta(days=1)
+        return datetime(next_day.year, next_day.month, next_day.day, 8, 59, 59)
+
+    def get_grace_window_end(self, d: date) -> datetime:
+        next_next_day = d + timedelta(days=2)
+        return datetime(next_next_day.year, next_next_day.month, next_next_day.day, 8, 59, 59)
+
+    def is_active_for_check(self, check_date: date) -> bool:
+        now = self.current_datetime
+        start = self.get_day_start(check_date)
+        initial_end = self.get_initial_window_end(check_date)
+        grace_end = self.get_grace_window_end(check_date)
+
+        if start <= now <= initial_end:
+            return True
+        elif initial_end < now <= grace_end and self.is_eligible_for_grace(check_date):
+            return True
+        return False
+
+    def is_eligible_for_grace(self, check_date: date) -> bool:
+        """연속성 혜택 자격 확인: 이전 날 체크했는지"""
+        if self.last_checked_date and (check_date - self.last_checked_date).days == 1:
+            return True
+        return False
+
+    def get_day_status(self, check_date: date) -> str:
+        day_key = self.get_day_key(check_date)
+        if day_key in self.attendance_history and self.attendance_history[day_key] == 'checked':
+            return 'red'  # 출석 완료 (비활성)
+        elif check_date > self.current_datetime.date():
+            return 'gray'  # 미래 날짜
+        elif self.is_active_for_check(check_date):
+            return 'blue'  # 활성화
+        else:
+            return 'gray'  # 비활성화
+
+    def check_attendance(self) -> str:
+        """출석 체크 로직"""
+        self.reset_bonus_if_needed()  # 먼저 초기화 확인
+        check_date = self.current_datetime.date()
+        day_key = self.get_day_key(check_date)
+        if day_key in self.attendance_history and self.attendance_history[day_key] == 'checked':
+            return 'already_checked'
+
+        if self.is_active_for_check(check_date):
+            self.attendance_history[day_key] = 'checked'
+            is_grace = self.current_datetime > self.get_initial_window_end(self.last_checked_date) if self.last_checked_date else False
+            if self.last_checked_date and (check_date - self.last_checked_date).days <= 2:  # 연속 or 유예
+                self.consecutive_days += 1
+            else:
+                self.consecutive_days = 1
+            self.last_checked_date = check_date
+            self.update_bonus_rate()
+            return 'checked_success'
+        else:
+            # 유예 만료 시 초기화
+            if self.current_datetime > self.get_grace_window_end(self.last_checked_date) if self.last_checked_date else False:
+                self.consecutive_days = 0
+                self.bonus_rate = 0.0
+            return 'not_active'
+
+    def update_bonus_rate(self):
+        """보너스율 업데이트"""
+        for min_days, rate, _ in sorted(self.bonus_tiers, reverse=True):
+            if self.consecutive_days >= min_days:
+                self.bonus_rate = rate
+                break
+
+    def reset_bonus_if_needed(self):
+        """매일 9:00:00에 보너스 0% 초기화 (연속성은 유지)"""
+        if self.current_datetime.time() == datetime.strptime('09:00:00', '%H:%M:%S').time():
+            self.bonus_rate = 0.0
+
+    def get_final_mining_rate(self) -> float:
+        """최종 채굴률 계산"""
+        return self.base_mining_rate * (1 + self.bonus_rate)
+
+    def get_calendar_data(self, year: int, month: int) -> list:
+        """캘린더 데이터 생성 (이미지와 유사)"""
+        cal = calendar.monthcalendar(year, month)
+        calendar_data = []
+        for week in cal:
+            week_data = []
+            for day in week:
+                if day == 0:
+                    week_data.append(None)
+                else:
+                    d = date(year, month, day)
+                    status = self.get_day_status(d)
+                    week_data.append((day, status))
+            calendar_data.append(week_data)
+        return calendar_data
+
+# UI 구현 예시 (pygame 사용, 라이브러리 지원됨)
+import pygame
+
+def render_attendance_ui(system: AttendanceBonusSystem):
+    """pygame으로 이미지와 유사한 UI 렌더링"""
+    pygame.init()
+    screen = pygame.display.set_mode((400, 600))
+    pygame.display.set_caption("관리자용 출석 보너스")
+
+    font = pygame.font.SysFont(None, 24)
+    colors = {
+        'blue': (0, 0, 255),
+        'gray': (128, 128, 128),
+        'red': (255, 0, 0),
+        'white': (255, 255, 255),
+        'purple': (128, 0, 128),
+        'green': (0, 255, 0)
+    }
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # 확인 버튼 클릭 시뮬 (x=150, y=500, width=100, height=50)
+                if 150 < event.pos[0] < 250 and 500 < event.pos[1] < 550:
+                    system.check_attendance()
+
+        screen.fill(colors['white'])
+
+        # 제목
+        title = font.render("관리자용 출석 보너스", True, colors['purple'])
+        screen.blit(title, (50, 20))
+
+        # 연월
+        year_month = font.render("2025년 9월", True, colors['blue'])
+        screen.blit(year_month, (50, 60))
+
+        # 오늘
+        today_text = font.render(f"오늘: {system.current_datetime.strftime('%Y년 %m월 %d일')}", True, colors['black'])
+        screen.blit(today_text, (50, 90))
+
+        # 요일 헤더
+        days = ['일', '월', '화', '수', '목', '금', '토']
+        for i, day in enumerate(days):
+            day_text = font.render(day, True, colors['black'])
+            screen.blit(day_text, (50 + i*40, 120))
+
+        # 캘린더
+        cal = system.get_calendar_data(2025, 9)
+        for row, week in enumerate(cal):
+            for col, item in enumerate(week):
+                if item:
+                    day_num, status = item
+                    color = colors[status]
+                    pygame.draw.circle(screen, color, (70 + col*40, 150 + row*40), 15, 2 if status == 'red' else 0)
+                    num_text = font.render(str(day_num), True, colors['black'] if status != 'red' else colors['red'])
+                    screen.blit(num_text, (60 + col*40, 140 + row*40))
+
+        # 연속 출석
+        consec_text = font.render(f"연속 출석: {system.consecutive_days}일", True, colors['black'])
+        screen.blit(consec_text, (50, 400))
+
+        # 보너스
+        bonus_text = font.render(f"{system.bonus_rate * 100:.1f}%", True, colors['black'])
+        screen.blit(bonus_text, (50, 430))
+
+        # 확인 버튼
+        pygame.draw.rect(screen, colors['purple'], (150, 500, 100, 50))
+        confirm_text = font.render("확인", True, colors['white'])
+        screen.blit(confirm_text, (170, 515))
+
+        pygame.display.flip()
+
+    pygame.quit()
+
+# 사용 예시
+if __name__ == "__main__":
+    current_dt = datetime(2025, 9, 21, 10, 0, 0)  # 현재 시간 설정
+    system = AttendanceBonusSystem('test_user', current_dt)
+    # 이미지 시뮬: 20일 체크, 연속 0 (체크 안된 상태로 초기화)
+    system.attendance_history['2025-09-20'] = 'checked'
+    system.last_checked_date = date(2025, 9, 20)
+    system.consecutive_days = 0  # 이미지에 0일
+    system.bonus_rate = 0.0
+    render_attendance_ui(system)

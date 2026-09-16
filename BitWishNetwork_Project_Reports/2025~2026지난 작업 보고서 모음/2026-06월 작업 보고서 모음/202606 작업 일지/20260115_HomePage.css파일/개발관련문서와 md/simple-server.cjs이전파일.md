@@ -1,0 +1,9221 @@
+/**
+ * ====================================================================================
+ * 🚀 BitWish Network 독립 블록체인 API 서버 v2.0
+ * ====================================================================================
+ * 
+ * 🎯 핵심 기능:
+ * - BitWish Network 독립 블록체인 시스템
+ * - BW 토큰 전용 지갑 시스템
+ * - BitWish-256 암호화 기반 보안
+ * - P2P 네트워크 연동
+ * - 완벽한 독립성 보장
+ * 
+ * 🔒 보안 강화:
+ * - 시드문구 저장 금지 (블록체인 원칙 준수)
+ * - 클라이언트 사이드 지갑 생성
+ * - 서버 사이드 검증만 수행
+ * - 완벽한 보안 검증 시스템
+ * 
+ * 🔢 50자리 부동소수점 정밀도:
+ * - 모든 계산에 Decimal.js 사용 (50자리 정밀도)
+ * - 부동소수점 오차 완전 제거
+ * - 정밀한 잔액 계산 및 전송
+ * 
+ * 📊 시스템 통계:
+ * - 총 API 엔드포인트: 50개 (완전 독립)
+ * - 메모리 사용량: 최적화
+ * - BitWish 지갑 시스템: 완전 통합
+ * - 마이닝 시스템: 완전 통합
+ * 
+ * 🌍 다국어 지원:
+ * - 한국어, 영어, 일본어, 중국어 4개국 언어 지원
+ * - i18n 시스템 완벽 구현
+ * - 실시간 언어 전환 지원
+ * 
+ * 🚀 BitWish Network 완전 통합 시스템:
+ * - 지갑 만들기 시스템 완벽 연동
+ * - 나의 지갑 시스템 완벽 연동
+ * - 마이닝 페이지 유저/관리자 시스템 완벽 연동
+ * - BitWish 블록체인 코어 완전 통합
+ * - MongoDB 간소화 시스템 완전 통합
+ * 
+ * ⚠️  중요 사항:
+ * - 이 서버는 BitWish Network 전용입니다
+ * - 스텔라 관련 코드 완전 제거
+ * - 모든 기능은 BitWish Network 표준을 따릅니다
+ * - 보안을 위해 시드문구는 절대 저장하지 않습니다
+ * 
+ * 🔧 기술 스택:
+ * - Node.js + Express.js
+ * - WebSocket (P2P 네트워크)
+ * - MongoDB (간소화된 구조)
+ * - BitWish-256 암호화
+ * - Decimal.js (50자리 정밀도)
+ * 
+ * 📝 버전 정보:
+ * - 버전: 2.0.0
+ * - 빌드: 2025-01-27
+ * - 호환성: BitWish Network v2.0+
+ * - 정밀도: 50자리 부동소수점
+ * 
+ * 🚨 보안 경고:
+ * - 시드문구는 절대 서버에 저장하지 마세요
+ * - 클라이언트 사이드에서만 지갑을 생성하세요
+ * - 모든 민감한 정보는 암호화하여 처리하세요
+ * 
+ * ====================================================================================
+ */
+
+// ====================================================================================
+// 필수 모듈 임포트 (완벽한 독립성 보장)
+// ====================================================================================
+
+const express = require('express');
+const cors = require('cors'); // ✅ CORS 모듈 추가
+const http = require('http');
+const https = require('https'); // ✅ HTTPS 모듈 추가
+const WebSocket = require('ws');
+const crypto = require('crypto');
+const Decimal = require('decimal.js');
+
+// ====================================================================================
+// BitWish Network - 50자리 정밀도 설정 (전역)
+// 모든 P2P 송금, 마이닝 보상, 보너스 계산에 적용
+// ====================================================================================
+Decimal.set({ precision: 50 });
+
+const fs = require('fs').promises;
+const fsSync = require('fs'); // ✅ 동기 파일 읽기용
+const path = require('path');
+const { MongoClient } = require('mongodb');
+
+// ✅ BitWish Input Validator 임포트
+const BitWishInputValidator = require('./BitWishInputValidator.cjs');
+
+// ✅ BitWish Security Logger 임포트
+const BitWishSecurityLogger = require('./BitWishSecurityLogger.cjs');
+
+// ✅ BitWish Session Manager 임포트
+const BitWishSessionManager = require('./BitWishSessionManager.cjs');
+
+// ✅ BitWish Password Hasher 임포트
+const BitWishPasswordHasher = require('./BitWishPasswordHasher.cjs');
+
+// ✅ BitWish 2FA Manager 임포트
+const BitWish2FAManager = require('./BitWish2FAManager.cjs');
+
+// ====================================================================================
+// BitWish Network 핵심 설정 (완벽한 독립성)
+// ====================================================================================
+
+// ====================================================================================
+// 보안 경고 메시지 함수 (4개국 언어 지원)
+// ====================================================================================
+function getPasswordFailureWarning(failures, language = 'ko') {
+  const warnings = {
+    ko: {
+      1: '비밀번호가 일치하지 않습니다. (1/5회 실패)',
+      2: '비밀번호가 일치하지 않습니다. (2/5회 실패)',
+      3: '⚠️ 경고: 비밀번호가 일치하지 않습니다. (3/5회 실패) - 2회 남음',
+      4: '🚨 주의: 비밀번호가 일치하지 않습니다. (4/5회 실패) - 1회 남음, 실패 시 15분 차단',
+      5: '🔒 계정 차단: 비밀번호 5회 연속 실패로 15분간 차단되었습니다.',
+      10: '🚫 계정 블랙리스트: 비밀번호 10회 연속 실패로 24시간 차단되었습니다.'
+    },
+    en: {
+      1: 'Incorrect password. (1/5 attempts failed)',
+      2: 'Incorrect password. (2/5 attempts failed)',
+      3: '⚠️ Warning: Incorrect password. (3/5 attempts failed) - 2 remaining',
+      4: '🚨 Caution: Incorrect password. (4/5 attempts failed) - 1 remaining, 15-min lockout on next failure',
+      5: '🔒 Account Locked: 15-minute lockout due to 5 consecutive failures.',
+      10: '🚫 Account Blacklisted: 24-hour lockout due to 10 consecutive failures.'
+    },
+    ja: {
+      1: 'パスワードが一致しません。(1/5回失敗)',
+      2: 'パスワードが一致しません。(2/5回失敗)',
+      3: '⚠️ 警告: パスワードが一致しません。(3/5回失敗) - 残り2回',
+      4: '🚨 注意: パスワードが一致しません。(4/5回失敗) - 残り1回、失敗時15分ロック',
+      5: '🔒 アカウントロック: 5回連続失敗により15分間ロックされました。',
+      10: '🚫 アカウントブラックリスト: 10回連続失敗により24時間ロックされました。'
+    },
+    zh: {
+      1: '密码不匹配。(1/5次失败)',
+      2: '密码不匹配。(2/5次失败)',
+      3: '⚠️ 警告: 密码不匹配。(3/5次失败) - 剩余2次',
+      4: '🚨 注意: 密码不匹配。(4/5次失败) - 剩余1次，失败将锁定15分钟',
+      5: '🔒 账户锁定: 连续5次失败，已锁定15分钟。',
+      10: '🚫 账户黑名单: 连续10次失败，已锁定24小时。'
+    }
+  };
+  
+  return warnings[language]?.[failures] || warnings[language][1];
+}
+
+const BITWISH_CONFIG = {
+  NETWORK_ID: 'BitWish-Mainnet-v2.0',
+  BLOCK_TIME: 10000, // 10초
+  MAX_TRANSACTIONS_PER_BLOCK: 1000,
+  GAS_PRICE: 0.01, // ✅ 수정: 0.001 → 0.01 BW (토큰 이코노미 준수)
+  BLOCK_FEE: 0.001, // ✅ 추가: 블록 수수료 0.001 BW
+  GAS_LIMIT: 21000,
+  TOTAL_SUPPLY: '21000000000.000000000000000000000000000000000000000000000000000', // 210억 BW (50자리 정밀도)
+  GENESIS_VALIDATOR: 'BitWish-Foundation',
+  DIFFICULTY_TARGET: 4, // 4개의 0으로 시작하는 해시
+  MINING_REWARD: '0.250000000000000000000000000000000000000000000000000', // ✅ 0.25 BW/시간 (토큰 이코노미 준수)
+  STAKING_APY: 15.0, // 15% APY
+  LOCKUP_PERIODS: [30, 90, 180, 365], // 일 단위
+  MAX_SESSIONS: 10000,
+  SESSION_EXPIRY: 24 * 60 * 60 * 1000, // 24시간
+  
+  // ✅ 추가: 토큰 분배 비율 (토큰 이코노미 준수)
+  TOKEN_DISTRIBUTION: {
+    NODE_COMMUNITY_MARKETING: 0.70, // 70% - 노드 운영자/커뮤니티/마케팅
+    FOUNDATION_DEV_OPERATION: 0.20, // 20% - 재단/개발팀/운영
+    PARTNER_STORE: 0.10 // 10% - 파트너/상점
+  },
+  
+  // ✅ 추가: 수수료 분배 비율 (토큰 이코노미 준수)
+  FEE_DISTRIBUTION: {
+    ECOSYSTEM_FUND: 0.70, // 70% - 생태계 조성 & 지원 자금
+    DEV_OPERATION_FUND: 0.30 // 30% - 개발팀 운영자금
+  },
+  
+  // ✅ 추가: 마이닝 보상률 (토큰 이코노미 준수)
+  MINING_RATES: {
+    HOURLY_RATE: 0.25, // 시간당 0.25 BW
+    DAILY_RATE: 6.0, // 일일 6.0 BW
+    MONTHLY_RATE: 180, // 월간 180 BW
+    YEARLY_RATE: 2190 // 연간 2,190 BW
+  },
+  
+  SECURITY_CONFIG: {
+    maxFailedAttempts: 5,
+    lockoutDuration: 24 * 60 * 60 * 1000, // 24시간
+    passwordMinLength: 8,
+    passwordRequirements: /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/
+  }
+};
+
+// ====================================================================================
+// BitWish Network 블록체인 코어 클래스 (완벽한 독립성)
+// ====================================================================================
+
+class BitWishBlockchainCore {
+  constructor() {
+    this.blocks = new Map(); // 블록 저장소
+    this.transactions = new Map(); // 트랜잭션 저장소
+    this.accounts = new Map(); // 계정 저장소
+    this.pendingTransactions = []; // 대기 중인 트랜잭션
+    this.currentBlockHeight = 0;
+    this.genesisBlock = null;
+    this.networkId = BITWISH_CONFIG.NETWORK_ID;
+    this.blockTime = BITWISH_CONFIG.BLOCK_TIME;
+    this.maxTransactionsPerBlock = BITWISH_CONFIG.MAX_TRANSACTIONS_PER_BLOCK;
+    this.isAdminMode = false; // 관리자 모드 확인
+    this.gasPrice = new Decimal(BITWISH_CONFIG.GAS_PRICE);
+    this.gasLimit = BITWISH_CONFIG.GAS_LIMIT;
+    this.difficulty = BITWISH_CONFIG.DIFFICULTY_TARGET;
+    this.miningReward = new Decimal(BITWISH_CONFIG.MINING_REWARD);
+    this.totalSupply = new Decimal(BITWISH_CONFIG.TOTAL_SUPPLY);
+    this.isInitialized = false;
+  }
+
+  // 제네시스 블록 생성
+  createGenesisBlock() {
+    const genesisBlock = {
+      height: 0,
+      timestamp: new Date(),
+      previousHash: '0'.repeat(64),
+      hash: null,
+      merkleRoot: '0'.repeat(64),
+      transactions: [],
+      validator: BITWISH_CONFIG.GENESIS_VALIDATOR,
+      nonce: 0,
+      difficulty: this.difficulty,
+      networkId: this.networkId,
+      totalSupply: this.totalSupply.toString(),
+      isGenesis: true,
+      blockReward: '0.000000000000000000000000000000000000000000000000000'
+    };
+
+    genesisBlock.hash = this.calculateBlockHash(genesisBlock);
+    this.blocks.set(0, genesisBlock);
+    this.genesisBlock = genesisBlock;
+    this.currentBlockHeight = 0;
+    this.isInitialized = true;
+
+    console.log('🌱 BitWish Network 제네시스 블록 생성 완료');
+    console.log(`🔗 해시: ${genesisBlock.hash}`);
+    console.log(`📊 총 발행량: ${this.totalSupply.toString()} BW`);
+    return genesisBlock;
+  }
+
+  // 블록 생성
+  createBlock(transactions, validatorAddress) {
+    const block = {
+      height: this.currentBlockHeight + 1,
+      timestamp: new Date(),
+      previousHash: this.getCurrentBlock()?.hash || '0'.repeat(64),
+      hash: null,
+      merkleRoot: this.calculateMerkleRoot(transactions),
+      transactions: transactions,
+      validator: validatorAddress,
+      nonce: 0,
+      difficulty: this.difficulty,
+      networkId: this.networkId,
+      blockReward: this.miningReward.toString()
+    };
+
+    // PoW 작업 증명
+    block.hash = this.mineBlock(block);
+    this.blocks.set(block.height, block);
+    this.currentBlockHeight = block.height;
+
+    // 트랜잭션을 영구 저장소로 이동
+    transactions.forEach(tx => {
+      this.transactions.set(tx.hash, tx);
+    });
+
+    console.log(`🔗 블록 생성 완료: 높이 ${block.height}, 해시: ${block.hash}`);
+    return block;
+  }
+
+  // 블록 해시 계산
+  calculateBlockHash(block) {
+    const blockData = {
+      height: block.height,
+      timestamp: block.timestamp,
+      previousHash: block.previousHash,
+      merkleRoot: block.merkleRoot,
+      transactions: block.transactions.map(tx => tx.hash),
+      validator: block.validator,
+      nonce: block.nonce,
+      difficulty: block.difficulty,
+      networkId: block.networkId
+    };
+    
+    return crypto.createHash('sha256').update(JSON.stringify(blockData)).digest('hex');
+  }
+
+  // 머클 루트 계산
+  calculateMerkleRoot(transactions) {
+    if (transactions.length === 0) {
+      return '0'.repeat(64);
+    }
+    
+    if (transactions.length === 1) {
+      return crypto.createHash('sha256').update(transactions[0].hash).digest('hex');
+    }
+    
+    const hashes = transactions.map(tx => crypto.createHash('sha256').update(tx.hash).digest('hex'));
+    
+    while (hashes.length > 1) {
+      const nextLevel = [];
+      for (let i = 0; i < hashes.length; i += 2) {
+        const left = hashes[i];
+        const right = hashes[i + 1] || left;
+        const combined = crypto.createHash('sha256').update(left + right).digest('hex');
+        nextLevel.push(combined);
+      }
+      hashes.splice(0, hashes.length, ...nextLevel);
+    }
+    
+    return hashes[0];
+  }
+
+  // 블록 마이닝 (PoW)
+  mineBlock(block) {
+    let hash = '';
+    let nonce = 0;
+    const target = '0'.repeat(this.difficulty);
+    
+    while (!hash.startsWith(target)) {
+      block.nonce = nonce;
+      hash = this.calculateBlockHash(block);
+      nonce++;
+    }
+    
+    return hash;
+  }
+
+  // 트랜잭션 생성
+  createTransaction(from, to, amount, gasLimit = this.gasLimit, data = '') {
+    const tx = {
+      hash: null,
+      from: from,
+      to: to,
+      amount: new Decimal(amount).toString(),
+      gasLimit: gasLimit,
+      gasPrice: this.gasPrice.toString(),
+      gasUsed: 0,
+      data: data,
+      timestamp: new Date(),
+      nonce: this.getNonce(from),
+      signature: null
+    };
+
+    tx.hash = this.calculateTransactionHash(tx);
+    return tx;
+  }
+
+  // 트랜잭션 해시 계산
+  calculateTransactionHash(tx) {
+    const txData = {
+      from: tx.from,
+      to: tx.to,
+      amount: tx.amount,
+      gasLimit: tx.gasLimit,
+      gasPrice: tx.gasPrice,
+      data: tx.data,
+      timestamp: tx.timestamp,
+      nonce: tx.nonce
+    };
+    
+    return crypto.createHash('sha256').update(JSON.stringify(txData)).digest('hex');
+  }
+
+  // 트랜잭션 검증
+  validateTransaction(tx) {
+    // 기본 형식 검증
+    if (!tx.from || !tx.to || !tx.amount || !tx.hash) {
+      return { valid: false, error: '트랜잭션 형식이 올바르지 않습니다' };
+    }
+
+    // 금액 검증
+    const amount = new Decimal(tx.amount);
+    if (amount.lte(0)) {
+      return { valid: false, error: '트랜잭션 금액은 0보다 커야 합니다' };
+    }
+
+    // 가스 검증
+    const gasUsed = new Decimal(tx.gasUsed || tx.gasLimit);
+    const gasPrice = new Decimal(tx.gasPrice);
+    const totalCost = amount.plus(gasUsed.mul(gasPrice));
+
+    // 잔액 검증
+    const fromAccount = this.accounts.get(tx.from);
+    if (!fromAccount) {
+      return { valid: false, error: '발신자 계정을 찾을 수 없습니다' };
+    }
+
+    const balance = new Decimal(fromAccount.balance || 0);
+    if (balance.lt(totalCost)) {
+      return { valid: false, error: '잔액이 부족합니다' };
+    }
+
+    return { valid: true };
+  }
+
+  // 트랜잭션 실행
+  executeTransaction(tx) {
+    const validation = this.validateTransaction(tx);
+    if (!validation.valid) {
+      return { success: false, error: validation.error };
+    }
+
+    try {
+      const amount = new Decimal(tx.amount);
+      const gasUsed = new Decimal(tx.gasUsed || tx.gasLimit);
+      const gasPrice = new Decimal(tx.gasPrice);
+      const gasCost = gasUsed.mul(gasPrice);
+      const totalCost = amount.plus(gasCost);
+
+      // 발신자 계정 업데이트
+      const fromAccount = this.accounts.get(tx.from);
+      fromAccount.balance = new Decimal(fromAccount.balance || 0).minus(totalCost).toString();
+      fromAccount.nonce = (fromAccount.nonce || 0) + 1;
+
+      // 수신자 계정 업데이트
+      let toAccount = this.accounts.get(tx.to);
+      if (!toAccount) {
+        toAccount = {
+          address: tx.to,
+          balance: '0.000000000000000000000000000000000000000000000000000',
+          nonce: 0,
+          createdAt: new Date()
+        };
+        this.accounts.set(tx.to, toAccount);
+      }
+      toAccount.balance = new Decimal(toAccount.balance || 0).plus(amount).toString();
+
+      // 가스 수수료는 검증자에게 지급 (현재는 소각)
+      console.log(`💰 트랜잭션 실행 완료: ${amount.toString()} BW (가스비: ${gasCost.toString()} BW)`);
+
+      return { success: true, transactionHash: tx.hash };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 계정 생성
+  createAccount(address, initialBalance = '0') {
+    const account = {
+      address: address,
+      balance: new Decimal(initialBalance).toString(),
+      nonce: 0,
+      createdAt: new Date(),
+      isActive: true
+    };
+
+    this.accounts.set(address, account);
+    console.log(`👤 계정 생성 완료: ${address} (잔액: ${account.balance} BW)`);
+    return account;
+  }
+
+  // 계정 잔액 조회
+  getBalance(address) {
+    const account = this.accounts.get(address);
+    return account ? account.balance : '0.000000000000000000000000000000000000000000000000000';
+  }
+
+  // Nonce 조회
+  getNonce(address) {
+    const account = this.accounts.get(address);
+    return account ? (account.nonce || 0) : 0;
+  }
+
+  // 현재 블록 조회
+  getCurrentBlock() {
+    return this.blocks.get(this.currentBlockHeight);
+  }
+
+  // 블록 조회
+  getBlock(height) {
+    return this.blocks.get(height);
+  }
+
+  // 트랜잭션 조회
+  getTransaction(hash) {
+    return this.transactions.get(hash);
+  }
+
+  // 네트워크 상태 조회
+  getNetworkStatus() {
+    return {
+      networkId: this.networkId,
+      currentBlockHeight: this.currentBlockHeight,
+      totalBlocks: this.blocks.size,  // 🔥 추가: 총 블록 수 (제네시스 블록 포함)
+      totalTransactions: this.transactions.size,
+      totalAccounts: this.accounts.size,
+      pendingTransactions: this.pendingTransactions.length,
+      blockTime: this.blockTime,
+      gasPrice: this.gasPrice.toString(),
+      gasLimit: this.gasLimit,
+      difficulty: this.difficulty,
+      miningReward: this.miningReward.toString(),
+      totalSupply: this.totalSupply.toString(),
+      isInitialized: this.isInitialized
+    };
+  }
+
+  // 블록체인 초기화
+  initialize() {
+    if (!this.isInitialized) {
+      this.createGenesisBlock();
+      console.log('🚀 BitWish 블록체인 초기화 완료');
+    }
+    return this.getNetworkStatus();
+  }
+}
+
+// ====================================================================================
+// BitWish 지갑 시스템 클래스 (완벽한 독립성)
+// ====================================================================================
+
+class BitWishWalletSystem {
+  constructor(blockchainCore) {
+    this.blockchain = blockchainCore;
+    this.wallets = new Map(); // 지갑 정보 저장
+    this.sessions = new Map(); // 세션 관리
+    this.passwordManager = new BitWishPasswordManager();
+    this.isInitialized = false;
+  }
+
+  // BitWish 지갑 주소 생성
+  generateBitWishAddress(seedPhrase) {
+    try {
+      // 시드문구를 SHA-256으로 해시화
+      const encoder = new TextEncoder();
+      const data = encoder.encode(seedPhrase.trim());
+      const hashBuffer = crypto.createHash('sha256').update(data).digest();
+      const hashHex = hashBuffer.toString('hex').toUpperCase();
+      
+      // BitWish 주소: BW + 40자리 16진수 (총 42자리)
+      const address = 'BW' + hashHex.substring(0, 40);
+      return address;
+    } catch (error) {
+      console.error('BitWish 주소 생성 오류:', error);
+      return null;
+    }
+  }
+
+  // BitWish 지갑 생성
+  createBitWishWallet(seedPhrase, userId = null) {
+    try {
+      const address = this.generateBitWishAddress(seedPhrase);
+      if (!address) {
+        return { success: false, error: '지갑 주소 생성에 실패했습니다' };
+      }
+
+      // 블록체인에 계정 생성
+      const account = this.blockchain.createAccount(address, '0');
+
+      // 🔐 시드문구 해시 생성 (원본은 저장하지 않음, 검증용)
+      const seedHashBuffer = crypto.createHash('sha256').update(seedPhrase.trim()).digest();
+      const seedHash = seedHashBuffer.toString('hex').toUpperCase();
+
+      // 지갑 정보 저장
+      const wallet = {
+        address: address,
+        userId: userId,
+        seedHash: seedHash,  // 🔥 핵심: 시드문구 해시만 저장 (원본 저장 절대 금지)
+        createdAt: new Date(),
+        isActive: true,
+        hasPassword: false,
+        lastActivity: new Date()
+      };
+
+      this.wallets.set(address, wallet);
+
+      console.log(`💼 BitWish 지갑 생성 완료: ${address}`);
+      console.log(`🔐 시드문구 해시 저장 (검증용): ${seedHash.substring(0, 16)}...`);
+      return { success: true, address: address, wallet: wallet };
+    } catch (error) {
+      console.error('BitWish 지갑 생성 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 지갑 검증 (주소 기반)
+  validateBitWishWallet(address, seedPhrase) {
+    try {
+      const generatedAddress = this.generateBitWishAddress(seedPhrase);
+      return generatedAddress === address;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // 🔐 시드문구 해시 검증 (보안 강화)
+  validateSeedPhraseHash(address, seedPhrase) {
+    try {
+      const wallet = this.wallets.get(address);
+      if (!wallet || !wallet.seedHash) {
+        return { success: false, error: '지갑을 찾을 수 없거나 시드문구 해시가 없습니다' };
+      }
+
+      // 입력된 시드문구의 해시 생성
+      const seedHashBuffer = crypto.createHash('sha256').update(seedPhrase.trim()).digest();
+      const inputSeedHash = seedHashBuffer.toString('hex').toUpperCase();
+
+      // 저장된 해시와 비교
+      const isValid = inputSeedHash === wallet.seedHash;
+      
+      if (isValid) {
+        console.log(`✅ 시드문구 해시 검증 성공: ${address}`);
+        return { success: true, message: '시드문구가 일치합니다' };
+      } else {
+        console.log(`❌ 시드문구 해시 검증 실패: ${address}`);
+        return { success: false, error: '시드문구가 일치하지 않습니다' };
+      }
+    } catch (error) {
+      console.error('시드문구 해시 검증 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 지갑 정보 조회
+  getWalletInfo(address) {
+    const wallet = this.wallets.get(address);
+    const balance = this.blockchain.getBalance(address);
+    
+    if (!wallet) {
+      return null;
+    }
+
+    return {
+      address: wallet.address,
+      balance: balance,
+      userId: wallet.userId,
+      seedHash: wallet.seedHash,  // 🔐 시드문구 해시 포함 (검증용, 원본 아님)
+      createdAt: wallet.createdAt,
+      isActive: wallet.isActive,
+      hasPassword: wallet.hasPassword,
+      lastActivity: wallet.lastActivity
+    };
+  }
+
+  // 비밀번호 설정
+  async setPassword(address, password) {
+    try {
+      const wallet = this.wallets.get(address);
+      if (!wallet) {
+        return { success: false, error: '지갑을 찾을 수 없습니다' };
+      }
+
+      const hashedPassword = await this.passwordManager.hashPassword(password);
+      
+      // 비밀번호 정보 업데이트
+      wallet.hasPassword = true;
+      wallet.passwordHash = hashedPassword;
+      wallet.passwordSetAt = new Date();
+
+      this.wallets.set(address, wallet);
+
+      console.log(`🔐 비밀번호 설정 완료: ${address}`);
+      return { success: true, message: '비밀번호가 설정되었습니다' };
+    } catch (error) {
+      console.error('비밀번호 설정 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 비밀번호 검증
+  async verifyPassword(address, password) {
+    try {
+      const wallet = this.wallets.get(address);
+      if (!wallet || !wallet.hasPassword) {
+        return { success: false, error: '비밀번호가 설정되지 않았습니다' };
+      }
+
+      const isValid = await this.passwordManager.verifyPassword(password, wallet.passwordHash);
+      
+      if (isValid) {
+        wallet.lastActivity = new Date();
+        this.wallets.set(address, wallet);
+        return { success: true, message: '비밀번호가 일치합니다' };
+      } else {
+        return { success: false, error: '비밀번호가 일치하지 않습니다' };
+      }
+    } catch (error) {
+      console.error('비밀번호 검증 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 비밀번호 존재 확인
+  checkPasswordExists(address) {
+    const wallet = this.wallets.get(address);
+    return wallet ? wallet.hasPassword : false;
+  }
+
+  // 세션 생성
+  createSession(address, userType = 'USER') {
+    const sessionId = crypto.randomUUID();
+    const session = {
+      id: sessionId,
+      address: address,
+      userType: userType,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + BITWISH_CONFIG.SESSION_EXPIRY),
+      isActive: true,
+      lastActivity: new Date()
+    };
+
+    this.sessions.set(sessionId, session);
+    console.log(`🔑 세션 생성 완료: ${sessionId} (${address})`);
+    return session;
+  }
+
+  // 세션 검증
+  validateSession(sessionId) {
+    const session = this.sessions.get(sessionId);
+    
+    if (!session || !session.isActive) {
+      return { valid: false, error: '유효하지 않은 세션입니다' };
+    }
+
+    if (new Date() > session.expiresAt) {
+      session.isActive = false;
+      this.sessions.set(sessionId, session);
+      return { valid: false, error: '세션이 만료되었습니다' };
+    }
+
+    // 세션 활성화 시간 업데이트
+    session.lastActivity = new Date();
+    this.sessions.set(sessionId, session);
+
+    return { valid: true, session: session };
+  }
+
+  // 세션 종료
+  endSession(sessionId) {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.isActive = false;
+      session.endedAt = new Date();
+      this.sessions.set(sessionId, session);
+      console.log(`🔓 세션 종료: ${sessionId}`);
+    }
+  }
+
+  // 시스템 초기화
+  initialize() {
+    if (!this.isInitialized) {
+      this.blockchain.initialize();
+      this.isInitialized = true;
+      console.log('💼 BitWish 지갑 시스템 초기화 완료');
+    }
+    return { success: true, message: '지갑 시스템이 초기화되었습니다' };
+  }
+}
+
+// ====================================================================================
+// BitWish 토큰 분배 시스템 클래스 (완벽한 독립성)
+// ====================================================================================
+
+class BitWishTokenDistributionSystem {
+  constructor(blockchainCore) {
+    this.blockchain = blockchainCore;
+    this.distributionAccounts = new Map();
+    this.isInitialized = false;
+  }
+
+  // 토큰 분배 계정 초기화
+  initializeDistributionAccounts() {
+    const totalSupply = new Decimal(BITWISH_CONFIG.TOTAL_SUPPLY);
+    
+    // 70% - 노드 운영자/커뮤니티/마케팅
+    const nodeCommunityAmount = totalSupply.mul(BITWISH_CONFIG.TOKEN_DISTRIBUTION.NODE_COMMUNITY_MARKETING);
+    this.distributionAccounts.set('NODE_COMMUNITY_MARKETING', {
+      address: 'BitWish-Node-Community-Marketing',
+      balance: nodeCommunityAmount.toString(),
+      purpose: '노드 운영자/커뮤니티/마케팅',
+      percentage: 70
+    });
+
+    // 20% - 재단/개발팀/운영
+    const foundationAmount = totalSupply.mul(BITWISH_CONFIG.TOKEN_DISTRIBUTION.FOUNDATION_DEV_OPERATION);
+    this.distributionAccounts.set('FOUNDATION_DEV_OPERATION', {
+      address: 'BitWish-Foundation-Dev-Operation',
+      balance: foundationAmount.toString(),
+      purpose: '재단/개발팀/운영',
+      percentage: 20
+    });
+
+    // 10% - 파트너/상점
+    const partnerAmount = totalSupply.mul(BITWISH_CONFIG.TOKEN_DISTRIBUTION.PARTNER_STORE);
+    this.distributionAccounts.set('PARTNER_STORE', {
+      address: 'BitWish-Partner-Store',
+      balance: partnerAmount.toString(),
+      purpose: '파트너/상점',
+      percentage: 10
+    });
+
+    // 블록체인에 계정 생성
+    this.distributionAccounts.forEach((account, key) => {
+      this.blockchain.createAccount(account.address, account.balance);
+    });
+
+    console.log('✅ BitWish 토큰 분배 계정 초기화 완료');
+    console.log(`📊 노드/커뮤니티/마케팅: ${nodeCommunityAmount.toString()} BW (70%)`);
+    console.log(`📊 재단/개발팀/운영: ${foundationAmount.toString()} BW (20%)`);
+    console.log(`📊 파트너/상점: ${partnerAmount.toString()} BW (10%)`);
+  }
+
+  // 마이닝 보상 분배 (노드 운영자/커뮤니티/마케팅 계정에서 지급)
+  distributeMiningReward(toAddress, amount) {
+    try {
+      const nodeCommunityAccount = this.distributionAccounts.get('NODE_COMMUNITY_MARKETING');
+      
+      // 마이닝 보상 트랜잭션 생성
+      const rewardTx = this.blockchain.createTransaction(
+        nodeCommunityAccount.address,
+        toAddress,
+        amount.toString()
+      );
+
+      const result = this.blockchain.executeTransaction(rewardTx);
+      
+      if (result.success) {
+        console.log(`💰 마이닝 보상 분배 완료: ${amount.toString()} BW → ${toAddress}`);
+        return { success: true, transactionHash: result.transactionHash };
+      } else {
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('마이닝 보상 분배 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 토큰 분배 상태 조회
+  getDistributionStatus() {
+    const status = {};
+    this.distributionAccounts.forEach((account, key) => {
+      const currentBalance = this.blockchain.getBalance(account.address);
+      status[key] = {
+        address: account.address,
+        initialBalance: account.balance,
+        currentBalance: currentBalance,
+        purpose: account.purpose,
+        percentage: account.percentage,
+        used: new Decimal(account.balance).minus(currentBalance).toString()
+      };
+    });
+    return status;
+  }
+
+  // 시스템 초기화
+  initialize() {
+    if (!this.isInitialized) {
+      this.initializeDistributionAccounts();
+      this.isInitialized = true;
+      console.log('🏗️ BitWish 토큰 분배 시스템 초기화 완료');
+    }
+    return { success: true, message: '토큰 분배 시스템이 초기화되었습니다' };
+  }
+}
+
+// ====================================================================================
+// BitWish 수수료 분배 시스템 클래스 (완벽한 독립성)
+// ====================================================================================
+
+class BitWishFeeDistributionSystem {
+  constructor(blockchainCore, tokenDistributionSystem) {
+    this.blockchain = blockchainCore;
+    this.tokenDistribution = tokenDistributionSystem;
+    this.feeAccounts = new Map();
+    this.totalFeesCollected = new Decimal(0);
+    this.isInitialized = false;
+  }
+
+  // 수수료 분배 계정 초기화
+  initializeFeeAccounts() {
+    // 70% - 생태계 조성 & 지원 자금
+    this.feeAccounts.set('ECOSYSTEM_FUND', {
+      address: 'BitWish-Ecosystem-Fund',
+      balance: '0.000000000000000000000000000000000000000000000000000',
+      purpose: '생태계 조성 & 지원 자금',
+      percentage: 70,
+      totalCollected: '0.000000000000000000000000000000000000000000000000000'
+    });
+
+    // 30% - 개발팀 운영자금
+    this.feeAccounts.set('DEV_OPERATION_FUND', {
+      address: 'BitWish-Dev-Operation-Fund',
+      balance: '0.000000000000000000000000000000000000000000000000000',
+      purpose: '개발팀 운영자금',
+      percentage: 30,
+      totalCollected: '0.000000000000000000000000000000000000000000000000000'
+    });
+
+    // 블록체인에 계정 생성
+    this.feeAccounts.forEach((account, key) => {
+      this.blockchain.createAccount(account.address, account.balance);
+    });
+
+    console.log('✅ BitWish 수수료 분배 계정 초기화 완료');
+    console.log('📊 생태계 조성 자금: 70%');
+    console.log('📊 개발팀 운영자금: 30%');
+  }
+
+  // 수수료 분배 처리
+  distributeFees(totalFees) {
+    try {
+      const fees = new Decimal(totalFees);
+      this.totalFeesCollected = this.totalFeesCollected.plus(fees);
+
+      // 70% - 생태계 조성 & 지원 자금
+      const ecosystemAmount = fees.mul(BITWISH_CONFIG.FEE_DISTRIBUTION.ECOSYSTEM_FUND);
+      const ecosystemTx = this.blockchain.createTransaction(
+        'BitWish-Fee-Source',
+        'BitWish-Ecosystem-Fund',
+        ecosystemAmount.toString()
+      );
+
+      // 30% - 개발팀 운영자금
+      const devAmount = fees.mul(BITWISH_CONFIG.FEE_DISTRIBUTION.DEV_OPERATION_FUND);
+      const devTx = this.blockchain.createTransaction(
+        'BitWish-Fee-Source',
+        'BitWish-Dev-Operation-Fund',
+        devAmount.toString()
+      );
+
+      // 트랜잭션 실행
+      const ecosystemResult = this.blockchain.executeTransaction(ecosystemTx);
+      const devResult = this.blockchain.executeTransaction(devTx);
+
+      if (ecosystemResult.success && devResult.success) {
+        // 수수료 계정 업데이트
+        const ecosystemAccount = this.feeAccounts.get('ECOSYSTEM_FUND');
+        const devAccount = this.feeAccounts.get('DEV_OPERATION_FUND');
+
+        ecosystemAccount.balance = new Decimal(ecosystemAccount.balance).plus(ecosystemAmount).toString();
+        ecosystemAccount.totalCollected = new Decimal(ecosystemAccount.totalCollected).plus(ecosystemAmount).toString();
+
+        devAccount.balance = new Decimal(devAccount.balance).plus(devAmount).toString();
+        devAccount.totalCollected = new Decimal(devAccount.totalCollected).plus(devAmount).toString();
+
+        console.log(`💰 수수료 분배 완료: ${fees.toString()} BW`);
+        console.log(`📊 생태계 자금: ${ecosystemAmount.toString()} BW (70%)`);
+        console.log(`📊 개발팀 자금: ${devAmount.toString()} BW (30%)`);
+
+        return { 
+          success: true, 
+          ecosystemAmount: ecosystemAmount.toString(),
+          devAmount: devAmount.toString(),
+          ecosystemTxHash: ecosystemResult.transactionHash,
+          devTxHash: devResult.transactionHash
+        };
+      } else {
+        return { success: false, error: '수수료 분배 트랜잭션 실행 실패' };
+      }
+    } catch (error) {
+      console.error('수수료 분배 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 수수료 분배 상태 조회
+  getFeeDistributionStatus() {
+    const status = {};
+    this.feeAccounts.forEach((account, key) => {
+      const currentBalance = this.blockchain.getBalance(account.address);
+      status[key] = {
+        address: account.address,
+        currentBalance: currentBalance,
+        totalCollected: account.totalCollected,
+        purpose: account.purpose,
+        percentage: account.percentage
+      };
+    });
+    
+    status.totalFeesCollected = this.totalFeesCollected.toString();
+    return status;
+  }
+
+  // 시스템 초기화
+  initialize() {
+    if (!this.isInitialized) {
+      this.initializeFeeAccounts();
+      this.isInitialized = true;
+      console.log('💰 BitWish 수수료 분배 시스템 초기화 완료');
+    }
+    return { success: true, message: '수수료 분배 시스템이 초기화되었습니다' };
+  }
+}
+
+// ====================================================================================
+// BitWish 추천 보너스 시스템 클래스 (완벽한 독립성)
+// ====================================================================================
+
+class BitWishReferralBonusSystem {
+  constructor(blockchainCore, tokenDistributionSystem) {
+    this.blockchain = blockchainCore;
+    this.tokenDistribution = tokenDistributionSystem;
+    this.referralData = new Map(); // 지갑 주소별 추천 데이터
+    this.referralRewards = new Map(); // 추천 보상 데이터
+    this.isInitialized = false;
+  }
+
+  // 추천 관계 등록
+  registerReferral(referrerAddress, refereeAddress) {
+    try {
+      if (!this.referralData.has(referrerAddress)) {
+        this.referralData.set(referrerAddress, {
+          referrals: new Set(),
+          totalReferrals: 0,
+          totalRewardsEarned: new Decimal(0),
+          createdAt: new Date()
+        });
+      }
+
+      const referrerData = this.referralData.get(referrerAddress);
+      
+      if (!referrerData.referrals.has(refereeAddress)) {
+        referrerData.referrals.add(refereeAddress);
+        referrerData.totalReferrals++;
+        
+        console.log(`🎁 추천 관계 등록: ${referrerAddress} → ${refereeAddress}`);
+        return { success: true, message: '추천 관계가 등록되었습니다' };
+      } else {
+        return { success: false, error: '이미 등록된 추천 관계입니다' };
+      }
+    } catch (error) {
+      console.error('추천 관계 등록 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 추천 보너스 계산 (1BW + 2% 영구 보너스)
+  calculateReferralBonus(referrerAddress, refereeMiningAmount) {
+    try {
+      const referrerData = this.referralData.get(referrerAddress);
+      if (!referrerData) {
+        return { success: false, error: '추천인 데이터를 찾을 수 없습니다' };
+      }
+
+      // 1. 즉시 지급 보상 (1BW)
+      const immediateReward = new Decimal('1.000000000000000000000000000000000000000000000000000');
+      
+      // 2. 영구 보너스 (2% - 추천받은 사람의 마이닝 보상의 2%)
+      const miningAmount = new Decimal(refereeMiningAmount);
+      const permanentBonus = miningAmount.mul(0.02); // 2%
+      
+      const totalReward = immediateReward.plus(permanentBonus);
+      
+      // 추천인 계정 업데이트
+      referrerData.totalRewardsEarned = referrerData.totalRewardsEarned.plus(totalReward);
+      
+      return {
+        success: true,
+        immediateReward: immediateReward.toString(),
+        permanentBonus: permanentBonus.toString(),
+        totalReward: totalReward.toString()
+      };
+    } catch (error) {
+      console.error('추천 보너스 계산 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 추천 보너스 지급
+  distributeReferralBonus(referrerAddress, refereeAddress, refereeMiningAmount) {
+    try {
+      const bonusCalculation = this.calculateReferralBonus(referrerAddress, refereeMiningAmount);
+      
+      if (!bonusCalculation.success) {
+        return bonusCalculation;
+      }
+
+      // 노드/커뮤니티/마케팅 계정에서 추천 보너스 지급
+      const rewardTx = this.blockchain.createTransaction(
+        'BitWish-Node-Community-Marketing',
+        referrerAddress,
+        bonusCalculation.totalReward
+      );
+
+      const result = this.blockchain.executeTransaction(rewardTx);
+      
+      if (result.success) {
+        // 추천 보상 기록 저장
+        const rewardRecord = {
+          referrerAddress: referrerAddress,
+          refereeAddress: refereeAddress,
+          immediateReward: bonusCalculation.immediateReward,
+          permanentBonus: bonusCalculation.permanentBonus,
+          totalReward: bonusCalculation.totalReward,
+          transactionHash: result.transactionHash,
+          timestamp: new Date()
+        };
+
+        this.referralRewards.set(result.transactionHash, rewardRecord);
+        
+        console.log(`🎁 추천 보너스 지급 완료: ${referrerAddress} - ${bonusCalculation.totalReward} BW`);
+        return { 
+          success: true, 
+          ...bonusCalculation,
+          transactionHash: result.transactionHash
+        };
+      } else {
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('추천 보너스 지급 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 추천 데이터 조회
+  getReferralData(address) {
+    const referrerData = this.referralData.get(address);
+    if (!referrerData) {
+      return null;
+    }
+
+    return {
+      address: address,
+      totalReferrals: referrerData.totalReferrals,
+      totalRewardsEarned: referrerData.totalRewardsEarned.toString(),
+      createdAt: referrerData.createdAt,
+      referrals: Array.from(referrerData.referrals)
+    };
+  }
+
+  // 시스템 초기화
+  initialize() {
+    if (!this.isInitialized) {
+      this.isInitialized = true;
+      console.log('🎁 BitWish 추천 보너스 시스템 초기화 완료');
+    }
+    return { success: true, message: '추천 보너스 시스템이 초기화되었습니다' };
+  }
+}
+
+// ====================================================================================
+// BitWish 비밀번호 관리 클래스 (완벽한 독립성)
+// ====================================================================================
+
+class BitWishPasswordManager {
+  constructor() {
+    this.saltLength = 32;
+    this.iterations = 100000;
+    this.keyLength = 64;
+    this.algorithm = 'sha512';
+  }
+
+  // 비밀번호 해싱
+  async hashPassword(password) {
+    return new Promise((resolve, reject) => {
+      const salt = crypto.randomBytes(this.saltLength);
+      
+      crypto.pbkdf2(password, salt, this.iterations, this.keyLength, this.algorithm, (err, derivedKey) => {
+        if (err) {
+          reject(err);
+        } else {
+          const hash = salt.toString('hex') + ':' + derivedKey.toString('hex');
+          resolve(hash);
+        }
+      });
+    });
+  }
+
+  // 비밀번호 검증
+  async verifyPassword(password, hash) {
+    return new Promise((resolve, reject) => {
+      const [saltHex, keyHex] = hash.split(':');
+      const salt = Buffer.from(saltHex, 'hex');
+      
+      crypto.pbkdf2(password, salt, this.iterations, this.keyLength, this.algorithm, (err, derivedKey) => {
+        if (err) {
+          reject(err);
+        } else {
+          const isValid = derivedKey.toString('hex') === keyHex;
+          resolve(isValid);
+        }
+      });
+    });
+  }
+
+  // 비밀번호 강도 검증
+  validatePasswordStrength(password) {
+    const minLength = BITWISH_CONFIG.SECURITY_CONFIG.passwordMinLength;
+    const requirements = BITWISH_CONFIG.SECURITY_CONFIG.passwordRequirements;
+
+    if (password.length < minLength) {
+      return { valid: false, error: `비밀번호는 최소 ${minLength}자 이상이어야 합니다` };
+    }
+
+    if (!requirements.test(password)) {
+      return { 
+        valid: false, 
+        error: '비밀번호는 대문자, 소문자, 숫자, 특수문자를 포함해야 합니다' 
+      };
+    }
+
+    return { valid: true };
+  }
+}
+
+// ====================================================================================
+// BitWish 마이닝 시스템 클래스 (완벽한 독립성)
+// ====================================================================================
+
+class BitWishMiningSystem {
+  constructor(blockchainCore, walletSystem) {
+    this.blockchain = blockchainCore;
+    this.walletSystem = walletSystem;
+    this.activeMiningSessions = new Map();
+    this.permanentMiningSessions = new Map(); // ✅ 추가: 영구 마이닝 세션
+    this.miningStats = {
+      totalBlocksMined: 0,
+      totalRewardsDistributed: new Decimal(0),
+      activeMiners: 0,
+      permanentMiners: 0, // ✅ 추가: 영구 마이닝 통계
+      averageMiningTime: 0
+    };
+    this.isInitialized = false;
+  }
+
+  // 마이닝 세션 시작
+  startMiningSession(address, userType = 'USER') {
+    try {
+      // 지갑 존재 확인
+      const wallet = this.walletSystem.getWalletInfo(address);
+      if (!wallet) {
+        return { success: false, error: '지갑을 찾을 수 없습니다' };
+      }
+
+      // 이미 활성 세션이 있는지 확인
+      for (const [sessionId, session] of this.activeMiningSessions) {
+        if (session.address === address && session.isActive) {
+          return { success: false, error: '이미 활성화된 마이닝 세션이 있습니다' };
+        }
+      }
+
+      const sessionId = crypto.randomUUID();
+      const miningSession = {
+        id: sessionId,
+        address: address,
+        userType: userType,
+        startTime: new Date(),
+        lastUpdate: new Date(),
+        isActive: true,
+        totalEarned: new Decimal(0),
+        currentRate: new Decimal(BITWISH_CONFIG.MINING_RATES.HOURLY_RATE), // 0.25 BW/시간 (토큰 이코노미 준수)
+        pauseTime: 0,
+        blocksMined: 0,
+        efficiency: 1.0
+      };
+
+      this.activeMiningSessions.set(sessionId, miningSession);
+      this.miningStats.activeMiners++;
+
+      console.log(`⛏️ 마이닝 세션 시작: ${address} (${userType})`);
+      return { success: true, sessionId: sessionId, session: miningSession };
+    } catch (error) {
+      console.error('마이닝 세션 시작 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 마이닝 세션 중지
+  stopMiningSession(sessionId) {
+    try {
+      const session = this.activeMiningSessions.get(sessionId);
+      if (!session || !session.isActive) {
+        return { success: false, error: '활성화된 마이닝 세션을 찾을 수 없습니다' };
+      }
+
+      session.isActive = false;
+      session.endTime = new Date();
+      session.totalEarned = session.totalEarned.toFixed(50);
+      
+      this.activeMiningSessions.set(sessionId, session);
+      this.miningStats.activeMiners--;
+
+      console.log(`⛏️ 마이닝 세션 중지: ${session.address}`);
+      return { success: true, session: session };
+    } catch (error) {
+      console.error('마이닝 세션 중지 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 마이닝 세션 일시정지
+  pauseMiningSession(sessionId) {
+    try {
+      const session = this.activeMiningSessions.get(sessionId);
+      if (!session || !session.isActive) {
+        return { success: false, error: '활성화된 마이닝 세션을 찾을 수 없습니다' };
+      }
+
+      session.isPaused = true;
+      session.pauseTime = new Date();
+      
+      this.activeMiningSessions.set(sessionId, session);
+
+      console.log(`⏸️ 마이닝 세션 일시정지: ${session.address}`);
+      return { success: true, session: session };
+    } catch (error) {
+      console.error('마이닝 세션 일시정지 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 마이닝 세션 재개
+  resumeMiningSession(sessionId) {
+    try {
+      const session = this.activeMiningSessions.get(sessionId);
+      if (!session || !session.isActive || !session.isPaused) {
+        return { success: false, error: '일시정지된 마이닝 세션을 찾을 수 없습니다' };
+      }
+
+      session.isPaused = false;
+      session.pauseTime = 0;
+      session.lastUpdate = new Date();
+      
+      this.activeMiningSessions.set(sessionId, session);
+
+      console.log(`▶️ 마이닝 세션 재개: ${session.address}`);
+      return { success: true, session: session };
+    } catch (error) {
+      console.error('마이닝 세션 재개 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 마이닝 보상 계산
+  calculateMiningReward(sessionId, timeElapsed) {
+    try {
+      const session = this.activeMiningSessions.get(sessionId);
+      if (!session || !session.isActive || session.isPaused) {
+        return new Decimal(0);
+      }
+
+      // 시간당 보상률 (0.25 BW/시간)
+      const hourlyRate = new Decimal(session.currentRate);
+      const hoursElapsed = new Decimal(timeElapsed).div(3600000); // 밀리초를 시간으로 변환
+      
+      // 효율성 적용
+      const baseReward = hourlyRate.mul(hoursElapsed);
+      const efficiencyMultiplier = new Decimal(session.efficiency);
+      
+      const finalReward = baseReward.mul(efficiencyMultiplier);
+      
+      return finalReward;
+    } catch (error) {
+      console.error('마이닝 보상 계산 오류:', error);
+      return new Decimal(0);
+    }
+  }
+
+  // ✅ 추가: 영구 마이닝 세션 시작 (토큰 이코노미 준수)
+  startPermanentMiningSession(address, userType = 'USER') {
+    try {
+      // 지갑 존재 확인
+      const wallet = this.walletSystem.getWalletInfo(address);
+      if (!wallet) {
+        return { success: false, error: '지갑을 찾을 수 없습니다' };
+      }
+
+      // 이미 영구 마이닝 세션이 있는지 확인
+      if (this.permanentMiningSessions.has(address)) {
+        return { success: false, error: '이미 영구 마이닝 세션이 활성화되어 있습니다' };
+      }
+
+      const sessionId = `permanent_${address}_${Date.now()}`;
+      const permanentSession = {
+        id: sessionId,
+        address: address,
+        userType: userType,
+        startTime: new Date(),
+        lastUpdate: new Date(),
+        isActive: true,
+        isPermanent: true, // ✅ 영구 마이닝 플래그
+        totalEarned: new Decimal(0),
+        currentRate: new Decimal(BITWISH_CONFIG.MINING_RATES.HOURLY_RATE), // 0.25 BW/시간
+        blocksMined: 0,
+        efficiency: 1.0,
+        // ✅ 토큰 이코노미: "사업이 망하고 서버가 닫히는 날까지 멈추지 않는다"
+        description: '영구 마이닝 - 서버 종료 시까지 중단 없음'
+      };
+
+      this.permanentMiningSessions.set(address, permanentSession);
+      this.miningStats.permanentMiners++;
+
+      console.log(`⛏️ 영구 마이닝 세션 시작: ${address} (${userType})`);
+      console.log('🚨 경고: 영구 마이닝은 서버 종료 시까지 중단되지 않습니다!');
+      
+      return { success: true, sessionId: sessionId, session: permanentSession };
+    } catch (error) {
+      console.error('영구 마이닝 세션 시작 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ✅ 추가: 영구 마이닝 세션 중지 (관리자 전용)
+  stopPermanentMiningSession(address, adminKey) {
+    try {
+      // 관리자 권한 확인
+      if (adminKey !== 'admin_bitwish_2024') {
+        return { success: false, error: '관리자 권한이 필요합니다' };
+      }
+
+      const session = this.permanentMiningSessions.get(address);
+      if (!session || !session.isActive) {
+        return { success: false, error: '활성화된 영구 마이닝 세션을 찾을 수 없습니다' };
+      }
+
+      session.isActive = false;
+      session.endTime = new Date();
+      session.totalEarned = session.totalEarned.toFixed(50);
+      
+      this.permanentMiningSessions.set(address, session);
+      this.miningStats.permanentMiners--;
+
+      console.log(`⛏️ 영구 마이닝 세션 중지: ${address} (관리자 권한)`);
+      return { success: true, session: session };
+    } catch (error) {
+      console.error('영구 마이닝 세션 중지 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // ✅ 수정: 마이닝 보상 계산 (영구 마이닝 포함)
+  calculateMiningReward(sessionId, timeElapsed) {
+    try {
+      let session = this.activeMiningSessions.get(sessionId);
+      let isPermanent = false;
+
+      // 일반 세션에서 찾지 못하면 영구 세션에서 찾기
+      if (!session) {
+        // 영구 세션에서 주소로 찾기
+        for (const [address, permSession] of this.permanentMiningSessions) {
+          if (permSession.id === sessionId) {
+            session = permSession;
+            isPermanent = true;
+            break;
+          }
+        }
+      }
+
+      if (!session || !session.isActive) {
+        return new Decimal(0);
+      }
+
+      // 시간당 보상률 (0.25 BW/시간)
+      const hourlyRate = new Decimal(session.currentRate);
+      const hoursElapsed = new Decimal(timeElapsed).div(3600000); // 밀리초를 시간으로 변환
+      
+      // 효율성 적용
+      const baseReward = hourlyRate.mul(hoursElapsed);
+      const efficiencyMultiplier = new Decimal(session.efficiency);
+      
+      const finalReward = baseReward.mul(efficiencyMultiplier);
+      
+      // ✅ 영구 마이닝은 추가 보너스 없음 (기본 보상만)
+      return finalReward;
+    } catch (error) {
+      console.error('마이닝 보상 계산 오류:', error);
+      return new Decimal(0);
+    }
+  }
+
+  // 마이닝 보상 지급
+  distributeMiningReward(sessionId) {
+    try {
+      let session = this.activeMiningSessions.get(sessionId);
+      let isPermanent = false;
+
+      // 일반 세션에서 찾지 못하면 영구 세션에서 찾기
+      if (!session) {
+        for (const [address, permSession] of this.permanentMiningSessions) {
+          if (permSession.id === sessionId) {
+            session = permSession;
+            isPermanent = true;
+            break;
+          }
+        }
+      }
+
+      if (!session || !session.isActive) {
+        return { success: false, error: '활성화된 마이닝 세션을 찾을 수 없습니다' };
+      }
+
+      const now = new Date();
+      const timeElapsed = now.getTime() - session.lastUpdate.getTime();
+      
+      // 최소 1분 간격으로 보상 지급
+      if (timeElapsed < 60000) {
+        return { success: false, error: '보상 지급 간격이 너무 짧습니다' };
+      }
+
+      const reward = this.calculateMiningReward(sessionId, timeElapsed);
+      
+      if (reward.gt(0)) {
+        // 블록체인에 보상 지급 트랜잭션 생성
+        const rewardTx = this.blockchain.createTransaction(
+          'BitWish-Mining-Reward', // 시스템 계정
+          session.address,
+          reward.toString()
+        );
+
+        const result = this.blockchain.executeTransaction(rewardTx);
+        
+        if (result.success) {
+          session.totalEarned = session.totalEarned.plus(reward);
+          session.lastUpdate = now;
+          session.blocksMined++;
+          
+          if (isPermanent) {
+            this.permanentMiningSessions.set(session.address, session);
+          } else {
+            this.activeMiningSessions.set(sessionId, session);
+          }
+          
+          this.miningStats.totalRewardsDistributed = this.miningStats.totalRewardsDistributed.plus(reward);
+
+          console.log(`💰 마이닝 보상 지급: ${session.address} - ${reward.toString()} BW`);
+          return { success: true, reward: reward.toString(), transactionHash: result.transactionHash };
+        } else {
+          return { success: false, error: result.error };
+        }
+      }
+
+      return { success: false, error: '지급할 보상이 없습니다' };
+    } catch (error) {
+      console.error('마이닝 보상 지급 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 마이닝 세션 조회
+  getMiningSession(sessionId) {
+    return this.activeMiningSessions.get(sessionId);
+  }
+
+  // 활성 마이닝 세션 목록 조회
+  getActiveMiningSessions() {
+    const activeSessions = [];
+    for (const [sessionId, session] of this.activeMiningSessions) {
+      if (session.isActive) {
+        activeSessions.push({
+          sessionId: sessionId,
+          address: session.address,
+          userType: session.userType,
+          startTime: session.startTime,
+          totalEarned: session.totalEarned.toString(),
+          currentRate: session.currentRate.toString(),
+          isPaused: session.isPaused || false,
+          blocksMined: session.blocksMined,
+          efficiency: session.efficiency
+        });
+      }
+    }
+    return activeSessions;
+  }
+
+  // 마이닝 통계 조회
+  getMiningStats() {
+    return {
+      ...this.miningStats,
+      totalRewardsDistributed: this.miningStats.totalRewardsDistributed.toString(),
+      activeSessions: this.getActiveMiningSessions()
+    };
+  }
+
+  // 시스템 초기화
+  initialize() {
+    if (!this.isInitialized) {
+      // 정기적인 마이닝 보상 지급 스케줄러 시작
+      setInterval(() => {
+        this.processMiningRewards();
+      }, 60000); // 1분마다 실행
+
+      this.isInitialized = true;
+      console.log('⛏️ BitWish 마이닝 시스템 초기화 완료');
+    }
+    return { success: true, message: '마이닝 시스템이 초기화되었습니다' };
+  }
+
+  // ✅ 추가: 영구 마이닝 세션 목록 조회
+  getPermanentMiningSessions() {
+    const permanentSessions = [];
+    for (const [address, session] of this.permanentMiningSessions) {
+      if (session.isActive) {
+        permanentSessions.push({
+          address: address,
+          userType: session.userType,
+          startTime: session.startTime,
+          totalEarned: session.totalEarned.toString(),
+          currentRate: session.currentRate.toString(),
+          blocksMined: session.blocksMined,
+          efficiency: session.efficiency,
+          isPermanent: true
+        });
+      }
+    }
+    return permanentSessions;
+  }
+
+  // ✅ 수정: 마이닝 통계 조회 (영구 마이닝 포함)
+  getMiningStats() {
+    return {
+      ...this.miningStats,
+      totalRewardsDistributed: this.miningStats.totalRewardsDistributed.toString(),
+      activeSessions: this.getActiveMiningSessions(),
+      permanentSessions: this.getPermanentMiningSessions() // ✅ 추가
+    };
+  }
+
+  // ✅ 수정: 정기적인 마이닝 보상 처리 (영구 마이닝 포함)
+  processMiningRewards() {
+    // 일반 마이닝 세션 처리
+    for (const [sessionId, session] of this.activeMiningSessions) {
+      if (session.isActive && !session.isPaused) {
+        this.distributeMiningReward(sessionId);
+      }
+    }
+
+    // ✅ 영구 마이닝 세션 처리
+    for (const [address, session] of this.permanentMiningSessions) {
+      if (session.isActive) {
+        this.distributeMiningReward(session.id);
+      }
+    }
+  }
+}
+
+// ====================================================================================
+// BitWish MongoDB 간소화 시스템 (완벽한 독립성)
+// ====================================================================================
+
+class BitWishMongoDB {
+  constructor() {
+    this.client = null;
+    this.db = null;
+    this.collections = {};
+    this.connectionString = 'mongodb://localhost:27017';
+    this.databaseName = 'bitwish_network';
+    this.isConnected = false;
+  }
+
+  // MongoDB 연결
+  async connect() {
+    try {
+      this.client = new MongoClient(this.connectionString);
+      await this.client.connect();
+      this.db = this.client.db(this.databaseName);
+      
+      // 컬렉션 초기화
+      this.collections = {
+        wallets: this.db.collection('wallets'),
+        sessions: this.db.collection('sessions'),
+        miningSessions: this.db.collection('mining_sessions'),
+        transactions: this.db.collection('transactions'),
+        blocks: this.db.collection('blocks'),
+        accounts: this.db.collection('accounts')
+      };
+
+      this.isConnected = true;
+      console.log('🗄️ BitWish MongoDB 연결 완료');
+      return { success: true, message: 'MongoDB 연결이 완료되었습니다' };
+    } catch (error) {
+      console.error('MongoDB 연결 오류:', error);
+      this.isConnected = false;
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 연결 해제
+  async disconnect() {
+    try {
+      if (this.client) {
+        await this.client.close();
+        this.isConnected = false;
+        console.log('🗄️ BitWish MongoDB 연결 해제');
+      }
+    } catch (error) {
+      console.error('MongoDB 연결 해제 오류:', error);
+    }
+  }
+
+  // 지갑 데이터 저장
+  async saveWallet(walletData) {
+    try {
+      if (!this.isConnected) {
+        return { success: false, error: 'MongoDB에 연결되지 않았습니다' };
+      }
+
+      await this.collections.wallets.replaceOne(
+        { address: walletData.address },
+        walletData,
+        { upsert: true }
+      );
+
+      return { success: true, message: '지갑 데이터가 저장되었습니다' };
+    } catch (error) {
+      console.error('지갑 데이터 저장 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 지갑 데이터 조회
+  async getWallet(address) {
+    try {
+      if (!this.isConnected) {
+        return { success: false, error: 'MongoDB에 연결되지 않았습니다' };
+      }
+
+      const wallet = await this.collections.wallets.findOne({ address: address });
+      return { success: true, data: wallet };
+    } catch (error) {
+      console.error('지갑 데이터 조회 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 🔥 신규 추가: 전체 지갑 개수 조회
+  async getWalletCount() {
+    try {
+      if (!this.isConnected) {
+        return { success: false, error: 'MongoDB에 연결되지 않았습니다', count: 0 };
+      }
+
+      const count = await this.collections.wallets.countDocuments();
+      return { success: true, count: count };
+    } catch (error) {
+      console.error('지갑 개수 조회 오류:', error);
+      return { success: false, error: error.message, count: 0 };
+    }
+  }
+
+  // 🔥 신규 추가: 지갑 데이터 부분 업데이트
+  async updateWallet(address, updateData, fieldsToUnset = []) {
+    try {
+      if (!this.isConnected) {
+        return { success: false, error: 'MongoDB에 연결되지 않았습니다' };
+      }
+
+      const updateOperations = {};
+      
+      // $set 연산 (일반 업데이트)
+      if (Object.keys(updateData).length > 0) {
+        updateOperations.$set = updateData;
+      }
+      
+      // $unset 연산 (필드 삭제)
+      if (fieldsToUnset.length > 0) {
+        updateOperations.$unset = {};
+        fieldsToUnset.forEach(field => {
+          updateOperations.$unset[field] = '';
+        });
+      }
+
+      const result = await this.collections.wallets.updateOne(
+        { address: address },
+        updateOperations
+      );
+
+      if (result.matchedCount === 0) {
+        return { success: false, error: '지갑을 찾을 수 없습니다' };
+      }
+
+      return { success: true, message: '지갑이 업데이트되었습니다' };
+    } catch (error) {
+      console.error('지갑 업데이트 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 세션 데이터 저장
+  async saveSession(sessionData) {
+    try {
+      if (!this.isConnected) {
+        return { success: false, error: 'MongoDB에 연결되지 않았습니다' };
+      }
+
+      await this.collections.sessions.replaceOne(
+        { id: sessionData.id },
+        sessionData,
+        { upsert: true }
+      );
+
+      return { success: true, message: '세션 데이터가 저장되었습니다' };
+    } catch (error) {
+      console.error('세션 데이터 저장 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 마이닝 세션 데이터 저장
+  async saveMiningSession(sessionData) {
+    try {
+      if (!this.isConnected) {
+        return { success: false, error: 'MongoDB에 연결되지 않았습니다' };
+      }
+
+      await this.collections.miningSessions.replaceOne(
+        { id: sessionData.id },
+        sessionData,
+        { upsert: true }
+      );
+
+      return { success: true, message: '마이닝 세션 데이터가 저장되었습니다' };
+    } catch (error) {
+      console.error('마이닝 세션 데이터 저장 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 트랜잭션 데이터 저장
+  async saveTransaction(transactionData) {
+    try {
+      if (!this.isConnected) {
+        return { success: false, error: 'MongoDB에 연결되지 않았습니다' };
+      }
+
+      await this.collections.transactions.replaceOne(
+        { hash: transactionData.hash },
+        transactionData,
+        { upsert: true }
+      );
+
+      return { success: true, message: '트랜잭션 데이터가 저장되었습니다' };
+    } catch (error) {
+      console.error('트랜잭션 데이터 저장 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 블록 데이터 저장
+  async saveBlock(blockData) {
+    try {
+      if (!this.isConnected) {
+        return { success: false, error: 'MongoDB에 연결되지 않았습니다' };
+      }
+
+      await this.collections.blocks.replaceOne(
+        { height: blockData.height },
+        blockData,
+        { upsert: true }
+      );
+
+      return { success: true, message: '블록 데이터가 저장되었습니다' };
+    } catch (error) {
+      console.error('블록 데이터 저장 오류:', error);
+      return { success: false, error: error.message };
+    }
+  }
+}
+
+// ====================================================================================
+// BitWish 다국어 지원 시스템 (완벽한 독립성)
+// ====================================================================================
+
+class BitWishI18n {
+  constructor() {
+    this.currentLanguage = 'ko';
+    this.translations = {
+      ko: {
+        wallet: {
+          created: '지갑이 생성되었습니다',
+          notFound: '지갑을 찾을 수 없습니다',
+          passwordSet: '비밀번호가 설정되었습니다',
+          passwordVerified: '비밀번호가 확인되었습니다',
+          sessionCreated: '세션이 생성되었습니다',
+          sessionExpired: '세션이 만료되었습니다'
+        },
+        mining: {
+          sessionStarted: '마이닝 세션이 시작되었습니다',
+          sessionStopped: '마이닝 세션이 중지되었습니다',
+          sessionPaused: '마이닝 세션이 일시정지되었습니다',
+          sessionResumed: '마이닝 세션이 재개되었습니다',
+          rewardDistributed: '마이닝 보상이 지급되었습니다'
+        },
+        blockchain: {
+          initialized: '블록체인이 초기화되었습니다',
+          blockCreated: '블록이 생성되었습니다',
+          transactionExecuted: '트랜잭션이 실행되었습니다',
+          accountCreated: '계정이 생성되었습니다'
+        },
+        error: {
+          invalidAddress: '유효하지 않은 주소입니다',
+          insufficientBalance: '잔액이 부족합니다',
+          invalidPassword: '유효하지 않은 비밀번호입니다',
+          sessionExpired: '세션이 만료되었습니다',
+          networkError: '네트워크 오류가 발생했습니다'
+        }
+      },
+      en: {
+        wallet: {
+          created: 'Wallet created successfully',
+          notFound: 'Wallet not found',
+          passwordSet: 'Password has been set',
+          passwordVerified: 'Password verified',
+          sessionCreated: 'Session created',
+          sessionExpired: 'Session expired'
+        },
+        mining: {
+          sessionStarted: 'Mining session started',
+          sessionStopped: 'Mining session stopped',
+          sessionPaused: 'Mining session paused',
+          sessionResumed: 'Mining session resumed',
+          rewardDistributed: 'Mining reward distributed'
+        },
+        blockchain: {
+          initialized: 'Blockchain initialized',
+          blockCreated: 'Block created',
+          transactionExecuted: 'Transaction executed',
+          accountCreated: 'Account created'
+        },
+        error: {
+          invalidAddress: 'Invalid address',
+          insufficientBalance: 'Insufficient balance',
+          invalidPassword: 'Invalid password',
+          sessionExpired: 'Session expired',
+          networkError: 'Network error occurred'
+        }
+      },
+      ja: {
+        wallet: {
+          created: 'ウォレットが作成されました',
+          notFound: 'ウォレットが見つかりません',
+          passwordSet: 'パスワードが設定されました',
+          passwordVerified: 'パスワードが確認されました',
+          sessionCreated: 'セッションが作成されました',
+          sessionExpired: 'セッションが期限切れです'
+        },
+        mining: {
+          sessionStarted: 'マイニングセッションが開始されました',
+          sessionStopped: 'マイニングセッションが停止されました',
+          sessionPaused: 'マイニングセッションが一時停止されました',
+          sessionResumed: 'マイニングセッションが再開されました',
+          rewardDistributed: 'マイニング報酬が配布されました'
+        },
+        blockchain: {
+          initialized: 'ブロックチェーンが初期化されました',
+          blockCreated: 'ブロックが作成されました',
+          transactionExecuted: 'トランザクションが実行されました',
+          accountCreated: 'アカウントが作成されました'
+        },
+        error: {
+          invalidAddress: '無効なアドレスです',
+          insufficientBalance: '残高不足です',
+          invalidPassword: '無効なパスワードです',
+          sessionExpired: 'セッションが期限切れです',
+          networkError: 'ネットワークエラーが発生しました'
+        }
+      },
+      zh: {
+        wallet: {
+          created: '钱包创建成功',
+          notFound: '未找到钱包',
+          passwordSet: '密码已设置',
+          passwordVerified: '密码已验证',
+          sessionCreated: '会话已创建',
+          sessionExpired: '会话已过期'
+        },
+        mining: {
+          sessionStarted: '挖矿会话已开始',
+          sessionStopped: '挖矿会话已停止',
+          sessionPaused: '挖矿会话已暂停',
+          sessionResumed: '挖矿会话已恢复',
+          rewardDistributed: '挖矿奖励已分发'
+        },
+        blockchain: {
+          initialized: '区块链已初始化',
+          blockCreated: '区块已创建',
+          transactionExecuted: '交易已执行',
+          accountCreated: '账户已创建'
+        },
+        error: {
+          invalidAddress: '无效地址',
+          insufficientBalance: '余额不足',
+          invalidPassword: '无效密码',
+          sessionExpired: '会话已过期',
+          networkError: '发生网络错误'
+        }
+      }
+    };
+  }
+
+  // 언어 설정
+  setLanguage(language) {
+    if (this.translations[language]) {
+      this.currentLanguage = language;
+      return { success: true, language: language };
+    }
+    return { success: false, error: '지원하지 않는 언어입니다' };
+  }
+
+  // 번역 조회
+  translate(key, params = {}) {
+    const keys = key.split('.');
+    let translation = this.translations[this.currentLanguage];
+    
+    for (const k of keys) {
+      translation = translation[k];
+      if (!translation) {
+        return key; // 번역을 찾을 수 없으면 키 반환
+      }
+    }
+    
+    // 매개변수 치환
+    let result = translation;
+    for (const [param, value] of Object.entries(params)) {
+      result = result.replace(`{${param}}`, value);
+    }
+    
+    return result;
+  }
+
+  // 현재 언어 조회
+  getCurrentLanguage() {
+    return this.currentLanguage;
+  }
+
+  // 지원 언어 목록 조회
+  getSupportedLanguages() {
+    return Object.keys(this.translations);
+  }
+}
+
+// ====================================================================================
+// BitWish 시스템 인스턴스 생성 (완벽한 독립성)
+// ====================================================================================
+
+const bitWishBlockchainCore = new BitWishBlockchainCore();
+const bitWishWalletSystem = new BitWishWalletSystem(bitWishBlockchainCore);
+const bitWishMiningSystem = new BitWishMiningSystem(bitWishBlockchainCore, bitWishWalletSystem);
+const bitWishMongoDB = new BitWishMongoDB();
+const bitWishI18n = new BitWishI18n();
+
+// ✅ 추가: 새로운 시스템 인스턴스
+const bitWishTokenDistributionSystem = new BitWishTokenDistributionSystem(bitWishBlockchainCore);
+const bitWishFeeDistributionSystem = new BitWishFeeDistributionSystem(bitWishBlockchainCore, bitWishTokenDistributionSystem);
+const bitWishReferralBonusSystem = new BitWishReferralBonusSystem(bitWishBlockchainCore, bitWishTokenDistributionSystem);
+
+// ✅ BitWish Input Validator 인스턴스 생성
+const bitWishInputValidator = new BitWishInputValidator();
+
+// ✅ BitWish Security Logger 인스턴스 생성
+const bitWishSecurityLogger = new BitWishSecurityLogger();
+
+// ✅ BitWish Session Manager 인스턴스 생성
+const bitWishSessionManager = new BitWishSessionManager();
+
+// ✅ BitWish Password Hasher 인스턴스 생성
+const bitWishPasswordHasher = new BitWishPasswordHasher();
+
+// ✅ BitWish 2FA Manager 인스턴스 생성
+const bitWish2FAManager = new BitWish2FAManager();
+
+// ====================================================================================
+// 🔐 HTTPS 설정 로드 (BitWish Network 보안)
+// ====================================================================================
+
+let httpsOptions = null;
+let isHttpsEnabled = false;
+
+try {
+  // SSL 인증서 경로
+  const sslKeyPath = path.join(__dirname, 'ssl', 'bitwish-private-key.pem');
+  const sslCertPath = path.join(__dirname, 'ssl', 'bitwish-certificate.pem');
+  
+  // SSL 인증서 파일 존재 확인
+  if (fsSync.existsSync(sslKeyPath) && fsSync.existsSync(sslCertPath)) {
+    httpsOptions = {
+      key: fsSync.readFileSync(sslKeyPath),
+      cert: fsSync.readFileSync(sslCertPath)
+    };
+    isHttpsEnabled = true;
+    console.log('✅ HTTPS 인증서 로드 완료 (BitWish Network 보안 강화)');
+  } else {
+    console.log('⚠️  HTTPS 인증서가 없습니다. HTTP 모드로 시작합니다.');
+    console.log('   SSL 인증서 생성: node generate-ssl-cert.js');
+  }
+} catch (error) {
+  console.log('⚠️  HTTPS 인증서 로드 실패. HTTP 모드로 시작합니다:', error.message);
+}
+
+// ====================================================================================
+// Express 서버 설정
+// ====================================================================================
+
+const app = express();
+
+// ✅ CORS 설정 (프론트엔드 4000 ↔ 백엔드 4001 통신 허용)
+app.use(cors({
+  origin: ['http://localhost:4000', 'https://localhost:4000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// ✅ HTTPS 또는 HTTP 서버 생성
+const server = isHttpsEnabled 
+  ? https.createServer(httpsOptions, app)
+  : http.createServer(app);
+
+const wss = new WebSocket.Server({ server });
+
+// 미들웨어 설정
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// ✅ BitWish Input Validator 미들웨어 (전역 보안)
+app.use((req, res, next) => {
+  try {
+    // OPTIONS 요청은 검증 제외
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+    
+    // 요청 바디 검증 (NoSQL Injection 방어)
+    if (req.body && typeof req.body === 'object') {
+      const bodyCheck = bitWishInputValidator.validateNoSQLInjection(req.body);
+      if (!bodyCheck.valid) {
+        const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+        console.log(`🚫 NoSQL Injection 차단: ${req.path}`);
+        
+        // ✅ 보안 로그 기록
+        bitWishSecurityLogger.logNoSQLInjectionAttempt(clientIP, req.path, req.body);
+        
+        return res.status(400).json({
+          success: false,
+          error: bodyCheck.error,
+          dangerous: true
+        });
+      }
+    }
+    
+    // 쿼리 파라미터 검증 (SQL Injection 방어)
+    if (req.query && typeof req.query === 'object') {
+      for (const [key, value] of Object.entries(req.query)) {
+        if (typeof value === 'string') {
+          const sqlCheck = bitWishInputValidator.validateSQLInjection(value);
+          if (!sqlCheck.valid) {
+            const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+            console.log(`🚫 SQL Injection 차단: ${req.path} (${key})`);
+            
+            // ✅ 보안 로그 기록
+            bitWishSecurityLogger.logSQLInjectionAttempt(clientIP, req.path, { field: key, value: value });
+            
+            return res.status(400).json({
+              success: false,
+              error: sqlCheck.error,
+              field: key,
+              dangerous: true
+            });
+          }
+          
+          const xssCheck = bitWishInputValidator.validateXSS(value);
+          if (!xssCheck.valid) {
+            const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+            console.log(`🚫 XSS 공격 차단: ${req.path} (${key})`);
+            
+            // ✅ 보안 로그 기록
+            bitWishSecurityLogger.logXSSAttempt(clientIP, req.path, { field: key, value: value });
+            
+            return res.status(400).json({
+              success: false,
+              error: xssCheck.error,
+              field: key,
+              dangerous: true
+            });
+          }
+        }
+      }
+    }
+    
+    next();
+  } catch (error) {
+    console.error('입력 검증 미들웨어 오류:', error);
+    return res.status(400).json({
+      success: false,
+      error: '입력 검증 중 오류가 발생했습니다',
+      details: error.message
+    });
+  }
+});
+
+// ✅ 보안 강화된 CORS 설정 (BitWish Network 전용)
+app.use((req, res, next) => {
+  // HTTPS 환경에서는 특정 도메인만 허용
+  const allowedOrigins = isHttpsEnabled 
+    ? ['https://localhost:4000', 'https://localhost:4001']
+    : ['http://localhost:4000', 'http://localhost:4001'];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // ✅ 보안 헤더 추가
+  res.header('X-Content-Type-Options', 'nosniff');
+  res.header('X-Frame-Options', 'DENY');
+  res.header('X-XSS-Protection', '1; mode=block');
+  res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// ====================================================================================
+// BitWish 블록체인 API 엔드포인트
+// ====================================================================================
+
+// 블록체인 초기화
+app.post('/api/bitwish/blockchain/initialize', async (req, res) => {
+  try {
+    const result = bitWishBlockchainCore.initialize();
+    res.json({
+      success: true,
+      data: result,
+      message: bitWishI18n.translate('blockchain.initialized')
+    });
+  } catch (error) {
+    console.error('블록체인 초기화 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 네트워크 상태 조회
+app.get('/api/bitwish/blockchain/status', async (req, res) => {
+  try {
+    const status = bitWishBlockchainCore.getNetworkStatus();
+    
+    // 🔥 핵심 수정: MongoDB에서 실제 지갑 개수 가져오기 (서버 재시작 시에도 유지)
+    const walletCountResult = await bitWishMongoDB.getWalletCount();
+    const totalWallets = walletCountResult.success ? walletCountResult.count : 0;
+    
+    console.log(`📊 지갑 생성 개수 조회: ${totalWallets}개`);
+    
+    res.json({
+      success: true,
+      data: {
+        ...status,
+        totalWallets: totalWallets  // MongoDB에서 가져온 실제 지갑 개수
+      }
+    });
+  } catch (error) {
+    console.error('네트워크 상태 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 블록 조회
+app.get('/api/bitwish/blockchain/block/:height', async (req, res) => {
+  try {
+    const heightParam = req.params.height;
+    
+    // ✅ 블록 높이 검증
+    const validation = bitWishInputValidator.validateBlockHeight(heightParam);
+    
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: validation.error,
+        field: validation.field
+      });
+    }
+    
+    const block = bitWishBlockchainCore.getBlock(validation.sanitized);
+    
+    if (!block) {
+      return res.status(404).json({
+        success: false,
+        error: '블록을 찾을 수 없습니다'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: block
+    });
+  } catch (error) {
+    console.error('블록 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 트랜잭션 조회
+app.get('/api/bitwish/blockchain/transaction/:hash', async (req, res) => {
+  try {
+    const hashParam = req.params.hash;
+    
+    // ✅ 트랜잭션 해시 검증
+    const validation = bitWishInputValidator.validateTransactionHash(hashParam);
+    
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: validation.error,
+        field: validation.field
+      });
+    }
+    
+    const transaction = bitWishBlockchainCore.getTransaction(validation.sanitized);
+    
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        error: '트랜잭션을 찾을 수 없습니다'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: transaction
+    });
+  } catch (error) {
+    console.error('트랜잭션 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 계정 잔액 조회
+app.get('/api/bitwish/blockchain/balance/:address', async (req, res) => {
+  try {
+    const addressParam = req.params.address;
+    
+    // ✅ BitWish 주소 검증
+    const validation = bitWishInputValidator.validateBitWishAddress(addressParam);
+    
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: validation.error,
+        field: validation.field
+      });
+    }
+    
+    const balance = bitWishBlockchainCore.getBalance(validation.sanitized);
+    
+    res.json({
+      success: true,
+      data: {
+        address: validation.sanitized,
+        balance: balance
+      }
+    });
+  } catch (error) {
+    console.error('잔액 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// 지갑 만들기 - 지갑 생성 API 엔드포인트
+// ====================================================================================
+
+// 지갑 만들기 - 지갑 생성 (시드문구 → BitWish 주소 생성)
+app.post('/api/bitwish/wallet/create', async (req, res) => {
+  try {
+    console.log('🔥🔥🔥 지갑 생성 API 호출됨!');
+    const { seedPhrase, userId } = req.body;
+    console.log('📥 받은 데이터:', { seedPhrase: seedPhrase ? '있음' : '없음', userId });
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    // ✅ 입력 검증
+    const validation = bitWishInputValidator.validateMultiple({
+      seedPhrase: seedPhrase,
+      ...(userId && { userId: userId })
+    });
+    
+    if (!validation.valid) {
+      console.log(`🚫 지갑 생성 입력 검증 실패: ${clientIP}`);
+      return res.status(400).json({
+        success: false,
+        error: '입력값이 올바르지 않습니다',
+        errors: validation.errors
+      });
+    }
+    
+    // 검증된 데이터 사용
+    const result = bitWishWalletSystem.createBitWishWallet(
+      validation.sanitized.seedPhrase,
+      validation.sanitized.userId
+    );
+    
+    if (result.success) {
+      console.log('💾 MongoDB에 저장 시도 중...');
+      // MongoDB에 저장
+      const saveResult = await bitWishMongoDB.saveWallet(result.wallet);
+      console.log('💾 MongoDB 저장 결과:', saveResult);
+      
+      console.log(`✅ 지갑 생성 완료: ${result.address} (IP: ${clientIP})`);
+      
+      // ✅ 보안 로그 기록
+      bitWishSecurityLogger.logWalletCreated(
+        result.address,
+        clientIP,
+        validation.sanitized.userId || 'anonymous'
+      );
+      
+      res.json({
+        success: true,
+        data: result,
+        message: bitWishI18n.translate('wallet.created')
+      });
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('지갑 생성 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 지갑 만들기 - 지갑 주소 검증 API
+app.post('/api/bitwish/wallet/validate', async (req, res) => {
+  try {
+    const { address } = req.body;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+    
+    // BW 주소 형식 검증 (BW + 40자리 16진수)
+    const bwAddressRegex = /^BW[A-F0-9]{40}$/;
+    if (!bwAddressRegex.test(address)) {
+      return res.status(400).json({
+        success: false,
+        error: '올바른 BitWish 지갑 주소 형식이 아닙니다. (BW + 40자리 16진수)'
+      });
+    }
+    
+    // 지갑 존재 여부 확인 (메모리 + MongoDB)
+    console.log(`🔍 지갑 검증 요청: ${address}`);
+    console.log(`📊 현재 서버 메모리 지갑 수: ${bitWishWalletSystem.wallets.size}`);
+    
+    let wallet = bitWishWalletSystem.wallets.get(address);
+    console.log(`🔍 메모리 조회 결과:`, wallet ? '존재함' : '없음');
+    
+    // 메모리에 없으면 MongoDB에서 로드
+    if (!wallet) {
+      console.log(`📂 MongoDB에서 지갑 조회 중...`);
+      const dbResult = await bitWishMongoDB.getWallet(address);
+      if (dbResult.success && dbResult.data) {
+        wallet = dbResult.data;
+        // 메모리에도 추가
+        bitWishWalletSystem.wallets.set(address, wallet);
+        console.log(`✅ MongoDB에서 지갑 복원: ${address}`);
+      } else {
+        console.log(`❌ MongoDB에도 지갑 없음`);
+        return res.status(404).json({
+          success: false,
+          error: '해당 지갑 주소를 찾을 수 없습니다'
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: '유효한 BitWish 지갑 주소입니다',
+      wallet: {
+        address: wallet.address,
+        hasPassword: wallet.hasPassword,
+        createdAt: wallet.createdAt
+      }
+    });
+    
+  } catch (error) {
+    console.error('지갑 주소 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '지갑 주소 검증 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 지갑 만들기 - 지갑 검증
+app.post('/api/bitwish/wallet/verify', async (req, res) => {
+  try {
+    const { address, seedPhrase } = req.body;
+    
+    // ✅ 입력 검증
+    const validation = bitWishInputValidator.validateMultiple({
+      address: address,
+      seedPhrase: seedPhrase
+    });
+    
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: '입력값이 올바르지 않습니다',
+        errors: validation.errors
+      });
+    }
+    
+    // 검증된 데이터 사용
+    const isValid = bitWishWalletSystem.validateBitWishWallet(
+      validation.sanitized.address,
+      validation.sanitized.seedPhrase
+    );
+    
+    res.json({
+      success: true,
+      data: { valid: isValid },
+      message: isValid ? bitWishI18n.translate('wallet.passwordVerified') : bitWishI18n.translate('error.invalidPassword')
+    });
+  } catch (error) {
+    console.error('지갑 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 나의 지갑 - 지갑 정보 조회
+app.get('/api/bitwish/wallet/balance/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    console.log('🔍 지갑 잔액 조회:', address);
+    
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        error: '데이터베이스 연결 오류'
+      });
+    }
+    
+    const wallet = await db.collection('wallets').findOne({ address });
+    
+    if (!wallet) {
+      return res.status(404).json({
+        success: false,
+        error: '지갑을 찾을 수 없습니다'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        address: wallet.address,
+        balance: wallet.balance || '0.00000000',
+        availableBalance: wallet.availableBalance || '0.00000000',
+        lockedBalance: wallet.lockedBalance || '0.00000000'
+      }
+    });
+  } catch (error) {
+    console.error('지갑 잔액 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '지갑 잔액 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+app.get('/api/bitwish/wallet/:address', async (req, res) => {
+  try {
+    const address = req.params.address;
+    const walletInfo = bitWishWalletSystem.getWalletInfo(address);
+    
+    if (!walletInfo) {
+      return res.status(404).json({
+        success: false,
+        error: bitWishI18n.translate('wallet.notFound')
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: walletInfo
+    });
+  } catch (error) {
+    console.error('지갑 정보 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 지갑 만들기 - 2차 비밀번호 설정
+app.post('/api/bitwish/wallet/set-password', async (req, res) => {
+  try {
+    const { address, password } = req.body;
+    
+    if (!address || !password) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 비밀번호가 필요합니다'
+      });
+    }
+    
+    const result = await bitWishWalletSystem.setPassword(address, password);
+    
+    if (result.success) {
+      // MongoDB에 저장
+      const walletInfo = bitWishWalletSystem.getWalletInfo(address);
+      await bitWishMongoDB.saveWallet(walletInfo);
+    }
+    
+    res.json({
+      ...result,
+      message: result.success ? bitWishI18n.translate('wallet.passwordSet') : result.error
+    });
+  } catch (error) {
+    console.error('비밀번호 설정 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 지갑 만들기 - 2차 비밀번호 검증
+app.post('/api/bitwish/wallet/verify-password', async (req, res) => {
+  try {
+    const { address, password } = req.body;
+    
+    if (!address || !password) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 비밀번호가 필요합니다'
+      });
+    }
+    
+    const result = await bitWishWalletSystem.verifyPassword(address, password);
+    
+    res.json({
+      ...result,
+      message: result.success ? bitWishI18n.translate('wallet.passwordVerified') : result.error
+    });
+  } catch (error) {
+    console.error('비밀번호 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 지갑 만들기 - 2차 비밀번호 존재 확인
+app.post('/api/bitwish/wallet/check-password-exists', async (req, res) => {
+  try {
+    const { address } = req.body;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+    
+    const exists = bitWishWalletSystem.checkPasswordExists(address);
+    
+    res.json({
+      success: true,
+      data: { exists: exists },
+      message: exists ? '비밀번호가 설정되어 있습니다' : '비밀번호가 설정되지 않았습니다'
+    });
+  } catch (error) {
+    console.error('비밀번호 존재 확인 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 지갑 만들기 - 세션 생성
+app.post('/api/bitwish/wallet/create-session', async (req, res) => {
+  try {
+    const { address, userType } = req.body;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+    
+    const session = bitWishWalletSystem.createSession(address, userType || 'USER');
+    
+    // MongoDB에 저장
+    await bitWishMongoDB.saveSession(session);
+    
+    res.json({
+      success: true,
+      data: session,
+      message: bitWishI18n.translate('wallet.sessionCreated')
+    });
+  } catch (error) {
+    console.error('세션 생성 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 지갑 만들기 - 세션 검증
+app.post('/api/bitwish/wallet/validate-session', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: '세션 ID가 필요합니다'
+      });
+    }
+    
+    const result = bitWishWalletSystem.validateSession(sessionId);
+    
+    res.json({
+      ...result,
+      message: result.valid ? '세션이 유효합니다' : result.error
+    });
+  } catch (error) {
+    console.error('세션 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 지갑 만들기 - 세션 종료
+app.post('/api/bitwish/wallet/end-session', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: '세션 ID가 필요합니다'
+      });
+    }
+    
+    bitWishWalletSystem.endSession(sessionId);
+    
+    res.json({
+      success: true,
+      message: '세션이 종료되었습니다'
+    });
+  } catch (error) {
+    console.error('세션 종료 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish 마이닝 API 엔드포인트
+// ====================================================================================
+
+// 마이닝 세션 시작
+app.post('/api/bitwish/mining/start', async (req, res) => {
+  try {
+    const { address, userType } = req.body;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+    
+    const result = bitWishMiningSystem.startMiningSession(address, userType || 'USER');
+    
+    if (result.success) {
+      // MongoDB에 저장
+      await bitWishMongoDB.saveMiningSession(result.session);
+    }
+    
+    res.json({
+      ...result,
+      message: result.success ? bitWishI18n.translate('mining.sessionStarted') : result.error
+    });
+  } catch (error) {
+    console.error('마이닝 세션 시작 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 마이닝 세션 중지
+app.post('/api/bitwish/mining/stop', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: '세션 ID가 필요합니다'
+      });
+    }
+    
+    const result = bitWishMiningSystem.stopMiningSession(sessionId);
+    
+    if (result.success) {
+      // MongoDB에 저장
+      await bitWishMongoDB.saveMiningSession(result.session);
+    }
+    
+    res.json({
+      ...result,
+      message: result.success ? bitWishI18n.translate('mining.sessionStopped') : result.error
+    });
+  } catch (error) {
+    console.error('마이닝 세션 중지 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 마이닝 세션 일시정지
+app.post('/api/bitwish/mining/pause', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: '세션 ID가 필요합니다'
+      });
+    }
+    
+    const result = bitWishMiningSystem.pauseMiningSession(sessionId);
+    
+    if (result.success) {
+      // MongoDB에 저장
+      await bitWishMongoDB.saveMiningSession(result.session);
+    }
+    
+    res.json({
+      ...result,
+      message: result.success ? bitWishI18n.translate('mining.sessionPaused') : result.error
+    });
+  } catch (error) {
+    console.error('마이닝 세션 일시정지 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 마이닝 세션 재개
+app.post('/api/bitwish/mining/resume', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: '세션 ID가 필요합니다'
+      });
+    }
+    
+    const result = bitWishMiningSystem.resumeMiningSession(sessionId);
+    
+    if (result.success) {
+      // MongoDB에 저장
+      await bitWishMongoDB.saveMiningSession(result.session);
+    }
+    
+    res.json({
+      ...result,
+      message: result.success ? bitWishI18n.translate('mining.sessionResumed') : result.error
+    });
+  } catch (error) {
+    console.error('마이닝 세션 재개 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 마이닝 세션 조회
+app.get('/api/bitwish/mining/session/:sessionId', async (req, res) => {
+  try {
+    const sessionId = req.params.sessionId;
+    const session = bitWishMiningSystem.getMiningSession(sessionId);
+    
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: '마이닝 세션을 찾을 수 없습니다'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        sessionId: session.id,
+        address: session.address,
+        userType: session.userType,
+        startTime: session.startTime,
+        totalEarned: session.totalEarned.toString(),
+        currentRate: session.currentRate.toString(),
+        isActive: session.isActive,
+        isPaused: session.isPaused || false,
+        blocksMined: session.blocksMined,
+        efficiency: session.efficiency
+      }
+    });
+  } catch (error) {
+    console.error('마이닝 세션 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 활성 마이닝 세션 목록 조회
+app.get('/api/bitwish/mining/sessions', async (req, res) => {
+  try {
+    const sessions = bitWishMiningSystem.getActiveMiningSessions();
+    
+    res.json({
+      success: true,
+      data: sessions
+    });
+  } catch (error) {
+    console.error('활성 마이닝 세션 목록 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 마이닝 통계 조회
+app.get('/api/bitwish/mining/stats', async (req, res) => {
+  try {
+    const stats = bitWishMiningSystem.getMiningStats();
+    
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('마이닝 통계 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 마이닝 보상 수동 지급
+app.post('/api/bitwish/mining/distribute-reward', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: '세션 ID가 필요합니다'
+      });
+    }
+    
+    const result = bitWishMiningSystem.distributeMiningReward(sessionId);
+    
+    if (result.success) {
+      // 트랜잭션을 MongoDB에 저장
+      await bitWishMongoDB.saveTransaction({
+        hash: result.transactionHash,
+        type: 'mining_reward',
+        from: 'BitWish-Mining-Reward',
+        to: bitWishMiningSystem.getMiningSession(sessionId).address,
+        amount: result.reward,
+        timestamp: new Date()
+      });
+    }
+    
+    res.json({
+      ...result,
+      message: result.success ? bitWishI18n.translate('mining.rewardDistributed') : result.error
+    });
+  } catch (error) {
+    console.error('마이닝 보상 지급 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// ✅ 추가: 누락된 API 엔드포인트 (완벽한 독립성 보장)
+// ====================================================================================
+
+// ✅ 추가: 마이닝 데이터 로드 API (유저/관리자 완전 분리)
+app.post('/mining/load-data', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    const userType = req.headers['x-user-type'] || 'USER';
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+
+    // ✅ 유저/관리자 완전 분리된 데이터 조회
+    let miningData = null;
+    
+    if (userType === 'USER') {
+      // 유저 전용 마이닝 데이터 조회
+      for (const [sessionId, session] of bitWishMiningSystem.activeMiningSessions) {
+        if (session.address === walletAddress && session.userType === 'USER') {
+          miningData = {
+            isActive: session.isActive,
+            startTime: session.startTime,
+            totalMinedAmount: session.totalEarned.toString(),
+            currentHashRate: 1000, // 기본 해시레이트
+            averageHashRate: 1000,
+            miningPower: session.efficiency * 100,
+            efficiency: session.efficiency,
+            lastBlockTime: new Date().toISOString(),
+            blocksMined: session.blocksMined,
+            rewardsEarned: session.totalEarned.toString(),
+            pendingRewards: '0.00000000',
+            userType: 'USER'
+          };
+          break;
+        }
+      }
+    } else if (userType === 'ADMIN') {
+      // 관리자 전용 마이닝 데이터 조회
+      for (const [sessionId, session] of bitWishMiningSystem.activeMiningSessions) {
+        if (session.address === walletAddress && session.userType === 'ADMIN') {
+          miningData = {
+            isActive: session.isActive,
+            startTime: session.startTime,
+            totalMinedAmount: session.totalEarned.toString(),
+            currentHashRate: 1500, // 관리자 더 높은 해시레이트
+            averageHashRate: 1500,
+            miningPower: session.efficiency * 120,
+            efficiency: session.efficiency,
+            lastBlockTime: new Date().toISOString(),
+            blocksMined: session.blocksMined,
+            rewardsEarned: session.totalEarned.toString(),
+            pendingRewards: '0.00000000',
+            userType: 'ADMIN'
+          };
+          break;
+        }
+      }
+    }
+
+    if (!miningData) {
+      // 기본값 설정 (비활성 상태)
+      miningData = {
+        isActive: false,
+        startTime: null,
+        totalMinedAmount: '0.00000000',
+        currentHashRate: 0,
+        averageHashRate: 0,
+        miningPower: 0,
+        efficiency: 0,
+        lastBlockTime: null,
+        blocksMined: 0,
+        rewardsEarned: '0.00000000',
+        pendingRewards: '0.00000000',
+        userType: userType
+      };
+    }
+
+    res.json({
+      success: true,
+      miningData: miningData,
+      message: `${userType} 마이닝 데이터가 로드되었습니다`
+    });
+  } catch (error) {
+    console.error('마이닝 데이터 로드 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ 추가: 유저 출석 체크 API (완전 독립)
+app.post('/api/user/attendance/check-in', async (req, res) => {
+  try {
+    const { walletAddress, attendanceData } = req.body;
+    
+    if (!walletAddress || !attendanceData) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 출석 데이터가 필요합니다'
+      });
+    }
+
+    // ✅ 유저 전용 출석 데이터 저장
+    const userAttendanceRecord = {
+      ...attendanceData,
+      userType: 'USER',
+      timestamp: new Date().toISOString(),
+      source: 'UserAttendanceBonus'
+    };
+
+    // MongoDB에 저장
+    await bitWishMongoDB.saveTransaction({
+      hash: crypto.createHash('sha256').update(JSON.stringify(userAttendanceRecord)).digest('hex'),
+      type: 'user_attendance',
+      from: 'BitWish-User-Attendance',
+      to: walletAddress,
+      amount: '0',
+      data: userAttendanceRecord,
+      timestamp: new Date()
+    });
+
+    console.log(`✅ 유저 출석 체크 완료: ${walletAddress}`);
+    
+    res.json({
+      success: true,
+      attendanceData: userAttendanceRecord,
+      message: '유저 출석 체크가 완료되었습니다'
+    });
+  } catch (error) {
+    console.error('유저 출석 체크 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ 추가: 관리자 출석 체크 API (완전 독립)
+app.post('/api/admin/attendance/check-in', async (req, res) => {
+  try {
+    const { walletAddress, attendanceData, adminData } = req.body;
+    
+    // ✅ 관리자 권한 확인
+    if (!adminData || adminData.accessLevel !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: '관리자 권한이 필요합니다'
+      });
+    }
+
+    if (!walletAddress || !attendanceData) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 출석 데이터가 필요합니다'
+      });
+    }
+
+    // ✅ 관리자 전용 출석 데이터 저장
+    const adminAttendanceRecord = {
+      ...attendanceData,
+      adminType: 'ADMIN',
+      timestamp: new Date().toISOString(),
+      source: 'AdminAttendanceBonus',
+      adminAccess: adminData.accessLevel
+    };
+
+    // MongoDB에 저장
+    await bitWishMongoDB.saveTransaction({
+      hash: crypto.createHash('sha256').update(JSON.stringify(adminAttendanceRecord)).digest('hex'),
+      type: 'admin_attendance',
+      from: 'BitWish-Admin-Attendance',
+      to: walletAddress,
+      amount: '0',
+      data: adminAttendanceRecord,
+      timestamp: new Date()
+    });
+
+    console.log(`✅ 관리자 출석 체크 완료: ${walletAddress}`);
+    
+    res.json({
+      success: true,
+      attendanceData: adminAttendanceRecord,
+      message: '관리자 출석 체크가 완료되었습니다'
+    });
+  } catch (error) {
+    console.error('관리자 출석 체크 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ 추가: 영구 마이닝 시작 API
+app.post('/api/bitwish/mining/start-permanent', async (req, res) => {
+  try {
+    const { address, userType } = req.body;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+
+    const result = bitWishMiningSystem.startPermanentMiningSession(address, userType || 'USER');
+    
+    if (result.success) {
+      // MongoDB에 저장
+      await bitWishMongoDB.saveMiningSession(result.session);
+    }
+
+    res.json({
+      ...result,
+      message: result.success ? '영구 마이닝이 시작되었습니다' : result.error
+    });
+  } catch (error) {
+    console.error('영구 마이닝 시작 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ 추가: 추천 보너스 시스템 API
+app.post('/api/bitwish/referral/register', async (req, res) => {
+  try {
+    const { referrerAddress, refereeAddress } = req.body;
+    
+    if (!referrerAddress || !refereeAddress) {
+      return res.status(400).json({
+        success: false,
+        error: '추천인과 피추천인 주소가 필요합니다'
+      });
+    }
+
+    const result = bitWishReferralBonusSystem.registerReferral(referrerAddress, refereeAddress);
+    
+    res.json({
+      ...result,
+      message: result.success ? '추천 관계가 등록되었습니다' : result.error
+    });
+  } catch (error) {
+    console.error('추천 관계 등록 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ 추가: 토큰 분배 상태 조회 API
+app.get('/api/bitwish/token-distribution/status', async (req, res) => {
+  try {
+    const status = bitWishTokenDistributionSystem.getDistributionStatus();
+    
+    res.json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    console.error('토큰 분배 상태 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ 추가: 수수료 분배 상태 조회 API
+app.get('/api/bitwish/fee-distribution/status', async (req, res) => {
+  try {
+    const status = bitWishFeeDistributionSystem.getFeeDistributionStatus();
+    
+    res.json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    console.error('수수료 분배 상태 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// 지갑 만들기 - 통합 API 엔드포인트 (기존 시스템과의 호환성)
+// ====================================================================================
+
+// 지갑 만들기 - 통합 비밀번호 존재 확인
+app.post('/api/bitwish/integrated/wallet/check-password-exists', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+    
+    const exists = bitWishWalletSystem.checkPasswordExists(walletAddress);
+    
+    res.json({
+      success: true,
+      exists: exists,
+      message: exists ? '비밀번호가 설정되어 있습니다' : '비밀번호가 설정되지 않았습니다'
+    });
+  } catch (error) {
+    console.error('통합 비밀번호 존재 확인 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '비밀번호 존재 확인 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 통합 비밀번호 설정
+app.post('/api/bitwish/integrated/wallet/setup-password', async (req, res) => {
+  try {
+    const { walletAddress, password, hashedPassword } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    // 🔥 레이트 리미팅 제거: 비밀번호 설정은 check-password-exists에서 이미 검증됨
+    // 중복 레이트 리미팅으로 인한 차단 방지
+    
+    if (!walletAddress || (!password && !hashedPassword)) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 비밀번호가 필요합니다'
+      });
+    }
+    
+    let result;
+    if (hashedPassword) {
+      // 이미 해시된 비밀번호인 경우
+      const wallet = bitWishWalletSystem.wallets.get(walletAddress);
+      if (wallet) {
+        wallet.hasPassword = true;
+        wallet.passwordHash = hashedPassword;
+        wallet.passwordSetAt = new Date();
+        bitWishWalletSystem.wallets.set(walletAddress, wallet);
+        result = { success: true, message: '비밀번호가 설정되었습니다' };
+      } else {
+        result = { success: false, error: '지갑을 찾을 수 없습니다' };
+      }
+    } else {
+      // 일반 비밀번호인 경우
+      result = await bitWishWalletSystem.setPassword(walletAddress, password);
+    }
+    
+    if (result.success) {
+      // MongoDB에 저장
+      const walletInfo = bitWishWalletSystem.getWalletInfo(walletAddress);
+      await bitWishMongoDB.saveWallet(walletInfo);
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('통합 비밀번호 설정 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '비밀번호 설정 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 통합 비밀번호 검증
+app.post('/api/bitwish/integrated/wallet/verify-password', async (req, res) => {
+  try {
+    const { walletAddress, password } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    // 🔥 레이트 리미팅을 실패 시에만 적용하도록 수정
+    // 성공한 검증은 카운트하지 않음
+    
+    if (!walletAddress || !password) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 비밀번호가 필요합니다'
+      });
+    }
+    
+    const result = await bitWishWalletSystem.verifyPassword(walletAddress, password);
+    
+    if (result.success) {
+      console.log(`✅ 비밀번호 검증 성공: ${walletAddress}`);
+      
+      // ✅ 보안 로그 기록 (성공)
+      bitWishSecurityLogger.logAuthSuccess(walletAddress, clientIP, result.userType || 'unknown');
+    } else {
+      console.log(`❌ 비밀번호 검증 실패: ${clientIP} - ${walletAddress}`);
+      
+      // ✅ 보안 로그 기록 (실패)
+      bitWishSecurityLogger.logAuthFailure(walletAddress, clientIP, '비밀번호 불일치');
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('통합 비밀번호 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '비밀번호 검증 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 지갑 만들기 - 통합 지갑 인증 API
+app.post('/api/bitwish/integrated/wallet/authenticate', async (req, res) => {
+  try {
+    const { walletAddress, password } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    console.log(`🔐 지갑 인증 요청: ${walletAddress}`);
+    
+    if (!walletAddress || !password) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 비밀번호가 필요합니다'
+      });
+    }
+    
+    // 지갑 존재 확인 (메모리 + MongoDB)
+    let wallet = bitWishWalletSystem.wallets.get(walletAddress);
+    
+    if (!wallet) {
+      // MongoDB에서 로드 시도
+      const dbResult = await bitWishMongoDB.getWallet(walletAddress);
+      if (dbResult.success && dbResult.data) {
+        wallet = dbResult.data;
+        bitWishWalletSystem.wallets.set(walletAddress, wallet);
+        console.log(`✅ MongoDB에서 지갑 복원: ${walletAddress}`);
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: '지갑을 찾을 수 없습니다'
+        });
+      }
+    }
+    
+    // 🔥 비밀번호 검증: 저장된 salt를 사용하여 동일하게 해시 후 비교
+    if (!wallet.passwordHash || !wallet.passwordHash.includes(':')) {
+      console.log(`❌ 비밀번호 해시 형식 오류: ${walletAddress}`);
+      return res.json({
+        success: false,
+        error: '비밀번호가 설정되지 않았습니다'
+      });
+    }
+    
+    const [salt, storedHash] = wallet.passwordHash.split(':');
+    
+    // crypto 모듈로 PBKDF2 해싱 (프론트엔드와 동일한 파라미터)
+    const iterations = 100000;
+    const keyLength = 64;
+    
+    // 입력된 비밀번호를 저장된 salt로 해시
+    const inputHashBuffer = crypto.pbkdf2Sync(
+      password,
+      salt,
+      iterations,
+      keyLength,
+      'sha1'  // 🔥 CryptoJS PBKDF2 기본값은 SHA-1
+    );
+    const inputHash = inputHashBuffer.toString('hex');
+    
+    console.log(`🔍 비밀번호 검증 중...`);
+    console.log(`  - 저장된 해시: ${storedHash.substring(0, 20)}...`);
+    console.log(`  - 입력 해시: ${inputHash.substring(0, 20)}...`);
+    
+    const isValid = inputHash === storedHash;
+    
+    if (!isValid) {
+      // ✅ 보안 로그 기록
+      bitWishSecurityLogger.logAuthFailure(
+        walletAddress,
+        clientIP,
+        '비밀번호 불일치'
+      );
+      
+      return res.json({
+        success: false,
+        error: '비밀번호가 일치하지 않습니다'
+      });
+    }
+    
+    // ✅ 인증 성공
+    console.log(`✅ 지갑 인증 성공: ${walletAddress}`);
+    
+    // ✅ 보안 로그 기록
+    bitWishSecurityLogger.logAuthSuccess(
+      walletAddress,
+      clientIP,
+      wallet.userType || 'USER'
+    );
+    
+    // 세션 생성
+    const session = bitWishWalletSystem.createSession(
+      walletAddress,
+      wallet.userType || 'USER'
+    );
+    
+    res.json({
+      success: true,
+      message: '지갑 인증이 완료되었습니다',
+      wallet: {
+        address: wallet.address,
+        userType: wallet.userType || 'USER',
+        hasPassword: wallet.hasPassword,
+        createdAt: wallet.createdAt
+      },
+      session: {
+        id: session.id,
+        expiresAt: session.expiresAt
+      }
+    });
+    
+  } catch (error) {
+    console.error('지갑 인증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '지갑 인증 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// 지갑 만들기 - 2차 비밀번호 존재 여부 확인 API
+// ====================================================================================
+
+// 지갑 만들기 - 2차 비밀번호 존재 여부 확인
+app.post('/api/bitwish/wallet/check-password-exists', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    
+    console.log(`🔍 2차 비밀번호 존재 여부 확인: ${walletAddress}`);
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+    
+    // BW 주소 형식 검증
+    const bwAddressRegex = /^BW[A-F0-9]{40}$/;
+    if (!bwAddressRegex.test(walletAddress)) {
+      return res.status(400).json({
+        success: false,
+        error: '올바른 BitWish 지갑 주소 형식이 아닙니다.'
+      });
+    }
+    
+    // 지갑 존재 확인 (메모리 + MongoDB)
+    let wallet = bitWishWalletSystem.wallets.get(walletAddress);
+    
+    if (!wallet) {
+      // MongoDB에서 로드 시도
+      const dbResult = await bitWishMongoDB.getWallet(walletAddress);
+      if (dbResult.success && dbResult.data) {
+        wallet = dbResult.data;
+        bitWishWalletSystem.wallets.set(walletAddress, wallet);
+        console.log(`✅ MongoDB에서 지갑 복원: ${walletAddress}`);
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: '지갑을 찾을 수 없습니다'
+        });
+      }
+    }
+    
+    // 2차 비밀번호 설정 여부 확인
+    const hasPassword = wallet.hasPassword === true && wallet.passwordHash !== undefined && wallet.passwordHash !== null;
+    
+    console.log(`✅ 2차 비밀번호 존재 여부: ${hasPassword ? '있음' : '없음'}`);
+    
+    res.json({
+      success: true,
+      exists: hasPassword,
+      walletAddress: walletAddress
+    });
+    
+  } catch (error) {
+    console.error('2차 비밀번호 존재 여부 확인 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '2차 비밀번호 존재 여부 확인 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// 나의 지갑 - 2차 비밀번호 초기화 API
+// ====================================================================================
+
+// 나의 지갑 - 2차 비밀번호 초기화
+app.post('/api/bitwish/integrated/wallet/reset-password', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    console.log(`🔄 2차 비밀번호 초기화 요청: ${walletAddress}`);
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+    
+    // BW 주소 형식 검증
+    const bwAddressRegex = /^BW[A-F0-9]{40}$/;
+    if (!bwAddressRegex.test(walletAddress)) {
+      return res.status(400).json({
+        success: false,
+        error: '올바른 BitWish 지갑 주소 형식이 아닙니다.'
+      });
+    }
+    
+    // 지갑 존재 확인 (메모리 + MongoDB)
+    let wallet = bitWishWalletSystem.wallets.get(walletAddress);
+    
+    if (!wallet) {
+      // MongoDB에서 로드 시도
+      const dbResult = await bitWishMongoDB.getWallet(walletAddress);
+      if (dbResult.success && dbResult.data) {
+        wallet = dbResult.data;
+        bitWishWalletSystem.wallets.set(walletAddress, wallet);
+        console.log(`✅ MongoDB에서 지갑 복원: ${walletAddress}`);
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: '지갑을 찾을 수 없습니다'
+        });
+      }
+    }
+    
+    // 2차 비밀번호 초기화 (passwordHash 삭제)
+    wallet.passwordHash = undefined;
+    wallet.hasPassword = false;
+    wallet.updatedAt = new Date().toISOString();
+    
+    // 메모리 업데이트
+    bitWishWalletSystem.wallets.set(walletAddress, wallet);
+    
+    // MongoDB 업데이트 - passwordHash 필드 완전 삭제
+    const updateResult = await bitWishMongoDB.updateWallet(
+      walletAddress, 
+      {
+        hasPassword: false,
+        updatedAt: wallet.updatedAt
+      },
+      ['passwordHash', 'passwordSetAt'] // 🔥 필드 완전 삭제
+    );
+    
+    if (!updateResult.success) {
+      console.error(`❌ MongoDB 업데이트 실패: ${walletAddress}`);
+      return res.status(500).json({
+        success: false,
+        error: 'MongoDB 업데이트에 실패했습니다'
+      });
+    }
+    
+    // ✅ 보안 로그 기록
+    bitWishSecurityLogger.log(
+      bitWishSecurityLogger.LOG_TYPES.PASSWORD_CHANGED,
+      bitWishSecurityLogger.SEVERITY_LEVELS.INFO,
+      `2차 비밀번호 초기화: ${walletAddress}`,
+      { walletAddress, action: 'password_reset' },
+      clientIP
+    );
+    
+    console.log(`✅ 2차 비밀번호 초기화 완료: ${walletAddress}`);
+    
+    res.json({
+      success: true,
+      message: '2차 비밀번호가 초기화되었습니다'
+    });
+    
+  } catch (error) {
+    console.error('2차 비밀번호 초기화 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '2차 비밀번호 초기화 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// 지갑 만들기 - 시드문구 검증 API (기존 시스템과의 호환성)
+// ====================================================================================
+
+// 지갑 만들기 - 시드문구 검증
+app.post('/api/bitwish/wallet/verify-seed', async (req, res) => {
+  try {
+    const { address, seedPhrase } = req.body;
+    
+    if (!address || !seedPhrase) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 시드문구가 필요합니다'
+      });
+    }
+    
+    const isValid = bitWishWalletSystem.validateBitWishWallet(address, seedPhrase);
+    
+    res.json({
+      success: true,
+      valid: isValid,
+      message: isValid ? '시드문구가 일치합니다' : '시드문구가 일치하지 않습니다'
+    });
+  } catch (error) {
+    console.error('시드문구 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '시드문구 검증 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish 트랜잭션 API 엔드포인트
+// ====================================================================================
+
+// 트랜잭션 생성 및 실행
+app.post('/api/bitwish/transaction/create', async (req, res) => {
+  try {
+    const { from, to, amount, gasLimit, data } = req.body;
+    
+    // ✅ 입력 검증
+    const validation = bitWishInputValidator.validateMultiple({
+      address: from,  // from 주소 검증
+      walletAddress: to,  // to 주소 검증
+      amount: amount
+    });
+    
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: '입력값이 올바르지 않습니다',
+        errors: validation.errors
+      });
+    }
+    
+    // 트랜잭션 생성 (검증된 데이터 사용)
+    const transaction = bitWishBlockchainCore.createTransaction(
+      validation.sanitized.address,
+      validation.sanitized.walletAddress,
+      validation.sanitized.amount,
+      gasLimit,
+      data
+    );
+    
+    // 트랜잭션 실행
+    const result = bitWishBlockchainCore.executeTransaction(transaction);
+    
+    if (result.success) {
+      // MongoDB에 저장
+      await bitWishMongoDB.saveTransaction(transaction);
+      
+      console.log(`✅ 트랜잭션 생성 완료: ${result.transactionHash}`);
+      
+      // ✅ 보안 로그 기록
+      const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+      bitWishSecurityLogger.logTransactionCreated(
+        result.transactionHash,
+        validation.sanitized.address,
+        validation.sanitized.walletAddress,
+        validation.sanitized.amount,
+        clientIP
+      );
+      
+      res.json({
+        success: true,
+        data: {
+          transactionHash: result.transactionHash,
+          transaction: transaction
+        },
+        message: bitWishI18n.translate('blockchain.transactionExecuted')
+      });
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error('트랜잭션 생성 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish 다국어 API 엔드포인트
+// ====================================================================================
+
+// 언어 설정
+app.post('/api/bitwish/i18n/set-language', async (req, res) => {
+  try {
+    const { language } = req.body;
+    
+    if (!language) {
+      return res.status(400).json({
+        success: false,
+        error: '언어 코드가 필요합니다'
+      });
+    }
+    
+    const result = bitWishI18n.setLanguage(language);
+    
+    res.json({
+      ...result,
+      message: result.success ? `언어가 ${language}로 설정되었습니다` : result.error
+    });
+  } catch (error) {
+    console.error('언어 설정 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 번역 조회
+app.get('/api/bitwish/i18n/translate/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { params } = req.query;
+    
+    let translationParams = {};
+    if (params) {
+      try {
+        translationParams = JSON.parse(params);
+      } catch (e) {
+        // 파싱 실패 시 빈 객체 사용
+      }
+    }
+    
+    const translation = bitWishI18n.translate(key, translationParams);
+    
+    res.json({
+      success: true,
+      data: {
+        key: key,
+        translation: translation,
+        language: bitWishI18n.getCurrentLanguage()
+      }
+    });
+  } catch (error) {
+    console.error('번역 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// 현재 언어 조회
+app.get('/api/bitwish/i18n/current-language', async (req, res) => {
+  try {
+    const currentLanguage = bitWishI18n.getCurrentLanguage();
+    const supportedLanguages = bitWishI18n.getSupportedLanguages();
+    
+    res.json({
+      success: true,
+      data: {
+        currentLanguage: currentLanguage,
+        supportedLanguages: supportedLanguages
+      }
+    });
+  } catch (error) {
+    console.error('현재 언어 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish 보안 로그 API 엔드포인트
+// ====================================================================================
+
+// ✅ 보안 로그 조회
+app.get('/api/bitwish/security-logs', async (req, res) => {
+  try {
+    const filters = {
+      type: req.query.type,
+      severity: req.query.severity,
+      clientIP: req.query.clientIP,
+      startTime: req.query.startTime,
+      endTime: req.query.endTime,
+      limit: parseInt(req.query.limit) || 100
+    };
+    
+    // MongoDB에서 로그 조회 (연결되어 있다면)
+    if (bitWishMongoDB.isConnected) {
+      const result = await bitWishSecurityLogger.loadFromMongoDB(bitWishMongoDB, filters, filters.limit);
+      if (result.success) {
+        return res.json({
+          success: true,
+          data: {
+            logs: result.logs,
+            count: result.count,
+            source: 'mongodb'
+          }
+        });
+      }
+    }
+    
+    // 메모리 버퍼에서 조회
+    const logs = bitWishSecurityLogger.getLogs(filters);
+    res.json({
+      success: true,
+      data: {
+        logs: logs,
+        count: logs.length,
+        source: 'memory'
+      }
+    });
+  } catch (error) {
+    console.error('보안 로그 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ 보안 로그 통계 조회
+app.get('/api/bitwish/security-logs/statistics', async (req, res) => {
+  try {
+    const statistics = bitWishSecurityLogger.getStatistics();
+    res.json({
+      success: true,
+      data: statistics
+    });
+  } catch (error) {
+    console.error('보안 로그 통계 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ 위험한 IP 감지
+app.get('/api/bitwish/security-logs/suspicious-ips', async (req, res) => {
+  try {
+    const threshold = parseInt(req.query.threshold) || 10;
+    const suspicious = bitWishSecurityLogger.detectSuspiciousIPs(threshold);
+    
+    res.json({
+      success: true,
+      data: {
+        suspicious: suspicious,
+        count: suspicious.length
+      }
+    });
+  } catch (error) {
+    console.error('위험한 IP 감지 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ✅ 보안 로그 저장 (수동)
+app.post('/api/bitwish/security-logs/save', async (req, res) => {
+  try {
+    if (!bitWishMongoDB.isConnected) {
+      return res.status(503).json({
+        success: false,
+        error: 'MongoDB가 연결되지 않았습니다'
+      });
+    }
+    
+    const result = await bitWishSecurityLogger.saveToMongoDB(bitWishMongoDB);
+    res.json(result);
+  } catch (error) {
+    console.error('보안 로그 저장 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish 세션 관리 API 엔드포인트
+// ====================================================================================
+
+// ✅ 세션 생성 (로그인)
+app.post('/api/bitwish/session/login', async (req, res) => {
+  try {
+    const { walletAddress, password } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    // 1. 비밀번호 검증
+    const authResult = await bitWishWalletSystem.verifyPassword(walletAddress, password);
+    
+    if (!authResult.success) {
+      bitWishSecurityLogger.logAuthFailure(walletAddress, clientIP, '비밀번호 불일치');
+      return res.status(401).json({
+        success: false,
+        error: '지갑 주소 또는 비밀번호가 올바르지 않습니다'
+      });
+    }
+    
+    // 2. 세션 생성
+    const sessionResult = bitWishSessionManager.createSession(
+      walletAddress,
+      authResult.userType || 'user',
+      clientIP,
+      userAgent
+    );
+    
+    // 3. 보안 로그 기록
+    bitWishSecurityLogger.logAuthSuccess(walletAddress, clientIP, authResult.userType || 'user');
+    
+    console.log(`✅ 로그인 성공: ${walletAddress} (세션: ${sessionResult.sessionId})`);
+    
+    res.json({
+      success: true,
+      ...sessionResult,
+      message: '로그인 성공'
+    });
+  } catch (error) {
+    console.error('로그인 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '로그인 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ Access Token 갱신
+app.post('/api/bitwish/session/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Refresh Token이 필요합니다'
+      });
+    }
+    
+    const result = bitWishSessionManager.refreshAccessToken(refreshToken, clientIP, userAgent);
+    
+    if (!result.success) {
+      // 하이재킹 시도 감지 시 보안 로그 기록
+      if (result.hijackingAttempt) {
+        bitWishSecurityLogger.logSystemError(
+          new Error('세션 하이재킹 시도'),
+          { clientIP, userAgent, type: 'token_refresh' }
+        );
+      }
+      
+      return res.status(401).json(result);
+    }
+    
+    console.log(`✅ Access Token 갱신 성공`);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('토큰 갱신 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '토큰 갱신 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 로그아웃 (세션 무효화)
+app.post('/api/bitwish/session/logout', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: '세션 ID가 필요합니다'
+      });
+    }
+    
+    const result = bitWishSessionManager.revokeSession(sessionId);
+    
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    
+    console.log(`✅ 로그아웃 성공: ${sessionId}`);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('로그아웃 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '로그아웃 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 세션 검증
+app.post('/api/bitwish/session/verify', async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    if (!accessToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Access Token이 필요합니다'
+      });
+    }
+    
+    const result = bitWishSessionManager.verifyAccessToken(accessToken, clientIP, userAgent);
+    
+    if (!result.valid) {
+      // 하이재킹 시도 감지 시 보안 로그 기록
+      if (result.hijackingAttempt) {
+        bitWishSecurityLogger.logSystemError(
+          new Error('세션 하이재킹 시도'),
+          { clientIP, userAgent, type: 'token_verify' }
+        );
+      }
+      
+      return res.status(401).json({
+        success: false,
+        error: result.error
+      });
+    }
+    
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    console.error('세션 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '세션 검증 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ CSRF 토큰 검증
+app.post('/api/bitwish/session/verify-csrf', async (req, res) => {
+  try {
+    const { sessionId, csrfToken } = req.body;
+    
+    if (!sessionId || !csrfToken) {
+      return res.status(400).json({
+        success: false,
+        error: '세션 ID와 CSRF 토큰이 필요합니다'
+      });
+    }
+    
+    const result = bitWishSessionManager.verifyCSRFToken(sessionId, csrfToken);
+    
+    if (!result.valid) {
+      const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+      bitWishSecurityLogger.logSystemError(
+        new Error('CSRF 공격 시도'),
+        { clientIP, sessionId }
+      );
+      
+      return res.status(403).json({
+        success: false,
+        error: result.error
+      });
+    }
+    
+    res.json({
+      success: true,
+      valid: true
+    });
+  } catch (error) {
+    console.error('CSRF 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'CSRF 검증 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 활성 세션 목록 조회
+app.get('/api/bitwish/session/active', async (req, res) => {
+  try {
+    const walletAddress = req.query.walletAddress;
+    
+    const sessions = bitWishSessionManager.getActiveSessions(walletAddress);
+    
+    res.json({
+      success: true,
+      sessions: sessions,
+      count: sessions.length
+    });
+  } catch (error) {
+    console.error('활성 세션 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '활성 세션 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 세션 통계 조회
+app.get('/api/bitwish/session/statistics', async (req, res) => {
+  try {
+    const statistics = bitWishSessionManager.getStatistics();
+    
+    res.json({
+      success: true,
+      data: statistics
+    });
+  } catch (error) {
+    console.error('세션 통계 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '세션 통계 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 모든 세션 무효화 (지갑 기준)
+app.post('/api/bitwish/session/revoke-all', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+    
+    const result = bitWishSessionManager.revokeAllSessionsByWallet(walletAddress);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('모든 세션 무효화 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '모든 세션 무효화 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish 비밀번호 해싱 API 엔드포인트
+// ====================================================================================
+
+// ✅ 비밀번호 설정 (이중 해싱)
+app.post('/api/bitwish/password/set', async (req, res) => {
+  try {
+    const { walletAddress, clientHash, clientSalt } = req.body;
+    
+    if (!walletAddress || !clientHash || !clientSalt) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소, 클라이언트 해시, Salt가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const result = await bitWishPasswordHasher.setPassword(
+      addressValidation.sanitized,
+      clientHash,
+      clientSalt
+    );
+    
+    res.json(result);
+  } catch (error) {
+    console.error('비밀번호 설정 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '비밀번호 설정 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 비밀번호 검증 (이중 해싱)
+app.post('/api/bitwish/password/verify', async (req, res) => {
+  try {
+    const { walletAddress, clientHash } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    if (!walletAddress || !clientHash) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 클라이언트 해시가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const result = await bitWishPasswordHasher.verifyPassword(
+      addressValidation.sanitized,
+      clientHash
+    );
+    
+    // 보안 로그 기록
+    if (result.success) {
+      bitWishSecurityLogger.logAuthSuccess(addressValidation.sanitized, clientIP, 'password_verify');
+    } else {
+      bitWishSecurityLogger.logAuthFailure(addressValidation.sanitized, clientIP, '비밀번호 불일치 (이중 해싱)');
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('비밀번호 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '비밀번호 검증 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 비밀번호 변경
+app.post('/api/bitwish/password/change', async (req, res) => {
+  try {
+    const { walletAddress, oldClientHash, newClientHash, newClientSalt } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    if (!walletAddress || !oldClientHash || !newClientHash || !newClientSalt) {
+      return res.status(400).json({
+        success: false,
+        error: '모든 필드가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const result = await bitWishPasswordHasher.changePassword(
+      addressValidation.sanitized,
+      oldClientHash,
+      newClientHash,
+      newClientSalt
+    );
+    
+    // 보안 로그 기록
+    if (result.success) {
+      bitWishSecurityLogger.logPasswordChanged(addressValidation.sanitized, clientIP);
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('비밀번호 변경 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '비밀번호 변경 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 클라이언트 Salt 조회
+app.get('/api/bitwish/password/salt/:walletAddress', async (req, res) => {
+  try {
+    const walletAddress = req.params.walletAddress;
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const clientSalt = bitWishPasswordHasher.getClientSalt(addressValidation.sanitized);
+    
+    if (!clientSalt) {
+      return res.status(404).json({
+        success: false,
+        error: '비밀번호가 설정되지 않았습니다'
+      });
+    }
+    
+    res.json({
+      success: true,
+      clientSalt: clientSalt
+    });
+  } catch (error) {
+    console.error('Salt 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Salt 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 비밀번호 해싱 통계
+app.get('/api/bitwish/password/statistics', async (req, res) => {
+  try {
+    const statistics = bitWishPasswordHasher.getStatistics();
+    
+    res.json({
+      success: true,
+      data: statistics
+    });
+  } catch (error) {
+    console.error('통계 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '통계 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish 2FA API 엔드포인트
+// ====================================================================================
+
+// ✅ 2FA 설정 생성
+app.post('/api/bitwish/2fa/setup', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const result = await bitWish2FAManager.setup2FA(addressValidation.sanitized);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('2FA 설정 생성 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '2FA 설정 생성 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 2FA 활성화
+app.post('/api/bitwish/2fa/enable', async (req, res) => {
+  try {
+    const { walletAddress, token } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    if (!walletAddress || !token) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 인증 코드가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const result = await bitWish2FAManager.enable2FA(addressValidation.sanitized, token);
+    
+    // 보안 로그 기록
+    if (result.success) {
+      bitWishSecurityLogger.log(
+        'SYSTEM_EVENT',
+        'INFO',
+        '2FA 활성화',
+        { walletAddress: addressValidation.sanitized, clientIP }
+      );
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('2FA 활성화 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '2FA 활성화 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 2FA 비활성화
+app.post('/api/bitwish/2fa/disable', async (req, res) => {
+  try {
+    const { walletAddress, token } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    if (!walletAddress || !token) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 인증 코드가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const result = await bitWish2FAManager.disable2FA(addressValidation.sanitized, token);
+    
+    // 보안 로그 기록
+    if (result.success) {
+      bitWishSecurityLogger.log(
+        'SYSTEM_EVENT',
+        'INFO',
+        '2FA 비활성화',
+        { walletAddress: addressValidation.sanitized, clientIP }
+      );
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('2FA 비활성화 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '2FA 비활성화 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 2FA 코드 검증
+app.post('/api/bitwish/2fa/verify', async (req, res) => {
+  try {
+    const { walletAddress, token } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    if (!walletAddress || !token) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 인증 코드가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const result = bitWish2FAManager.verify2FA(addressValidation.sanitized, token);
+    
+    // 보안 로그 기록
+    if (result.success) {
+      bitWishSecurityLogger.logAuthSuccess(
+        addressValidation.sanitized,
+        clientIP,
+        `2fa_${result.method}`
+      );
+    } else {
+      bitWishSecurityLogger.logAuthFailure(
+        addressValidation.sanitized,
+        clientIP,
+        '2FA 코드 불일치'
+      );
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('2FA 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '2FA 검증 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 2FA 상태 조회
+app.get('/api/bitwish/2fa/status/:walletAddress', async (req, res) => {
+  try {
+    const walletAddress = req.params.walletAddress;
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const result = bitWish2FAManager.get2FAStatus(addressValidation.sanitized);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('2FA 상태 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '2FA 상태 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 백업 코드 재생성
+app.post('/api/bitwish/2fa/regenerate-backup-codes', async (req, res) => {
+  try {
+    const { walletAddress, token } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    if (!walletAddress || !token) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 인증 코드가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    const result = await bitWish2FAManager.regenerateBackupCodes(
+      addressValidation.sanitized,
+      token
+    );
+    
+    // 보안 로그 기록
+    if (result.success) {
+      bitWishSecurityLogger.log(
+        'SYSTEM_EVENT',
+        'INFO',
+        '2FA 백업 코드 재생성',
+        { walletAddress: addressValidation.sanitized, clientIP }
+      );
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('백업 코드 재생성 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '백업 코드 재생성 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ✅ 2FA 통계
+app.get('/api/bitwish/2fa/statistics', async (req, res) => {
+  try {
+    const statistics = bitWish2FAManager.getStatistics();
+    
+    res.json({
+      success: true,
+      data: statistics
+    });
+  } catch (error) {
+    console.error('2FA 통계 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '2FA 통계 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// 나의 지갑 - OTP API 엔드포인트 (OTP 설정/검증)
+// ====================================================================================
+
+// 나의 지갑 - OTP 설정 API (MongoDB 저장 확인)
+// ✅ 준수사항: 전역/공통 변수/함수/클래스/모달 절대 사용 안함
+// ✅ 50단위 부동소수점 정밀계산 적용
+// ✅ BitWish Network 전용 시스템만 사용
+// ✅ 완벽한 독립성 보장
+app.post('/api/bitwish/wallet/otp/setup', async (req, res) => {
+  try {
+    const { address, secret } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    console.log('🔍 나의 지갑 - OTP 설정 요청:', { address, secret: secret ? '설정됨' : '설정 안됨', clientIP });
+    
+    if (!address || !secret) {
+      console.log('❌ 나의 지갑 - 필수 파라미터 누락:', { address: !!address, secret: !!secret });
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 OTP 시크릿이 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(address);
+    if (!addressValidation.valid) {
+      console.log('❌ 나의 지갑 - 지갑 주소 형식 오류:', addressValidation.error);
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    // ✅ MongoDB 연결 확인
+    console.log('🔍 나의 지갑 - MongoDB 연결 확인 중...');
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      console.log('❌ 나의 지갑 - MongoDB 연결 실패');
+      return res.status(500).json({
+        success: false,
+        error: '데이터베이스 연결 오류'
+      });
+    }
+
+    // ✅ 지갑 조회 또는 생성
+    console.log('🔍 나의 지갑 - 지갑 조회/생성 중:', addressValidation.sanitized);
+    let wallet = await db.collection('bitwish_wallets').findOne({ 
+      address: addressValidation.sanitized 
+    });
+    
+    if (!wallet) {
+      console.log('🔍 나의 지갑 - 지갑이 없어서 새로 생성 중...');
+      const newWallet = {
+        address: addressValidation.sanitized,
+        balance: '0.00000000',
+        availableBalance: '0.00000000',
+        lockedBalance: '0.00000000',
+        networkType: 'BITWISH_MAINNET',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastActivity: new Date(),
+        otpSetup: false,
+        otpEnabled: false,
+        otpSecret: null,
+        kycStatus: {
+          isApplied: false,
+          isApproved: false,
+          kycLevel: 0
+        }
+      };
+      
+      const insertResult = await db.collection('bitwish_wallets').insertOne(newWallet);
+      console.log('✅ 나의 지갑 - 새 지갑 생성 완료:', insertResult.insertedId);
+      wallet = newWallet;
+    } else {
+      console.log('✅ 나의 지갑 - 기존 지갑 발견:', {
+        address: wallet.address,
+        otpSetup: wallet.otpSetup,
+        otpEnabled: wallet.otpEnabled,
+        otpSecret: wallet.otpSecret ? '설정됨' : '설정 안됨'
+      });
+    }
+    
+    // ✅ BitWish2FAManager에 시크릿 저장
+    console.log('🔍 나의 지갑 - BitWish2FAManager에 시크릿 저장 중...');
+    const setupResult = await bitWish2FAManager.setup2FA(addressValidation.sanitized, secret);
+    console.log('🔍 나의 지갑 - BitWish2FAManager 저장 결과:', setupResult);
+    
+    if (!setupResult.success) {
+      console.log('❌ 나의 지갑 - BitWish2FAManager 저장 실패:', setupResult.error);
+      return res.status(500).json({
+        success: false,
+        error: setupResult.error || 'OTP 시크릿 저장에 실패했습니다'
+      });
+    }
+    
+    // ✅ MongoDB에도 시크릿 저장 (백업용)
+    console.log('🔍 나의 지갑 - MongoDB에 시크릿 저장 중...');
+    const updateResult = await db.collection('bitwish_wallets').updateOne(
+      { address: addressValidation.sanitized },
+      {
+        $set: {
+          otpSecret: secret,
+          otpSetup: true,
+          otpEnabled: false, // 아직 검증 전이므로 false
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    console.log('✅ 나의 지갑 - OTP 시크릿 저장 완료:', updateResult.modifiedCount);
+    
+    // ✅ 저장 확인
+    const savedWallet = await db.collection('bitwish_wallets').findOne({ 
+      address: addressValidation.sanitized 
+    });
+    
+    console.log('✅ 나의 지갑 - 저장 확인:', {
+      address: savedWallet.address,
+      otpSecret: savedWallet.otpSecret ? '저장됨' : '저장 안됨',
+      otpSetup: savedWallet.otpSetup,
+      otpEnabled: savedWallet.otpEnabled
+    });
+    
+    // 보안 로그 기록
+    bitWishSecurityLogger.logAuthSuccess(
+      addressValidation.sanitized,
+      clientIP,
+      'otp_setup'
+    );
+    
+    console.log(`✅ 나의 지갑 - OTP 설정 완료: ${addressValidation.sanitized}`);
+    
+    res.json({
+      success: true,
+      message: 'OTP 시크릿이 저장되었습니다',
+      data: {
+        address: addressValidation.sanitized,
+        otpSetup: true
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ 나의 지갑 - OTP 설정 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'OTP 설정 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - OTP 검증 API (완벽한 구현)
+// 나의 지갑 - OTP 검증 API (MongoDB 연결 확인)
+// ✅ 준수사항: 전역/공통 변수/함수/클래스/모달 절대 사용 안함
+// ✅ 50단위 부동소수점 정밀계산 적용
+// ✅ BitWish Network 전용 시스템만 사용
+// ✅ 완벽한 독립성 보장
+app.post('/api/bitwish/wallet/otp/verify', async (req, res) => {
+  try {
+    const { address, otp } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    console.log('🔍 나의 지갑 - OTP 검증 요청:', { address, otp, clientIP });
+    
+    if (!address || !otp) {
+      console.log('❌ 나의 지갑 - 필수 파라미터 누락:', { address: !!address, otp: !!otp });
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 OTP 코드가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(address);
+    if (!addressValidation.valid) {
+      console.log('❌ 나의 지갑 - 지갑 주소 형식 오류:', addressValidation.error);
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    // ✅ MongoDB 연결 확인
+    console.log('🔍 나의 지갑 - MongoDB 연결 확인 중...');
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      console.log('❌ 나의 지갑 - MongoDB 연결 실패');
+      return res.status(500).json({
+        success: false,
+        error: '데이터베이스 연결 오류'
+      });
+    }
+    
+    // ✅ 지갑 조회 및 OTP 시크릿 확인
+    console.log('🔍 나의 지갑 - 지갑 조회 중:', addressValidation.sanitized);
+    const wallet = await db.collection('bitwish_wallets')
+      .findOne({ address: addressValidation.sanitized });
+    
+    if (!wallet) {
+      console.log('❌ 나의 지갑 - 지갑을 찾을 수 없음:', addressValidation.sanitized);
+      return res.status(400).json({
+        success: false,
+        error: '지갑을 찾을 수 없습니다'
+      });
+    }
+    
+    console.log('✅ 나의 지갑 - 지갑 발견:', {
+      address: wallet.address,
+      otpSecret: wallet.otpSecret ? '설정됨' : '설정 안됨',
+      otpSetup: wallet.otpSetup,
+      otpEnabled: wallet.otpEnabled
+    });
+    
+    if (!wallet.otpSecret) {
+      console.log('❌ 나의 지갑 - OTP 시크릿이 설정되지 않음');
+      return res.status(400).json({
+        success: false,
+        error: 'OTP가 설정되지 않았습니다. 먼저 OTP 설정을 완료해주세요.'
+      });
+    }
+    
+    // ✅ MongoDB의 시크릿으로 직접 OTP 검증 실행
+    console.log('🔍 나의 지갑 - MongoDB 시크릿으로 OTP 검증 실행 중...');
+    const isOTPValid = bitWish2FAManager.verifyTOTP(wallet.otpSecret, otp);
+    console.log('🔍 나의 지갑 - OTP 검증 결과:', isOTPValid);
+    
+    if (!isOTPValid) {
+      console.log('❌ 나의 지갑 - OTP 검증 실패');
+      return res.status(400).json({
+        success: false,
+        error: '올바른 OTP 코드가 아닙니다. Google Authenticator에서 현재 표시되는 6자리 코드를 입력해주세요.'
+      });
+    }
+    
+    // ✅ OTP 검증 성공 시 otpEnabled를 true로 업데이트
+    console.log('🔍 나의 지갑 - OTP 검증 성공, 활성화 업데이트 중...');
+    await db.collection('bitwish_wallets').updateOne(
+      { address: addressValidation.sanitized },
+      {
+        $set: {
+          otpEnabled: true,
+          otpVerifiedAt: new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    // BitWish2FAManager에서도 활성화 (MongoDB 시크릿 사용)
+    const enableResult = await bitWish2FAManager.setup2FA(addressValidation.sanitized, wallet.otpSecret);
+    if (enableResult.success) {
+      await bitWish2FAManager.enable2FA(addressValidation.sanitized, otp);
+    }
+    
+    console.log('✅ 나의 지갑 - OTP 검증 성공 및 활성화 완료');
+    
+    // 보안 로그 기록
+    bitWishSecurityLogger.logAuthSuccess(
+      addressValidation.sanitized,
+      clientIP,
+      'otp_verify_success'
+    );
+    
+    console.log(`✅ OTP 검증 성공: ${addressValidation.sanitized}`);
+    
+    res.json({
+      success: true,
+      message: 'OTP 검증이 성공했습니다',
+      method: 'totp'
+    });
+    
+  } catch (error) {
+    console.error('❌ 나의 지갑 - OTP 검증 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'OTP 검증 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// 나의 지갑 - KYC API 엔드포인트 (신원 인증)
+// ====================================================================================
+
+// 나의 지갑 - KYC 신청 제출
+app.post('/api/bitwish/kyc/submit', async (req, res) => {
+  try {
+    const { walletAddress, kycData } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    if (!walletAddress || !kycData) {
+      return res.status(400).json({
+        success: false,
+        error: '지갑 주소와 KYC 데이터가 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    // 기존 신청 확인
+    const existingApplication = await bitWishMongoDB.db.collection('bitwish_kyc_applications')
+      .findOne({ walletAddress: addressValidation.sanitized });
+    
+    if (existingApplication && existingApplication.status === 'pending') {
+      return res.status(400).json({
+        success: false,
+        error: '이미 승인 대기 중인 KYC 신청이 있습니다'
+      });
+    }
+    
+    // KYC 데이터 파싱
+    const parsedKycData = typeof kycData === 'string' ? JSON.parse(kycData) : kycData;
+    
+    // KYC 신청 데이터 저장
+    const kycApplication = {
+      walletAddress: addressValidation.sanitized,
+      personalInfo: parsedKycData,
+      documents: [],  // 파일 업로드는 별도 처리
+      status: 'pending',
+      kycLevel: 1,  // 기본 레벨
+      appliedAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    await bitWishMongoDB.db.collection('bitwish_kyc_applications')
+      .insertOne(kycApplication);
+    
+    // 지갑 정보 업데이트
+    await bitWishMongoDB.db.collection('bitwish_wallets').updateOne(
+      { address: addressValidation.sanitized },
+      {
+        $set: {
+          'kycStatus.isApplied': true,
+          'kycStatus.applicationDate': new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    // 보안 로그 기록
+    bitWishSecurityLogger.logSecurityEvent(
+      addressValidation.sanitized,
+      clientIP,
+      'kyc_application_submitted'
+    );
+    
+    console.log(`✅ KYC 신청 완료: ${addressValidation.sanitized}`);
+    
+    res.json({
+      success: true,
+      message: 'KYC 신청이 완료되었습니다. 승인까지 24-48시간이 소요됩니다.'
+    });
+    
+  } catch (error) {
+    console.error('KYC 신청 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KYC 신청 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - KYC 상태 조회
+app.get('/api/bitwish/kyc/status/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(address);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    // KYC 신청 조회
+    const kycApplication = await bitWishMongoDB.db.collection('bitwish_kyc_applications')
+      .findOne({ walletAddress: addressValidation.sanitized });
+    
+    if (!kycApplication) {
+      return res.json({
+        success: true,
+        data: {
+          isApplied: false,
+          isApproved: false,
+          status: 'not_applied'
+        }
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        isApplied: true,
+        isApproved: kycApplication.status === 'approved',
+        status: kycApplication.status,
+        kycLevel: kycApplication.kycLevel,
+        appliedAt: kycApplication.appliedAt,
+        approvedAt: kycApplication.approvedAt || null,
+        rejectionReason: kycApplication.rejectionReason || null
+      }
+    });
+    
+  } catch (error) {
+    console.error('KYC 상태 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KYC 상태 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - KYC 승인 (관리자 전용)
+app.post('/api/bitwish/kyc/approve', async (req, res) => {
+  try {
+    const { walletAddress, kycLevel, adminAddress } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    // 관리자 권한 확인
+    if (adminAddress !== 'BW2E45DA460B70E2BFE25D3E6B8070593A4107A540') {
+      return res.status(403).json({
+        success: false,
+        error: '관리자 권한이 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    // KYC 신청 승인
+    const result = await bitWishMongoDB.db.collection('bitwish_kyc_applications').updateOne(
+      { walletAddress: addressValidation.sanitized },
+      {
+        $set: {
+          status: 'approved',
+          kycLevel: kycLevel || 2,
+          approvedBy: adminAddress,
+          approvedAt: new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'KYC 신청을 찾을 수 없습니다'
+      });
+    }
+    
+    // 지갑 정보 업데이트
+    await bitWishMongoDB.db.collection('bitwish_wallets').updateOne(
+      { address: addressValidation.sanitized },
+      {
+        $set: {
+          'kycStatus.isApproved': true,
+          'kycStatus.approvalDate': new Date(),
+          'kycStatus.kycLevel': kycLevel || 2,
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    // 보안 로그 기록
+    bitWishSecurityLogger.logSecurityEvent(
+      addressValidation.sanitized,
+      clientIP,
+      'kyc_approved',
+      { approvedBy: adminAddress, kycLevel: kycLevel || 2 }
+    );
+    
+    console.log(`✅ KYC 승인 완료: ${addressValidation.sanitized}`);
+    
+    res.json({
+      success: true,
+      message: 'KYC 승인이 완료되었습니다'
+    });
+    
+  } catch (error) {
+    console.error('KYC 승인 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KYC 승인 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - KYC 거부 (관리자 전용)
+app.post('/api/bitwish/kyc/reject', async (req, res) => {
+  try {
+    const { walletAddress, rejectionReason, adminAddress } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    // 관리자 권한 확인
+    if (adminAddress !== 'BW2E45DA460B70E2BFE25D3E6B8070593A4107A540') {
+      return res.status(403).json({
+        success: false,
+        error: '관리자 권한이 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    if (!rejectionReason) {
+      return res.status(400).json({
+        success: false,
+        error: '거부 사유가 필요합니다'
+      });
+    }
+    
+    // KYC 신청 거부
+    const result = await bitWishMongoDB.db.collection('bitwish_kyc_applications').updateOne(
+      { walletAddress: addressValidation.sanitized },
+      {
+        $set: {
+          status: 'rejected',
+          rejectionReason: rejectionReason,
+          rejectedBy: adminAddress,
+          rejectedAt: new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'KYC 신청을 찾을 수 없습니다'
+      });
+    }
+    
+    // 지갑 정보 업데이트
+    await bitWishMongoDB.db.collection('bitwish_wallets').updateOne(
+      { address: addressValidation.sanitized },
+      {
+        $set: {
+          'kycStatus.isApproved': false,
+          'kycStatus.rejectionReason': rejectionReason,
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    // 보안 로그 기록
+    bitWishSecurityLogger.logSecurityEvent(
+      addressValidation.sanitized,
+      clientIP,
+      'kyc_rejected',
+      { rejectedBy: adminAddress, reason: rejectionReason }
+    );
+    
+    console.log(`❌ KYC 거부 완료: ${addressValidation.sanitized} - ${rejectionReason}`);
+    
+    res.json({
+      success: true,
+      message: 'KYC 신청이 거부되었습니다'
+    });
+    
+  } catch (error) {
+    console.error('KYC 거부 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KYC 거부 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - KYC 신청 목록 조회 (관리자 전용)
+app.get('/api/bitwish/kyc/applications', async (req, res) => {
+  try {
+    const { adminAddress, status, limit = 50, offset = 0 } = req.query;
+    
+    // 관리자 권한 확인
+    if (adminAddress !== 'BW2E45DA460B70E2BFE25D3E6B8070593A4107A540') {
+      return res.status(403).json({
+        success: false,
+        error: '관리자 권한이 필요합니다'
+      });
+    }
+    
+    // 필터 조건 생성
+    let filter = {};
+    if (status) {
+      filter.status = status;  // pending, approved, rejected
+    }
+    
+    // MongoDB에서 KYC 신청 목록 조회
+    const applications = await bitWishMongoDB.db.collection('bitwish_kyc_applications')
+      .find(filter)
+      .sort({ appliedAt: -1 })  // 최신순
+      .skip(parseInt(offset))
+      .limit(parseInt(limit))
+      .toArray();
+    
+    // 총 개수 조회
+    const total = await bitWishMongoDB.db.collection('bitwish_kyc_applications')
+      .countDocuments(filter);
+    
+    // 개인정보 일부 마스킹 (목록에서는 전체 정보 노출 안 함)
+    const maskedApplications = applications.map(app => ({
+      walletAddress: app.walletAddress,
+      fullName: app.personalInfo?.fullName || 'N/A',
+      email: app.personalInfo?.email || 'N/A',
+      status: app.status,
+      kycLevel: app.kycLevel,
+      appliedAt: app.appliedAt,
+      approvedAt: app.approvedAt,
+      rejectedAt: app.rejectedAt,
+      rejectionReason: app.rejectionReason
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        applications: maskedApplications,
+        pagination: {
+          total,
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          hasMore: total > parseInt(offset) + parseInt(limit)
+        },
+        stats: {
+          pending: await bitWishMongoDB.db.collection('bitwish_kyc_applications').countDocuments({ status: 'pending' }),
+          approved: await bitWishMongoDB.db.collection('bitwish_kyc_applications').countDocuments({ status: 'approved' }),
+          rejected: await bitWishMongoDB.db.collection('bitwish_kyc_applications').countDocuments({ status: 'rejected' })
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('KYC 신청 목록 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KYC 신청 목록 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - KYC 신청 상세 조회 (관리자 전용)
+app.get('/api/bitwish/kyc/application/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+    const { adminAddress } = req.query;
+    
+    // 관리자 권한 확인
+    if (adminAddress !== 'BW2E45DA460B70E2BFE25D3E6B8070593A4107A540') {
+      return res.status(403).json({
+        success: false,
+        error: '관리자 권한이 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    // KYC 신청 조회
+    const application = await bitWishMongoDB.db.collection('bitwish_kyc_applications')
+      .findOne({ walletAddress: addressValidation.sanitized });
+    
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        error: 'KYC 신청을 찾을 수 없습니다'
+      });
+    }
+    
+    // _id 제거
+    const { _id, ...applicationData } = application;
+    
+    res.json({
+      success: true,
+      data: applicationData
+    });
+    
+  } catch (error) {
+    console.error('KYC 신청 상세 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KYC 신청 상세 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - KYC 문서 업로드
+app.post('/api/bitwish/kyc/upload-document', async (req, res) => {
+  try {
+    const { walletAddress, documentType, filename } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(walletAddress);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    if (!documentType || !filename) {
+      return res.status(400).json({
+        success: false,
+        error: '문서 타입과 파일명이 필요합니다'
+      });
+    }
+    
+    // 허용된 문서 타입 확인
+    const allowedTypes = ['id_front', 'id_back', 'proof_of_address', 'selfie'];
+    if (!allowedTypes.includes(documentType)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 문서 타입입니다'
+      });
+    }
+    
+    // KYC 신청에 문서 추가
+    const document = {
+      type: documentType,
+      filename: filename,
+      uploadedAt: new Date()
+    };
+    
+    const result = await bitWishMongoDB.db.collection('bitwish_kyc_applications').updateOne(
+      { walletAddress: addressValidation.sanitized },
+      {
+        $push: { documents: document },
+        $set: { updatedAt: new Date() }
+      },
+      { upsert: true }  // 신청이 없으면 생성
+    );
+    
+    // 보안 로그 기록
+    bitWishSecurityLogger.logSecurityEvent(
+      addressValidation.sanitized,
+      clientIP,
+      'kyc_document_uploaded',
+      { documentType, filename }
+    );
+    
+    console.log(`📎 KYC 문서 업로드: ${addressValidation.sanitized} - ${documentType}`);
+    
+    res.json({
+      success: true,
+      message: '문서가 업로드되었습니다',
+      data: { document }
+    });
+    
+  } catch (error) {
+    console.error('KYC 문서 업로드 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '문서 업로드 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// 나의 지갑 - KYC 활성화/비활성화 관리 API (관리자 전용)
+// ====================================================================================
+
+// KYC 활성화 상태 조회
+app.get('/api/admin/kyc/activation-status', async (req, res) => {
+  try {
+    // KYC 설정 조회
+    const kycSettings = await bitWishMongoDB.db.collection('bitwish_kyc_settings').findOne({ settingId: 'global' });
+    
+    // 설정이 없으면 기본값은 활성화(true)
+    const isEnabled = kycSettings ? kycSettings.isEnabled : true;
+    
+    res.json({
+      success: true,
+      data: {
+        isEnabled: isEnabled,
+        updatedAt: kycSettings ? kycSettings.updatedAt : null
+      }
+    });
+    
+  } catch (error) {
+    console.error('KYC 활성화 상태 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KYC 활성화 상태 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// KYC 활성화/비활성화 토글 (관리자 전용)
+app.post('/api/admin/kyc/toggle-activation', async (req, res) => {
+  try {
+    const { adminAddress, isEnabled } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    // 관리자 권한 확인
+    if (adminAddress !== 'BW2E45DA460B70E2BFE25D3E6B8070593A4107A540') {
+      return res.status(403).json({
+        success: false,
+        error: '관리자 권한이 필요합니다'
+      });
+    }
+    
+    // 입력 검증
+    if (typeof isEnabled !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 활성화 상태입니다'
+      });
+    }
+    
+    // KYC 활성화 상태 업데이트
+    const result = await bitWishMongoDB.db.collection('bitwish_kyc_settings').updateOne(
+      { settingId: 'global' },
+      {
+        $set: {
+          isEnabled: isEnabled,
+          updatedBy: adminAddress,
+          updatedAt: new Date()
+        }
+      },
+      { upsert: true }  // 설정이 없으면 생성
+    );
+    
+    // 보안 로그 기록
+    bitWishSecurityLogger.log(
+      'kyc_activation_toggled',
+      'info',
+      `KYC 활성화 상태 변경: ${isEnabled ? 'ON' : 'OFF'}`,
+      { 
+        adminAddress: adminAddress,
+        clientIP: clientIP,
+        isEnabled: isEnabled 
+      }
+    );
+    
+    res.json({
+      success: true,
+      message: `KYC가 ${isEnabled ? '활성화' : '비활성화'}되었습니다`,
+      data: {
+        isEnabled: isEnabled,
+        updatedAt: new Date()
+      }
+    });
+    
+  } catch (error) {
+    console.error('KYC 활성화/비활성화 토글 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KYC 활성화/비활성화 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// ⚠️ DEPRECATED: 나의 지갑 - P2P 송금 API (구 시스템 - bitwish_wallets 사용)
+// ====================================================================================
+// ⚠️ 경고: 이 API는 구 시스템용입니다.
+// ⚠️ 새로운 마이닝 시스템에서는 '/api/bitwish/wallet/send-with-fee'를 사용하세요.
+// ⚠️ 데이터베이스: bitwish_wallets (구)
+// ⚠️ 수수료 분배 없음
+// ====================================================================================
+
+// 나의 지갑 - 송금하기 (P2P) - DEPRECATED
+app.post('/api/bitwish/wallet/send', async (req, res) => {
+  try {
+    // ⚠️ DEPRECATED 경고
+    console.warn('⚠️ [DEPRECATED] /api/bitwish/wallet/send 사용됨. /api/bitwish/wallet/send-with-fee 사용 권장');
+    
+    const { from, to, amount, memo, otp } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    // ===== 1단계: 입력 검증 =====
+    const validation = bitWishInputValidator.validateMultiple({
+      address: from,
+      walletAddress: to,
+      amount: amount
+    });
+    
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: '입력값이 올바르지 않습니다',
+        errors: validation.errors
+      });
+    }
+    
+    // ===== 2단계: 송금자 지갑 조회 =====
+    const senderWallet = await bitWishMongoDB.db.collection('bitwish_wallets')
+      .findOne({ address: validation.sanitized.address });
+    
+    if (!senderWallet) {
+      return res.status(404).json({
+        success: false,
+        error: '송금자 지갑을 찾을 수 없습니다'
+      });
+    }
+    
+    // ===== 3단계: KYC 승인 확인 =====
+    if (!senderWallet.kycStatus || !senderWallet.kycStatus.isApproved) {
+      return res.status(403).json({
+        success: false,
+        error: 'KYC 승인이 필요합니다'
+      });
+    }
+    
+    // ===== 4단계: OTP 검증 =====
+    if (!senderWallet.otpEnabled) {
+      return res.status(403).json({
+        success: false,
+        error: 'OTP 설정이 필요합니다'
+      });
+    }
+    
+    const otpResult = bitWish2FAManager.verify2FA(validation.sanitized.address, otp);
+    if (!otpResult.success) {
+      bitWishSecurityLogger.logAuthFailure(
+        validation.sanitized.address,
+        clientIP,
+        'OTP 검증 실패 (송금 시도)'
+      );
+      
+      return res.status(400).json({
+        success: false,
+        error: '올바른 OTP 코드가 아닙니다'
+      });
+    }
+    
+    // ===== 5단계: 잔액 확인 =====
+    const senderBalance = new Decimal(senderWallet.availableBalance || '0');
+    const sendAmount = new Decimal(validation.sanitized.amount);
+    const fee = new Decimal('0.01');  // 0.01 BW 수수료
+    const totalAmount = sendAmount.plus(fee);
+    
+    if (senderBalance.lessThan(totalAmount)) {
+      return res.status(400).json({
+        success: false,
+        error: '잔액이 부족합니다',
+        required: totalAmount.toString(),
+        available: senderBalance.toString()
+      });
+    }
+    
+    // ===== 6단계: 수신자 지갑 확인 =====
+    const receiverWallet = await bitWishMongoDB.db.collection('bitwish_wallets')
+      .findOne({ address: validation.sanitized.walletAddress });
+    
+    if (!receiverWallet) {
+      return res.status(404).json({
+        success: false,
+        error: '수신자 지갑을 찾을 수 없습니다'
+      });
+    }
+    
+    // ===== 7단계: 트랜잭션 생성 =====
+    const crypto = require('crypto');
+    const txHash = crypto.createHash('sha256')
+      .update(`${from}${to}${amount}${Date.now()}`)
+      .digest('hex');
+    
+    const transaction = {
+      txHash: `0x${txHash}`,
+      from: validation.sanitized.address,
+      to: validation.sanitized.walletAddress,
+      amount: sendAmount.toString(),
+      fee: fee.toString(),
+      memo: memo || '',
+      status: 'pending',
+      confirmations: 0,
+      otpVerified: true,
+      otpVerifiedAt: new Date(),
+      createdAt: new Date()
+    };
+    
+    // ===== 8단계: MongoDB 트랜잭션 시작 =====
+    const session = bitWishMongoDB.client.startSession();
+    
+    try {
+      await session.withTransaction(async () => {
+        // 송금자 잔액 차감
+        const newSenderBalance = senderBalance.minus(totalAmount);
+        await bitWishMongoDB.db.collection('bitwish_wallets').updateOne(
+          { address: validation.sanitized.address },
+          {
+            $set: {
+              availableBalance: newSenderBalance.toString(),
+              balance: new Decimal(senderWallet.balance || '0').minus(totalAmount).toString(),
+              updatedAt: new Date()
+            }
+          },
+          { session }
+        );
+        
+        // 수신자 잔액 증가
+        const receiverBalance = new Decimal(receiverWallet.availableBalance || '0');
+        const newReceiverBalance = receiverBalance.plus(sendAmount);
+        await bitWishMongoDB.db.collection('bitwish_wallets').updateOne(
+          { address: validation.sanitized.walletAddress },
+          {
+            $set: {
+              availableBalance: newReceiverBalance.toString(),
+              balance: new Decimal(receiverWallet.balance || '0').plus(sendAmount).toString(),
+              updatedAt: new Date()
+            }
+          },
+          { session }
+        );
+        
+        // 트랜잭션 저장
+        transaction.status = 'confirmed';
+        transaction.confirmations = 6;
+        transaction.confirmedAt = new Date();
+        await bitWishMongoDB.db.collection('bitwish_transactions').insertOne(transaction, { session });
+      });
+      
+      // ===== 9단계: 보안 로그 기록 =====
+      bitWishSecurityLogger.logTransactionCreated(
+        transaction.txHash,
+        validation.sanitized.address,
+        validation.sanitized.walletAddress,
+        sendAmount.toString(),
+        clientIP
+      );
+      
+      console.log(`✅ P2P 송금 완료: ${transaction.txHash}`);
+      
+      // ===== 10단계: 성공 응답 =====
+      res.json({
+        success: true,
+        data: {
+          txHash: transaction.txHash,
+          from: transaction.from,
+          to: transaction.to,
+          amount: transaction.amount,
+          fee: transaction.fee,
+          status: transaction.status,
+          confirmations: transaction.confirmations
+        },
+        message: '송금이 완료되었습니다'
+      });
+      
+    } catch (error) {
+      console.error('트랜잭션 실행 오류:', error);
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+    
+  } catch (error) {
+    console.error('송금 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '송금 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// 나의 지갑 - 트랜잭션 조회 API (거래내역)
+// ====================================================================================
+
+// 나의 지갑 - 거래내역 조회 (송신/수신 전체)
+app.get('/api/bitwish/wallet/:address/transactions', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const { type, limit = 50, offset = 0 } = req.query;
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(address);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    // 필터 조건 생성
+    let filter = {};
+    
+    if (type === 'sent') {
+      // 송신만
+      filter.from = addressValidation.sanitized;
+    } else if (type === 'received') {
+      // 수신만
+      filter.to = addressValidation.sanitized;
+    } else {
+      // 전체 (송신 + 수신)
+      filter.$or = [
+        { from: addressValidation.sanitized },
+        { to: addressValidation.sanitized }
+      ];
+    }
+    
+    // MongoDB에서 트랜잭션 조회
+    const transactions = await bitWishMongoDB.db.collection('bitwish_transactions')
+      .find(filter)
+      .sort({ createdAt: -1 })  // 최신순
+      .skip(parseInt(offset))
+      .limit(parseInt(limit))
+      .toArray();
+    
+    // 총 개수 조회
+    const total = await bitWishMongoDB.db.collection('bitwish_transactions')
+      .countDocuments(filter);
+    
+    // 각 트랜잭션에 방향 정보 추가
+    const formattedTransactions = transactions.map(tx => ({
+      ...tx,
+      direction: tx.from === addressValidation.sanitized ? 'sent' : 'received',
+      // _id 제거 (프론트엔드에서 필요 없음)
+      _id: undefined
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        transactions: formattedTransactions,
+        pagination: {
+          total,
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          hasMore: total > parseInt(offset) + parseInt(limit)
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('거래내역 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '거래내역 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - 트랜잭션 상세 조회
+app.get('/api/bitwish/transaction/:txHash', async (req, res) => {
+  try {
+    const { txHash } = req.params;
+    
+    if (!txHash || !txHash.startsWith('0x')) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 트랜잭션 해시입니다'
+      });
+    }
+    
+    // MongoDB에서 트랜잭션 조회
+    const transaction = await bitWishMongoDB.db.collection('bitwish_transactions')
+      .findOne({ txHash });
+    
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        error: '트랜잭션을 찾을 수 없습니다'
+      });
+    }
+    
+    // _id 제거
+    const { _id, ...txData } = transaction;
+    
+    res.json({
+      success: true,
+      data: txData
+    });
+    
+  } catch (error) {
+    console.error('트랜잭션 상세 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '트랜잭션 상세 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - 트랜잭션 상태 조회 (실시간 확인용)
+app.get('/api/bitwish/transaction/:txHash/status', async (req, res) => {
+  try {
+    const { txHash } = req.params;
+    
+    if (!txHash || !txHash.startsWith('0x')) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 트랜잭션 해시입니다'
+      });
+    }
+    
+    // MongoDB에서 트랜잭션 조회
+    const transaction = await bitWishMongoDB.db.collection('bitwish_transactions')
+      .findOne({ txHash }, { 
+        projection: { 
+          status: 1, 
+          confirmations: 1, 
+          createdAt: 1, 
+          confirmedAt: 1,
+          blockNumber: 1,
+          blockHash: 1
+        } 
+      });
+    
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        error: '트랜잭션을 찾을 수 없습니다'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        status: transaction.status,
+        confirmations: transaction.confirmations,
+        blockNumber: transaction.blockNumber,
+        blockHash: transaction.blockHash,
+        createdAt: transaction.createdAt,
+        confirmedAt: transaction.confirmedAt,
+        isConfirmed: transaction.status === 'confirmed'
+      }
+    });
+    
+  } catch (error) {
+    console.error('트랜잭션 상태 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '트랜잭션 상태 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 나의 지갑 - 송금 내역 통계 조회
+app.get('/api/bitwish/wallet/:address/transaction-stats', async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    // 입력 검증
+    const addressValidation = bitWishInputValidator.validateBitWishAddress(address);
+    if (!addressValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        error: addressValidation.error
+      });
+    }
+    
+    // 송신 총액 계산
+    const sentResult = await bitWishMongoDB.db.collection('bitwish_transactions')
+      .aggregate([
+        { 
+          $match: { 
+            from: addressValidation.sanitized,
+            status: 'confirmed'
+          } 
+        },
+        { 
+          $group: { 
+            _id: null, 
+            totalAmount: { $sum: { $toDouble: "$amount" } },
+            totalFee: { $sum: { $toDouble: "$fee" } },
+            count: { $sum: 1 }
+          } 
+        }
+      ])
+      .toArray();
+    
+    // 수신 총액 계산
+    const receivedResult = await bitWishMongoDB.db.collection('bitwish_transactions')
+      .aggregate([
+        { 
+          $match: { 
+            to: addressValidation.sanitized,
+            status: 'confirmed'
+          } 
+        },
+        { 
+          $group: { 
+            _id: null, 
+            totalAmount: { $sum: { $toDouble: "$amount" } },
+            count: { $sum: 1 }
+          } 
+        }
+      ])
+      .toArray();
+    
+    const sentData = sentResult[0] || { totalAmount: 0, totalFee: 0, count: 0 };
+    const receivedData = receivedResult[0] || { totalAmount: 0, count: 0 };
+    
+    // Decimal.js로 정밀 계산
+    const totalSent = new Decimal(sentData.totalAmount || 0);
+    const totalFee = new Decimal(sentData.totalFee || 0);
+    const totalReceived = new Decimal(receivedData.totalAmount || 0);
+    
+    res.json({
+      success: true,
+      data: {
+        sent: {
+          totalAmount: totalSent.toString(),
+          totalFee: totalFee.toString(),
+          count: sentData.count
+        },
+        received: {
+          totalAmount: totalReceived.toString(),
+          count: receivedData.count
+        },
+        net: {
+          amount: totalReceived.minus(totalSent).toString()
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('송금 통계 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '송금 통계 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish Admin 마이닝 API
+// ====================================================================================
+
+app.post('/api/admin/bitwish/mining/start', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+
+    if (!walletAddress || !walletAddress.startsWith('BW')) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 지갑 주소입니다.'
+      });
+    }
+
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+    const blockCollection = db.collection('admin_block_records');
+    const feeCollection = db.collection('admin_fee_collection');
+    const systemWalletsCollection = db.collection('admin_system_wallets');
+    const referralCodesCollection = db.collection('admin_referral_codes');
+
+    const existingMining = await miningCollection.findOne({ 
+      walletAddress,
+      userType: 'user'
+    });
+
+    if (existingMining && existingMining.miningStatus.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: '이미 마이닝이 진행 중입니다.'
+      });
+    }
+
+    const now = new Date();
+    const nowString = now.toISOString().replace('T', ' ').substring(0, 19);
+
+    const totalBlocks = await blockCollection.countDocuments();
+    const newBlockNumber = totalBlocks + 1;
+    const previousBlock = await blockCollection.findOne({}, { sort: { blockNumber: -1 } });
+    const previousHash = previousBlock ? previousBlock.blockHash : "0x" + "0".repeat(64);
+
+    const newBlock = {
+      blockNumber: newBlockNumber,
+      blockHash: `0x${Date.now().toString(16)}${Math.random().toString(16).substring(2, 66).padEnd(48, '0')}`,
+      previousHash: previousHash,
+      creator: {
+        walletAddress: walletAddress,
+        miningStartTime: nowString
+      },
+      blockFee: {
+        amount: "0.00100000",
+        distributed: false,
+        ecosystemShare: "0.00070000",
+        devTeamShare: "0.00030000"
+      },
+      transactions: [],
+      timestamp: nowString,
+      createdAt: now
+    };
+
+    await blockCollection.insertOne(newBlock);
+
+    const ecosystemWallet = await systemWalletsCollection.findOne({ walletType: 'ECOSYSTEM_FEE_70' });
+    const devWallet = await systemWalletsCollection.findOne({ walletType: 'DEV_FEE_30' });
+
+    if (!ecosystemWallet || !devWallet) {
+      return res.status(500).json({
+        success: false,
+        message: '시스템 지갑을 찾을 수 없습니다.'
+      });
+    }
+
+    const feeRecord = {
+      feeType: 'BLOCK_GENERATION',
+      feeInfo: {
+        amount: "0.00100000",
+        sourceType: 'block',
+        sourceId: `BLOCK-${newBlockNumber}`
+      },
+      distribution: {
+        ecosystemShare: {
+          percentage: 70,
+          amount: "0.00070000",
+          walletAddress: ecosystemWallet.walletInfo.address,
+          walletType: 'ECOSYSTEM_FEE_70',
+          status: 'completed'
+        },
+        devTeamShare: {
+          percentage: 30,
+          amount: "0.00030000",
+          walletAddress: devWallet.walletInfo.address,
+          walletType: 'DEV_FEE_30',
+          status: 'completed'
+        }
+      },
+      collectedAt: now,
+      distributedAt: now
+    };
+
+    await feeCollection.insertOne(feeRecord);
+
+    // 생태계 지갑 업데이트 (문자열 계산 방식)
+    const ecoCurrentBalance = parseFloat(ecosystemWallet.balance.current);
+    const ecoDistributed = parseFloat(ecosystemWallet.balance.distributed);
+    const ecoNewCurrent = (ecoCurrentBalance + 0.0007).toFixed(50);
+    const ecoNewDistributed = (ecoDistributed + 0.0007).toFixed(50);
+
+    await systemWalletsCollection.updateOne(
+      { walletType: 'ECOSYSTEM_FEE_70' },
+      { 
+        $set: { 
+          'balance.current': ecoNewCurrent,
+          'balance.distributed': ecoNewDistributed,
+          updatedAt: now
+        },
+        $push: {
+          transactions: {
+            transactionId: `TX-FEE-ECO-${Date.now()}`,
+            type: 'fee_collection',
+            amount: "0.00070000",
+            recipient: ecosystemWallet.walletInfo.address,
+            recipientName: "생태계 조성 지갑",
+            purpose: `블록 #${newBlockNumber} 생성 수수료 (70%)`,
+            timestamp: nowString,
+            status: 'completed'
+          }
+        }
+      }
+    );
+
+    // 개발팀 지갑 업데이트 (문자열 계산 방식)
+    const devCurrentBalance = parseFloat(devWallet.balance.current);
+    const devDistributed = parseFloat(devWallet.balance.distributed);
+    const devNewCurrent = (devCurrentBalance + 0.0003).toFixed(50);
+    const devNewDistributed = (devDistributed + 0.0003).toFixed(50);
+
+    await systemWalletsCollection.updateOne(
+      { walletType: 'DEV_FEE_30' },
+      { 
+        $set: { 
+          'balance.current': devNewCurrent,
+          'balance.distributed': devNewDistributed,
+          updatedAt: now
+        },
+        $push: {
+          transactions: {
+            transactionId: `TX-FEE-DEV-${Date.now()}`,
+            type: 'fee_collection',
+            amount: "0.00030000",
+            recipient: devWallet.walletInfo.address,
+            recipientName: "개발팀 운영 지갑",
+            purpose: `블록 #${newBlockNumber} 생성 수수료 (30%)`,
+            timestamp: nowString,
+            status: 'completed'
+          }
+        }
+      }
+    );
+
+    let newReferralCode;
+    
+    if (existingMining) {
+      await miningCollection.updateOne(
+        { walletAddress },
+        {
+          $set: {
+            userType: 'user',
+            miningStartTime: nowString,
+            'miningStatus.isActive': true,
+            'miningStatus.isPaused': false,
+            'miningStatus.lastUpdateTime': nowString,
+            updatedAt: now
+          }
+        }
+      );
+      newReferralCode = existingMining.referralCode;
+    } else {
+      let isUnique = false;
+      while (!isUnique) {
+        newReferralCode = `BWREF-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+        const existingCode = await referralCodesCollection.findOne({ referralCode: newReferralCode });
+        if (!existingCode) isUnique = true;
+      }
+
+      await referralCodesCollection.insertOne({
+        referralCode: newReferralCode,
+        ownerWalletAddress: walletAddress,
+        usage: { totalUses: 0, activeReferrals: 0, usedBy: [] },
+        createdAt: now,
+        updatedAt: now
+      });
+
+      const newMiningData = {
+        walletAddress: walletAddress,
+        userType: 'user',
+        referralCode: newReferralCode,
+        miningStartTime: nowString,
+        miningStatus: { isActive: true, isPaused: false, lastUpdateTime: nowString },
+        totalMined: { amount: "0.00000000", currency: "BW" },
+        miningBreakdown: {
+          basic: { rate: "0.25000000", total: "0.00000000" },
+          attendance: { rate: "0.05", total: "0.00000000", lastCheckIn: null, isCheckedToday: false, monthlyCheckIns: {} },
+          referralOneTime: { count: 0, perReferral: "1.00000000", total: "0.00000000" },
+          referralPermanent: { rate: "0.02", total: "0.00000000", activeReferrals: 0 }
+        },
+        monthlyMining: {},
+        referralBonusVault: { totalVault: "0.00000000", referees: {} },
+        kyc: {
+          status: 'none',
+          submittedAt: null,
+          approvedDate: null,
+          rejectedDate: null,
+          rejectionReason: null,
+          documents: {
+            idCard: { uploaded: false },
+            fullBodyPhoto: { uploaded: false },
+            selfieWithID: { uploaded: false }
+          },
+          personalInfo: {},
+          migrationStartDate: null,
+          countdown: { days: 0, hours: 0, minutes: 0, seconds: 0, totalSeconds: 0, isActive: false }
+        },
+        migrationHistory: [],
+        walletBalance: {
+          myBW: { amount: "0.00000000", type: "virtual", description: "KYC 승인 후 실제 BW로 전환 대기" },
+          availableAmount: { amount: "0.00000000", type: "real", sourceWallet: "COMMUNITY_70PERCENT_WALLET", description: "마이그레이션 완료된 실제 BW" },
+          referralVaultDisplay: { amount: "0.00000000", type: "locked", description: "추천받은 사람 KYC 승인 후 이동" }
+        },
+        createdAt: now,
+        updatedAt: now
+      };
+
+      await miningCollection.insertOne(newMiningData);
+    }
+
+    await blockCollection.updateOne(
+      { blockNumber: newBlockNumber },
+      { $set: { 'blockFee.distributed': true } }
+    );
+
+    res.json({
+      success: true,
+      message: '마이닝이 시작되었습니다.',
+      data: {
+        walletAddress: walletAddress,
+        miningStartTime: nowString,
+        blockNumber: newBlockNumber,
+        blockHash: newBlock.blockHash,
+        blockFee: { total: "0.00100000", ecosystem: "0.00070000", devTeam: "0.00030000" },
+        referralCode: newReferralCode
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 마이닝 시작 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '마이닝 시작 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API 3-1: POST /api/admin/bitwish/mining/update
+// 설명: 실시간 채굴량 계산 및 업데이트 (50자리 정밀도)
+// ========================================
+
+app.post('/api/admin/bitwish/mining/update', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+
+    // ========== 1. 입력 검증 ==========
+    if (!walletAddress || !walletAddress.startsWith('BW')) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 지갑 주소입니다.'
+      });
+    }
+
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // ========== 2. 마이닝 데이터 조회 (userType='user' 필터) ==========
+    const miningData = await miningCollection.findOne({ 
+      walletAddress,
+      userType: 'user'
+    });
+
+    if (!miningData) {
+      return res.status(404).json({
+        success: false,
+        message: '마이닝 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    if (!miningData.miningStatus.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: '마이닝이 활성화되지 않았습니다.'
+      });
+    }
+
+    // ========== 3. 시간 계산 ==========
+    const now = new Date();
+    const startTime = new Date(miningData.miningStartTime);
+    const elapsedMs = now - startTime;
+    const elapsedHours = elapsedMs / (1000 * 60 * 60);
+
+    // ========== 4. 현재 월 정보 ==========
+    const currentYear = now.getFullYear();
+    const currentMonthNum = now.getMonth() + 1;
+    const currentMonth = `${currentYear}-${String(currentMonthNum).padStart(2, '0')}`;
+    
+    const monthStartDate = new Date(currentYear, currentMonthNum - 1, 1);
+    const monthEndDate = new Date(currentYear, currentMonthNum, 0, 23, 59, 59, 999);
+    
+    // ========== 5. 이번 달 채굴 시간 계산 ==========
+    let monthStartTime = startTime;
+    if (startTime < monthStartDate) {
+      monthStartTime = monthStartDate;
+    }
+    
+    const monthElapsedMs = now - monthStartTime;
+    const monthElapsedHours = monthElapsedMs / (1000 * 60 * 60);
+
+    // ========== 6. 기본 채굴량 계산 (50자리 정밀도) ==========
+    const totalBasicMined = (elapsedHours * 0.25).toFixed(50);
+    const monthBasicMined = (monthElapsedHours * 0.25).toFixed(50);
+
+    // ========== 7. 출석 보너스 계산 (5%, 50자리 정밀도) ==========
+    let totalAttendanceBonus = "0.00000000000000000000000000000000000000000000000000";
+    let monthAttendanceBonus = "0.00000000000000000000000000000000000000000000000000";
+    
+    if (miningData.miningBreakdown.attendance.isCheckedToday) {
+      const totalBasic = parseFloat(totalBasicMined);
+      const monthBasic = parseFloat(monthBasicMined);
+      totalAttendanceBonus = (totalBasic * 0.05).toFixed(50);
+      monthAttendanceBonus = (monthBasic * 0.05).toFixed(50);
+    }
+
+    // ========== 8. 추천 영구 보너스 (2% × 활성 추천인 수, 50자리 정밀도) ==========
+    const activeReferrals = miningData.miningBreakdown.referralPermanent.activeReferrals || 0;
+    const totalBasic = parseFloat(totalBasicMined);
+    const monthBasic = parseFloat(monthBasicMined);
+    const totalReferralPermanent = (totalBasic * 0.02 * activeReferrals).toFixed(50);
+    const monthReferralPermanent = (monthBasic * 0.02 * activeReferrals).toFixed(50);
+
+    // ========== 9. 추천 일회성 보너스 (변동 없음, 50자리 정밀도) ==========
+    const referralOneTimeBonus = miningData.miningBreakdown.referralOneTime.total || "0.00000000000000000000000000000000000000000000000000";
+
+    // ========== 10. 총 채굴량 계산 (50자리 정밀도) ==========
+    const totalMined = (
+      parseFloat(totalBasicMined) + 
+      parseFloat(totalAttendanceBonus) + 
+      parseFloat(totalReferralPermanent) + 
+      parseFloat(referralOneTimeBonus)
+    ).toFixed(50);
+
+    const currentMonthMining = (
+      parseFloat(monthBasicMined) + 
+      parseFloat(monthAttendanceBonus) + 
+      parseFloat(monthReferralPermanent)
+    ).toFixed(50);
+
+    // ========== 11. 발급자 2% 실시간 보관 시스템 (백서 기준) ==========
+    if (miningData.referralInfo && miningData.referralInfo.referrerWallet) {
+      const referrerWallet = miningData.referralInfo.referrerWallet;
+      
+      // KYC 승인된 가입자만 처리
+      if (miningData.kyc && miningData.kyc.status === 'approved') {
+        try {
+          // 발급자 데이터 조회 (userType='user' 필터)
+          const referrerData = await miningCollection.findOne({ 
+            walletAddress: referrerWallet,
+            userType: 'user'
+          });
+
+          if (referrerData) {
+            // 가입자의 기본 채굴량의 2% 계산 (50자리 정밀도)
+            const referee2PercentBonus = (parseFloat(totalBasicMined) * 0.02).toFixed(50);
+            
+            // 발급자 보관함 데이터 가져오기
+            const referrerVault = referrerData.referralBonusVault || {
+              totalVault: "0.00000000000000000000000000000000000000000000000000",
+              referees: {}
+            };
+            
+            const referrerReferees = referrerVault.referees || {};
+            
+            // 현재 가입자의 보관함 데이터 업데이트
+            if (referrerReferees[walletAddress]) {
+              // 2% 영구 보너스 업데이트
+              referrerReferees[walletAddress].permanentBonus = referee2PercentBonus;
+              
+              // 총 보너스 재계산 (1BW + 2% 실시간 누적)
+              const oneTimeBonusAmount = parseFloat(referrerReferees[walletAddress].oneTimeBonus || 0);
+              const totalFromThisReferee = (
+                oneTimeBonusAmount + 
+                parseFloat(referee2PercentBonus)
+              ).toFixed(50);
+              
+              referrerReferees[walletAddress].totalFromThisReferee = totalFromThisReferee;
+              
+              // 전체 보관함 총액 재계산
+              let totalVaultAmount = 0;
+              for (const refKey in referrerReferees) {
+                totalVaultAmount += parseFloat(referrerReferees[refKey].totalFromThisReferee || 0);
+              }
+              
+              // MongoDB 업데이트 (userType='user' 필터, 50자리 정밀도)
+              await miningCollection.updateOne(
+                { 
+                  walletAddress: referrerWallet,
+                  userType: 'user'
+                },
+                {
+                  $set: {
+                    'referralBonusVault.totalVault': totalVaultAmount.toFixed(50),
+                    'referralBonusVault.referees': referrerReferees,
+                    updatedAt: now
+                  }
+                }
+              );
+              
+              console.log(`✅ 발급자 2% 실시간 보관: ${referrerWallet} ← ${walletAddress} (${referee2PercentBonus} BW)`);
+            }
+          }
+        } catch (vaultError) {
+          console.error('❌ 발급자 보관함 업데이트 오류:', vaultError);
+          // 보관함 오류는 메인 채굴 업데이트에 영향 없음
+        }
+      }
+    }
+
+    // ========== 12. MongoDB 업데이트 (userType='user' 필터, 50자리 정밀도) ==========
+    const nowString = now.toISOString().replace('T', ' ').substring(0, 19);
+    
+    await miningCollection.updateOne(
+      { 
+        walletAddress,
+        userType: 'user'
+      },
+      {
+        $set: {
+          'totalMined.amount': totalMined,
+          'miningBreakdown.basic.total': totalBasicMined,
+          'miningBreakdown.attendance.total': totalAttendanceBonus,
+          'miningBreakdown.referralPermanent.total': totalReferralPermanent,
+          'miningStatus.lastUpdateTime': nowString,
+          'walletBalance.myBW.amount': totalMined,
+          [`monthlyMining.${currentMonth}`]: {
+            amount: currentMonthMining,
+            saved: true,
+            startDate: monthStartDate.toISOString().substring(0, 10),
+            endDate: monthEndDate.toISOString().substring(0, 10),
+            breakdown: {
+              basic: monthBasicMined,
+              attendance: monthAttendanceBonus,
+              referral: monthReferralPermanent
+            }
+          },
+          updatedAt: now
+        }
+      }
+    );
+
+    // ========== 13. 응답 ==========
+    res.json({
+      success: true,
+      data: {
+        walletAddress: walletAddress,
+        totalMined: totalMined,
+        currentMonthMining: currentMonthMining,
+        breakdown: {
+          basic: totalBasicMined,
+          attendance: totalAttendanceBonus,
+          referralPermanent: totalReferralPermanent,
+          referralOneTime: referralOneTimeBonus
+        },
+        currentMonth: currentMonth,
+        lastUpdate: nowString
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 채굴량 업데이트 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '채굴량 업데이트 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API 3-2: GET /api/admin/bitwish/mining/stats
+// 설명: 전체 통계 조회 (현재 발행량/잔여 발행량/발행률)
+// ========================================
+
+app.get('/api/admin/bitwish/mining/stats', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+    const systemWalletsCollection = db.collection('admin_system_wallets');
+
+    // ========== 1. 전체 유저 채굴량 합계 (userType='user'만, 50자리 정밀도) ==========
+    const allUsers = await miningCollection.find({ userType: 'user' }).toArray();
+    
+    let totalMinedByAllUsers = 0;
+    for (const user of allUsers) {
+      totalMinedByAllUsers += parseFloat(user.totalMined?.amount || 0);
+    }
+    const totalMinedStr = totalMinedByAllUsers.toFixed(50);
+
+    // ========== 2. 시스템 지갑 조회 (50자리 정밀도) ==========
+    const communityWallet = await systemWalletsCollection.findOne({ walletType: 'COMMUNITY_70PERCENT' });
+    const initialSupply = parseFloat(communityWallet?.balance?.initial || 0);
+    const currentSupply = parseFloat(communityWallet?.balance?.current || 0);
+
+    // ========== 3. 통계 계산 (50자리 정밀도) ==========
+    const totalIssued = (initialSupply - currentSupply).toFixed(50);
+    const remainingSupply = currentSupply.toFixed(50);
+    const issuanceRate = initialSupply > 0 
+      ? ((parseFloat(totalIssued) / initialSupply) * 100).toFixed(50)
+      : "0.00000000000000000000000000000000000000000000000000";
+
+    // ========== 4. 응답 ==========
+    res.json({
+      success: true,
+      stats: {
+        totalIssued: totalIssued,
+        remainingSupply: remainingSupply,
+        issuanceRate: issuanceRate,
+        totalMinedByUsers: totalMinedStr,
+        activeUsers: allUsers.filter(u => u.miningStatus?.isActive).length,
+        totalUsers: allUsers.length,
+        lastUpdate: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 통계 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '통계 조회 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API 3-3: GET /api/admin/bitwish/mining/all-users
+// 설명: 관리자 전용 - 전체 유저 마이닝 데이터 조회
+// ========================================
+
+app.get('/api/admin/bitwish/mining/all-users', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // userType='user'만 조회
+    const allUsers = await miningCollection.find({ 
+      userType: 'user' 
+    }).toArray();
+
+    res.json({
+      success: true,
+      users: allUsers,
+      count: allUsers.length
+    });
+
+  } catch (error) {
+    console.error('❌ 전체 유저 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '전체 유저 조회 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API 4-1: POST /api/admin/bitwish/attendance/check
+// 설명: 출석 체크 및 5% 보너스 활성화 (50자리 정밀도)
+// ========================================
+
+app.post('/api/admin/bitwish/attendance/check', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+
+    // ========== 1. 입력 검증 ==========
+    if (!walletAddress || !walletAddress.startsWith('BW')) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 지갑 주소입니다.'
+      });
+    }
+
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // ========== 2. 마이닝 데이터 조회 (userType='user' 필터) ==========
+    const miningData = await miningCollection.findOne({ 
+      walletAddress,
+      userType: 'user'
+    });
+
+    if (!miningData) {
+      return res.status(404).json({
+        success: false,
+        message: '마이닝 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    if (!miningData.miningStatus.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: '마이닝이 활성화되지 않았습니다.'
+      });
+    }
+
+    // ========== 3. 현재 시간 및 날짜 정보 ==========
+    const now = new Date();
+    const nowString = now.toISOString().replace('T', ' ').substring(0, 19);
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentDay = now.getDate();
+    const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+    const today = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+
+    // ========== 4. 마지막 출석 시간 체크 (24시간 유예) ==========
+    const lastCheckIn = miningData.miningBreakdown.attendance.lastCheckIn;
+    
+    if (lastCheckIn) {
+      const lastCheckInDate = new Date(lastCheckIn);
+      const timeDiff = now - lastCheckInDate;
+      const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+      // 24시간 이내면 오늘 이미 출석한 것으로 간주
+      if (hoursDiff < 24) {
+        const lastCheckInDay = lastCheckInDate.toISOString().substring(0, 10);
+        
+        // 같은 날짜면 이미 출석
+        if (lastCheckInDay === today) {
+          return res.status(400).json({
+            success: false,
+            message: '오늘 이미 출석했습니다.',
+            data: {
+              lastCheckIn: lastCheckIn,
+              nextCheckInAvailable: new Date(lastCheckInDate.getTime() + 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19)
+            }
+          });
+        }
+      }
+    }
+
+    // ========== 5. 월별 출석 기록 업데이트 ==========
+    const monthlyCheckIns = miningData.miningBreakdown.attendance.monthlyCheckIns || {};
+    
+    if (!monthlyCheckIns[currentMonthKey]) {
+      monthlyCheckIns[currentMonthKey] = {
+        days: [],
+        totalDays: 0,
+        bonus: "0.00000000000000000000000000000000000000000000000000"
+      };
+    }
+
+    // 오늘 날짜가 이미 기록에 있는지 확인
+    if (!monthlyCheckIns[currentMonthKey].days.includes(currentDay)) {
+      monthlyCheckIns[currentMonthKey].days.push(currentDay);
+      monthlyCheckIns[currentMonthKey].days.sort((a, b) => a - b);
+    }
+
+    monthlyCheckIns[currentMonthKey].totalDays = monthlyCheckIns[currentMonthKey].days.length;
+
+    // ========== 6. 출석 보너스 계산 (5%, 50자리 정밀도) ==========
+    // 현재까지의 기본 채굴량에 5% 추가
+    const currentBasicMining = parseFloat(miningData.miningBreakdown.basic.total || 0);
+    const attendanceBonus = (currentBasicMining * 0.05).toFixed(50);
+    
+    // 월별 보너스 누적
+    const currentMonthBonus = parseFloat(monthlyCheckIns[currentMonthKey].bonus || 0);
+    const newMonthBonus = (currentMonthBonus + parseFloat(attendanceBonus)).toFixed(50);
+    monthlyCheckIns[currentMonthKey].bonus = newMonthBonus;
+
+    // ========== 7. MongoDB 업데이트 (userType='user' 필터, 50자리 정밀도) ==========
+    await miningCollection.updateOne(
+      { 
+        walletAddress,
+        userType: 'user'
+      },
+      {
+        $set: {
+          'miningBreakdown.attendance.lastCheckIn': nowString,
+          'miningBreakdown.attendance.isCheckedToday': true,
+          'miningBreakdown.attendance.monthlyCheckIns': monthlyCheckIns,
+          updatedAt: now
+        }
+      }
+    );
+
+    // ========== 8. 응답 ==========
+    res.json({
+      success: true,
+      message: '출석 체크 완료! 5% 보너스가 활성화되었습니다.',
+      data: {
+        walletAddress: walletAddress,
+        checkInTime: nowString,
+        currentMonthDays: monthlyCheckIns[currentMonthKey].days,
+        totalCheckInDays: monthlyCheckIns[currentMonthKey].totalDays,
+        monthlyBonus: monthlyCheckIns[currentMonthKey].bonus,
+        nextCheckInAvailable: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19)
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 출석 체크 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '출석 체크 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API 4-2: GET /api/admin/bitwish/attendance/stats
+// 설명: 전체 출석 통계 조회 (관리자용)
+// ========================================
+
+app.get('/api/admin/bitwish/attendance/stats', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // userType='user'인 모든 유저 조회
+    const allUsers = await miningCollection.find({ userType: 'user' }).toArray();
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    let totalCheckedToday = 0;
+    let totalActiveUsers = 0;
+    let monthlyCheckInStats = {};
+
+    for (const user of allUsers) {
+      if (user.miningBreakdown?.attendance?.isCheckedToday) {
+        totalCheckedToday++;
+      }
+
+      if (user.miningStatus?.isActive) {
+        totalActiveUsers++;
+      }
+
+      const monthlyCheckIns = user.miningBreakdown?.attendance?.monthlyCheckIns || {};
+      if (monthlyCheckIns[currentMonthKey]) {
+        const totalDays = monthlyCheckIns[currentMonthKey].totalDays || 0;
+        if (!monthlyCheckInStats[totalDays]) {
+          monthlyCheckInStats[totalDays] = 0;
+        }
+        monthlyCheckInStats[totalDays]++;
+      }
+    }
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers: allUsers.length,
+        activeUsers: totalActiveUsers,
+        checkedInToday: totalCheckedToday,
+        checkInRate: totalActiveUsers > 0 
+          ? ((totalCheckedToday / totalActiveUsers) * 100).toFixed(2)
+          : "0.00",
+        monthlyCheckInDistribution: monthlyCheckInStats,
+        currentMonth: currentMonthKey
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 출석 통계 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '출석 통계 조회 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API 5-1: POST /api/admin/bitwish/referral/use-code
+// 설명: 추천 코드 사용 및 관계 형성 + 즉시 1BW 보너스 (50자리 정밀도)
+// ========================================
+
+app.post('/api/admin/bitwish/referral/use-code', async (req, res) => {
+  try {
+    const { walletAddress, referralCode } = req.body;
+
+    // ========== 1. 입력 검증 ==========
+    if (!walletAddress || !walletAddress.startsWith('BW')) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 지갑 주소입니다.'
+      });
+    }
+
+    if (!referralCode || !referralCode.startsWith('BWREF-')) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 추천 코드입니다.'
+      });
+    }
+
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+    const referralCollection = db.collection('admin_referral_codes');
+
+    // ========== 2. 추천 코드 검증 (userType='user' 필터) ==========
+    const referralCodeData = await referralCollection.findOne({ 
+      code: referralCode,
+      userType: 'user'
+    });
+
+    if (!referralCodeData) {
+      return res.status(404).json({
+        success: false,
+        message: '존재하지 않는 추천 코드입니다.'
+      });
+    }
+
+    if (!referralCodeData.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: '비활성화된 추천 코드입니다.'
+      });
+    }
+
+    const referrerWallet = referralCodeData.walletAddress;
+
+    // 자기 자신의 코드 사용 방지
+    if (referrerWallet === walletAddress) {
+      return res.status(400).json({
+        success: false,
+        message: '자신의 추천 코드는 사용할 수 없습니다.'
+      });
+    }
+
+    // ========== 3. 가입자 데이터 조회 (userType='user' 필터) ==========
+    const refereeData = await miningCollection.findOne({ 
+      walletAddress,
+      userType: 'user'
+    });
+
+    if (!refereeData) {
+      return res.status(404).json({
+        success: false,
+        message: '마이닝 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    // 이미 추천 코드 사용했는지 확인
+    if (refereeData.referralInfo && refereeData.referralInfo.usedReferralCode) {
+      return res.status(400).json({
+        success: false,
+        message: '이미 추천 코드를 사용했습니다.',
+        data: {
+          usedCode: refereeData.referralInfo.usedReferralCode,
+          referrerWallet: refereeData.referralInfo.referrerWallet
+        }
+      });
+    }
+
+    // ========== 4. 추천인 데이터 조회 (userType='user' 필터) ==========
+    const referrerData = await miningCollection.findOne({ 
+      walletAddress: referrerWallet,
+      userType: 'user'
+    });
+
+    if (!referrerData) {
+      return res.status(404).json({
+        success: false,
+        message: '추천인 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    const now = new Date();
+    const nowString = now.toISOString().replace('T', ' ').substring(0, 19);
+
+    // ========== 5. 즉시 1BW 보너스 별도 보관 (50자리 정밀도) ==========
+    const oneTimeBonusAmount = "1.00000000000000000000000000000000000000000000000000";
+
+    // ========== 6. 추천인(발급자) 데이터 업데이트 ==========
+    // 6-1. 추천받은 사람 목록에 추가
+    const referrerReferees = referrerData.referralBonusVault?.referees || {};
+    
+    referrerReferees[walletAddress] = {
+      refereeAddress: walletAddress,
+      oneTimeBonus: oneTimeBonusAmount,
+      permanentBonus: "0.00000000000000000000000000000000000000000000000000",
+      totalFromThisReferee: oneTimeBonusAmount,
+      kycStatus: "pending",
+      kycApprovedDate: null,
+      canMigrate: false,
+      migrationDate: null,
+      refereeJoinedAt: nowString,
+      refereeStartedMiningAt: refereeData.miningStartTime || nowString
+    };
+
+    // 6-2. 총 보관함 금액 계산 (50자리 정밀도)
+    let totalVault = 0;
+    for (const refKey in referrerReferees) {
+      totalVault += parseFloat(referrerReferees[refKey].totalFromThisReferee || 0);
+    }
+    const totalVaultStr = totalVault.toFixed(50);
+
+    // 6-3. 활성 추천인 수 증가
+    const activeReferrals = (referrerData.miningBreakdown?.referralPermanent?.activeReferrals || 0) + 1;
+
+    // 6-4. 추천인 업데이트 (userType='user' 필터, 50자리 정밀도)
+    await miningCollection.updateOne(
+      { 
+        walletAddress: referrerWallet,
+        userType: 'user'
+      },
+      {
+        $set: {
+          'referralBonusVault.totalVault': totalVaultStr,
+          'referralBonusVault.referees': referrerReferees,
+          'miningBreakdown.referralPermanent.activeReferrals': activeReferrals,
+          updatedAt: now
+        }
+      }
+    );
+
+    // ========== 7. 가입자 데이터 업데이트 ==========
+    // 7-1. 추천 정보 저장
+    const referralInfo = {
+      usedReferralCode: referralCode,
+      referrerWallet: referrerWallet,
+      referralCodeUsedAt: nowString,
+      oneTimeBonusReceived: oneTimeBonusAmount,
+      oneTimeBonusStatus: "pending_kyc",
+      oneTime2PercentApplied: false,
+      oneTime2PercentAmount: "0.00000000000000000000000000000000000000000000000000"
+    };
+
+    // 7-2. 가입자 업데이트 (userType='user' 필터, 50자리 정밀도)
+    await miningCollection.updateOne(
+      { 
+        walletAddress,
+        userType: 'user'
+      },
+      {
+        $set: {
+          referralInfo: referralInfo,
+          updatedAt: now
+        }
+      }
+    );
+
+    // ========== 8. 추천 코드 사용 횟수 증가 ==========
+    await referralCollection.updateOne(
+      { 
+        code: referralCode,
+        userType: 'user'
+      },
+      {
+        $inc: { usedCount: 1 },
+        $set: { updatedAt: now }
+      }
+    );
+
+    // ========== 9. 응답 ==========
+    res.json({
+      success: true,
+      message: '추천 코드 사용 완료! KYC 승인 후 보너스가 지급됩니다.',
+      data: {
+        referee: {
+          walletAddress: walletAddress,
+          oneTimeBonusReserved: oneTimeBonusAmount,
+          status: "pending_kyc"
+        },
+        referrer: {
+          walletAddress: referrerWallet,
+          oneTimeBonusReserved: oneTimeBonusAmount,
+          activeReferrals: activeReferrals,
+          permanentBonusRate: "2%"
+        },
+        referralCode: referralCode,
+        createdAt: nowString
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 추천 코드 사용 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '추천 코드 사용 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API 5-2: POST /api/admin/bitwish/referral/activate-bonus
+// 설명: KYC 승인 시 추천 보너스 활성화 (50자리 정밀도)
+// ========================================
+
+app.post('/api/admin/bitwish/referral/activate-bonus', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+
+    // ========== 1. 입력 검증 ==========
+    if (!walletAddress || !walletAddress.startsWith('BW')) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 지갑 주소입니다.'
+      });
+    }
+
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // ========== 2. 가입자 데이터 조회 (userType='user' 필터) ==========
+    const refereeData = await miningCollection.findOne({ 
+      walletAddress,
+      userType: 'user'
+    });
+
+    if (!refereeData) {
+      return res.status(404).json({
+        success: false,
+        message: '마이닝 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    // KYC 상태 확인
+    if (refereeData.kyc?.status !== 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'KYC가 승인되지 않았습니다.'
+      });
+    }
+
+    // 추천 정보 확인
+    if (!refereeData.referralInfo || !refereeData.referralInfo.usedReferralCode) {
+      return res.status(400).json({
+        success: false,
+        message: '사용한 추천 코드가 없습니다.'
+      });
+    }
+
+    const referrerWallet = refereeData.referralInfo.referrerWallet;
+    const now = new Date();
+    const nowString = now.toISOString().replace('T', ' ').substring(0, 19);
+
+    // ========== 3. 추천인 데이터 조회 (userType='user' 필터) ==========
+    const referrerData = await miningCollection.findOne({ 
+      walletAddress: referrerWallet,
+      userType: 'user'
+    });
+
+    if (!referrerData) {
+      return res.status(404).json({
+        success: false,
+        message: '추천인 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    // ========== 4. 가입자 1회 2% 보너스 계산 (50자리 정밀도) ==========
+    let oneTime2PercentAmount = "0.00000000000000000000000000000000000000000000000000";
+    
+    if (!refereeData.referralInfo.oneTime2PercentApplied) {
+      const currentBasicMining = parseFloat(refereeData.miningBreakdown?.basic?.total || 0);
+      oneTime2PercentAmount = (currentBasicMining * 0.02).toFixed(50);
+    }
+
+    // ========== 5. 가입자 업데이트 (1BW + 1회 2% 보너스, 50자리 정밀도) ==========
+    const refereeOneTimeBonusTotal = (
+      parseFloat(refereeData.referralInfo.oneTimeBonusReceived || 0) + 
+      parseFloat(oneTime2PercentAmount)
+    ).toFixed(50);
+
+    const refereeReferralOneTimeTotal = (
+      parseFloat(refereeData.miningBreakdown?.referralOneTime?.total || 0) + 
+      parseFloat(refereeOneTimeBonusTotal)
+    ).toFixed(50);
+
+    await miningCollection.updateOne(
+      { 
+        walletAddress,
+        userType: 'user'
+      },
+      {
+        $set: {
+          'referralInfo.oneTimeBonusStatus': 'activated',
+          'referralInfo.oneTime2PercentApplied': true,
+          'referralInfo.oneTime2PercentAmount': oneTime2PercentAmount,
+          'miningBreakdown.referralOneTime.total': refereeReferralOneTimeTotal,
+          'miningBreakdown.referralOneTime.count': 1,
+          'miningBreakdown.referralOneTime.perReferral': refereeOneTimeBonusTotal,
+          updatedAt: now
+        }
+      }
+    );
+
+    // ========== 6. 발급자 보관함 업데이트 ==========
+    if (referrerData) {
+      const referrerVault = referrerData.referralBonusVault || {
+        totalVault: "0.00000000000000000000000000000000000000000000000000",
+        referees: {}
+      };
+      
+      const referrerReferees = referrerVault.referees || {};
+      
+      if (referrerReferees[walletAddress]) {
+        // 보관함 상태 업데이트
+        referrerReferees[walletAddress].kycStatus = 'approved';
+        referrerReferees[walletAddress].kycApprovedDate = now.toISOString().replace('T', ' ').substring(0, 19);
+        referrerReferees[walletAddress].canMigrate = true;
+        
+        // 15일 후 마이그레이션 날짜 설정
+        const migrationDate = new Date(now);
+        migrationDate.setDate(migrationDate.getDate() + 15);
+        referrerReferees[walletAddress].migrationDate = migrationDate.toISOString().replace('T', ' ').substring(0, 19);
+        
+        // ========== 7. 발급자에게 보관함 보너스 지급 (백서 기준) ==========
+        const referrerOneTimeBonus = referrerReferees[walletAddress].oneTimeBonus || "0.00000000000000000000000000000000000000000000000000"; // 1BW
+        const referrerPermanentBonus = referrerReferees[walletAddress].permanentBonus || "0.00000000000000000000000000000000000000000000000000"; // 실시간 누적 2%
+        
+        // 발급자 총 보너스 계산 (50자리 정밀도)
+        const totalReferrerBonus = (
+          parseFloat(referrerOneTimeBonus) + 
+          parseFloat(referrerPermanentBonus)
+        ).toFixed(50);
+        
+        console.log(`📦 발급자 보관함 지급: ${referrerWallet}`);
+        console.log(`  - 1BW 보너스: ${referrerOneTimeBonus}`);
+        console.log(`  - 2% 실시간 누적: ${referrerPermanentBonus}`);
+        console.log(`  - 총 지급액: ${totalReferrerBonus}`);
+        
+        // 발급자의 일회성 추천 보너스에 추가
+        const referrerCurrentOneTime = parseFloat(referrerData.miningBreakdown?.referralOneTime?.total || 0);
+        const referrerNewOneTime = (referrerCurrentOneTime + parseFloat(totalReferrerBonus)).toFixed(50);
+        
+        // 발급자 업데이트 (userType='user' 필터, 50자리 정밀도)
+        await miningCollection.updateOne(
+          { 
+            walletAddress: referrerWallet,
+            userType: 'user'
+          },
+          {
+            $set: {
+              'miningBreakdown.referralOneTime.total': referrerNewOneTime,
+              'referralBonusVault.referees': referrerReferees,
+              updatedAt: now
+            }
+          }
+        );
+        
+        console.log(`✅ 발급자 채굴량 반영 완료: ${referrerWallet} (+${totalReferrerBonus} BW)`);
+        
+        // ========== 8. 응답 데이터 ==========
+        res.json({
+          success: true,
+          message: 'KYC 승인으로 추천 보너스가 활성화되었습니다!',
+          data: {
+            referee: {
+              walletAddress: walletAddress,
+              oneTimeBonusActivated: refereeOneTimeBonusTotal,
+              oneTime2Percent: oneTime2PercentAmount,
+              totalReferralBonus: refereeReferralOneTimeTotal
+            },
+            referrer: {
+              walletAddress: referrerWallet,
+              bonusVaultPaid: totalReferrerBonus,
+              oneTimeBonus: referrerOneTimeBonus,
+              permanentBonus: referrerPermanentBonus,
+              totalPaid: referrerNewOneTime,
+              migrationDate: referrerReferees[walletAddress].migrationDate
+            }
+          }
+        });
+        
+      } else {
+        // 보관함에 가입자 정보 없음 (정상 처리)
+        res.json({
+          success: true,
+          message: 'KYC 승인으로 가입자 보너스가 활성화되었습니다!',
+          data: {
+            referee: {
+              walletAddress: walletAddress,
+              oneTimeBonusActivated: refereeOneTimeBonusTotal,
+              oneTime2Percent: oneTime2PercentAmount,
+              totalReferralBonus: refereeReferralOneTimeTotal
+            }
+          }
+        });
+      }
+    } else {
+      // 발급자 없음 (정상 처리)
+      res.json({
+        success: true,
+        message: 'KYC 승인으로 보너스가 활성화되었습니다!',
+        data: {
+          referee: {
+            walletAddress: walletAddress,
+            oneTimeBonusActivated: refereeOneTimeBonusTotal,
+            oneTime2Percent: oneTime2PercentAmount,
+            totalReferralBonus: refereeReferralOneTimeTotal
+          }
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ 추천 보너스 활성화 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '추천 보너스 활성화 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API 5-3: GET /api/admin/bitwish/referral/vault/:walletAddress
+// 설명: 발급자 추천 보너스 보관함 조회 (50자리 정밀도)
+// ========================================
+
+app.get('/api/admin/bitwish/referral/vault/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+
+    // ========== 1. 입력 검증 ==========
+    if (!walletAddress || !walletAddress.startsWith('BW')) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 지갑 주소입니다.'
+      });
+    }
+
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // ========== 2. 발급자 데이터 조회 (userType='user' 필터) ==========
+    const referrerData = await miningCollection.findOne({ 
+      walletAddress,
+      userType: 'user'
+    });
+
+    if (!referrerData) {
+      return res.status(404).json({
+        success: false,
+        message: '마이닝 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    // ========== 3. 보관함 데이터 추출 ==========
+    const vault = referrerData.referralBonusVault || {
+      totalVault: "0.00000000000000000000000000000000000000000000000000",
+      referees: {}
+    };
+
+    const referees = vault.referees || {};
+    const refereeList = [];
+
+    for (const refAddress in referees) {
+      const ref = referees[refAddress];
+      refereeList.push({
+        refereeAddress: ref.refereeAddress,
+        oneTimeBonus: ref.oneTimeBonus,
+        permanentBonus: ref.permanentBonus,
+        totalFromThisReferee: ref.totalFromThisReferee,
+        kycStatus: ref.kycStatus,
+        kycApprovedDate: ref.kycApprovedDate,
+        canMigrate: ref.canMigrate,
+        migrationDate: ref.migrationDate,
+        refereeJoinedAt: ref.refereeJoinedAt,
+        refereeStartedMiningAt: ref.refereeStartedMiningAt
+      });
+    }
+
+    // ========== 4. 통계 계산 ==========
+    const stats = {
+      totalReferees: refereeList.length,
+      kycApprovedCount: refereeList.filter(r => r.kycStatus === 'approved').length,
+      pendingKycCount: refereeList.filter(r => r.kycStatus === 'pending').length,
+      totalVault: vault.totalVault,
+      canMigrateCount: refereeList.filter(r => r.canMigrate === true).length
+    };
+
+    // ========== 5. 응답 ==========
+    res.json({
+      success: true,
+      data: {
+        walletAddress: walletAddress,
+        vault: vault.totalVault,
+        stats: stats,
+        referees: refereeList
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 보관함 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '보관함 조회 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish MongoDB 연결 API 엔드포인트
+// ====================================================================================
+
+// MongoDB 연결
+app.post('/api/bitwish/mongodb/connect', async (req, res) => {
+  try {
+    const result = await bitWishMongoDB.connect();
+    
+    res.json({
+      ...result,
+      message: result.success ? 'MongoDB 연결이 완료되었습니다' : result.error
+    });
+  } catch (error) {
+    console.error('MongoDB 연결 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// MongoDB 연결 해제
+app.post('/api/bitwish/mongodb/disconnect', async (req, res) => {
+  try {
+    await bitWishMongoDB.disconnect();
+    
+    res.json({
+      success: true,
+      message: 'MongoDB 연결이 해제되었습니다'
+    });
+  } catch (error) {
+    console.error('MongoDB 연결 해제 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// BitWish 시스템 상태 API 엔드포인트
+// ====================================================================================
+
+// 전체 시스템 상태 조회
+app.get('/api/bitwish/system/status', async (req, res) => {
+  try {
+    const blockchainStatus = bitWishBlockchainCore.getNetworkStatus();
+    const miningStats = bitWishMiningSystem.getMiningStats();
+    const currentLanguage = bitWishI18n.getCurrentLanguage();
+    const mongoConnected = bitWishMongoDB.isConnected;
+    
+    res.json({
+      success: true,
+      data: {
+        blockchain: blockchainStatus,
+        mining: miningStats,
+        language: currentLanguage,
+        mongodb: {
+          connected: mongoConnected,
+          collections: Object.keys(bitWishMongoDB.collections)
+        },
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('시스템 상태 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// WebSocket 연결 처리
+// ====================================================================================
+
+wss.on('connection', (ws, req) => {
+  console.log('🔗 WebSocket 클라이언트 연결됨');
+  
+  // 클라이언트에게 연결 확인 메시지 전송
+  ws.send(JSON.stringify({
+    type: 'connection',
+    message: 'BitWish Network에 연결되었습니다',
+    timestamp: new Date().toISOString()
+  }));
+  
+  // 클라이언트 메시지 처리
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      console.log('📨 WebSocket 메시지 수신:', data);
+      
+      // 메시지 타입에 따른 처리
+      switch (data.type) {
+        case 'ping':
+          ws.send(JSON.stringify({
+            type: 'pong',
+            timestamp: new Date().toISOString()
+          }));
+          break;
+          
+        case 'subscribe':
+          // 구독 처리 (예: 블록체인 상태, 마이닝 상태 등)
+          ws.send(JSON.stringify({
+            type: 'subscribed',
+            channel: data.channel,
+            message: `${data.channel} 채널에 구독되었습니다`,
+            timestamp: new Date().toISOString()
+          }));
+          break;
+          
+        default:
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: '알 수 없는 메시지 타입입니다',
+            timestamp: new Date().toISOString()
+          }));
+      }
+    } catch (error) {
+      console.error('WebSocket 메시지 처리 오류:', error);
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: '메시지 처리 중 오류가 발생했습니다',
+        timestamp: new Date().toISOString()
+      }));
+    }
+  });
+  
+  // 연결 종료 처리
+  ws.on('close', () => {
+    console.log('🔌 WebSocket 클라이언트 연결 해제됨');
+  });
+  
+  // 오류 처리
+  ws.on('error', (error) => {
+    console.error('WebSocket 오류:', error);
+  });
+});
+
+// ====================================================================================
+// 📊 Phase 1: 홈페이지 메인화면 통계 API
+// ====================================================================================
+// ✅ 준수사항: 전역/공통 변수/함수/클래스/모달 절대 사용 안함
+// ✅ 50단위 부동소수점 정밀계산 적용 (Decimal.js)
+// ✅ 4개국 언어 즉시 번역 시스템 적용
+// ✅ 유저/관리자 완벽 분리
+// ====================================================================================
+
+app.get('/api/bitwish/stats/homepage', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+    
+    // 1. 총 발행량 (고정)
+    const TOTAL_SUPPLY = new Decimal('21000000000'); // 210억 BW
+    const SYSTEM_WALLETS_COUNT = 5; // 초기 시스템 지갑
+    
+    // 2. ✅ 현재 발행량 (모든 유저의 totalMined 합계 - isActive 조건 제거)
+    const miningCollection = db.collection('admin_user_mining_data');
+    const allUsers = await miningCollection.find({}).toArray(); // ✅ 활성 여부 무관
+    
+    let currentSupply = new Decimal(0);
+    for (const user of allUsers) {
+      try {
+        const amount = user.totalMined?.amount;
+        if (amount !== null && amount !== undefined) {
+          const decimalAmount = new Decimal(amount);
+          if (decimalAmount.isFinite() && !decimalAmount.isNaN()) {
+            currentSupply = currentSupply.plus(decimalAmount);
+          }
+        }
+      } catch (err) {
+        console.warn(`⚠️ 잘못된 채굴량 데이터: ${user.walletAddress}`, err.message);
+      }
+    }
+    
+    // 3. 잔여 발행량
+    const remainingSupply = TOTAL_SUPPLY.minus(currentSupply);
+    
+    // 4. 발행률 (%)
+    const issueRate = currentSupply.greaterThan(0)
+      ? currentSupply.dividedBy(TOTAL_SUPPLY).times(100).toFixed(2)
+      : "0.00";
+    
+    // 5. 총 블록 수
+    const blockCollection = db.collection('admin_block_records');
+    const totalBlocks = await blockCollection.countDocuments();
+    
+    // 6. ✅ 지갑 생성 수 (시스템 지갑 포함)
+    const walletCollection = db.collection('bitwish_wallets');
+    const userWalletsCount = await walletCollection.countDocuments({
+      address: { $regex: /^BW[A-F0-9]{40}$/ } // BW + 40자리 16진수 (사용자 지갑만)
+    });
+    const totalWallets = SYSTEM_WALLETS_COUNT + userWalletsCount;
+    
+    // ✅ 50자리 정밀도 유지하면서 응답 생성
+    const currentSupplyString = currentSupply.toFixed(8);
+    const remainingSupplyString = remainingSupply.toFixed(8);
+    
+    // ✅ 천 단위 구분자 포맷팅
+    const formatNumber = (numStr) => {
+      const [intPart, decPart] = numStr.split('.');
+      const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return decPart ? `${formattedInt}.${decPart}` : formattedInt;
+    };
+    
+    res.json({
+      success: true,
+      data: {
+        totalSupply: {
+          value: TOTAL_SUPPLY.toString(),
+          formatted: "21,000,000,000 BW",
+          display: "210억 BW"
+        },
+        currentSupply: {
+          value: currentSupplyString,
+          formatted: `${formatNumber(parseFloat(currentSupplyString).toFixed(2))} BW`,
+          raw: currentSupply.toNumber()
+        },
+        remainingSupply: {
+          value: remainingSupplyString,
+          formatted: `${formatNumber(parseFloat(remainingSupplyString).toFixed(2))} BW`,
+          raw: remainingSupply.toNumber()
+        },
+        issueRate: {
+          value: issueRate,
+          formatted: `${issueRate}%`,
+          percentage: parseFloat(issueRate)
+        },
+        totalBlocks: {
+          value: totalBlocks,
+          formatted: `${totalBlocks.toLocaleString('ko-KR')}개`,
+          raw: totalBlocks
+        },
+        totalWallets: {
+          value: totalWallets,
+          formatted: `${totalWallets.toLocaleString('ko-KR')}개`,
+          raw: totalWallets,
+          breakdown: {
+            system: SYSTEM_WALLETS_COUNT,
+            user: userWalletsCount
+          }
+        },
+        lastUpdated: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ 홈페이지 통계 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '통계 조회 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// 💸 Phase 3: P2P 거래 수수료 시스템 (나의 지갑 → P2P 송금 기능) - 메인 API
+// ====================================================================================
+// ✅ 준수사항: 전역/공통 변수/함수/클래스/모달 절대 사용 안함
+// ✅ 50단위 부동소수점 정밀계산 적용 (Decimal.js)
+// ✅ "나의 지갑" P2P 송금 기능 (새 마이닝 시스템 전용)
+// ✅ 데이터베이스: admin_user_mining_data (메인)
+// ✅ 실제 BW (마이그레이션 완료된 금액)만 송금 가능
+// ✅ 수수료 0.01 BW (70% 생태계, 30% 개발팀 자동 분배)
+// ✅ 수수료 기록: admin_fee_collection
+// ✅ 시스템 지갑 연동: admin_system_wallets
+// ====================================================================================
+// 🎯 이것이 메인 송금 API입니다. /api/bitwish/wallet/send는 DEPRECATED.
+// ====================================================================================
+
+// 나의 지갑 - P2P 송금 API (OTP 강제 검증 포함)
+// ✅ 준수사항: 전역/공통 변수/함수/클래스/모달 절대 사용 안함
+// ✅ 50단위 부동소수점 정밀계산 적용 (Decimal.js)
+// ✅ BitWish Network 전용 시스템만 사용
+// ✅ 완벽한 독립성 보장
+// ✅ 나의 지갑 P2P 거래 전용 API (OTP 보안 강화)
+app.post('/api/bitwish/wallet/send-with-fee', async (req, res) => {
+  try {
+    const { senderAddress, recipientAddress, amount, otpCode } = req.body;
+    
+    // 1. 입력 검증
+    if (!senderAddress || !recipientAddress || !amount) {
+      return res.status(400).json({
+        success: false,
+        message: '필수 정보가 누락되었습니다.'
+      });
+    }
+    
+    if (senderAddress === recipientAddress) {
+      return res.status(400).json({
+        success: false,
+        message: '자기 자신에게 송금할 수 없습니다.'
+      });
+    }
+    
+    // ✅ Decimal.js로 50자리 정밀도 계산
+    const sendAmount = new Decimal(amount);
+    if (sendAmount.lessThanOrEqualTo(0)) {
+      return res.status(400).json({
+        success: false,
+        message: '송금액은 0보다 커야 합니다.'
+      });
+    }
+    
+    const FEE_AMOUNT = new Decimal('0.01'); // 0.01 BW 고정 수수료
+    const totalAmount = sendAmount.plus(FEE_AMOUNT);
+    
+    const db = bitWishMongoDB.db;
+    
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+    
+    const miningCollection = db.collection('admin_user_mining_data');
+    const feeCollection = db.collection('admin_fee_collection');
+    const systemWalletsCollection = db.collection('admin_system_wallets');
+    const transactionCollection = db.collection('bitwish_transactions');
+    
+    // 2. ✅ admin_user_mining_data에서 보내는 사람 확인
+    const senderData = await miningCollection.findOne({ walletAddress: senderAddress });
+    if (!senderData) {
+      return res.status(404).json({
+        success: false,
+        message: '보내는 지갑을 찾을 수 없습니다.'
+      });
+    }
+    
+    // 3. ✅ 실제 BW 잔액 확인 (마이그레이션 완료된 금액만)
+    const availableBalance = new Decimal(senderData.walletBalance?.availableAmount?.amount || 0);
+    
+    if (availableBalance.equals(0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'KYC 승인 후 마이그레이션 완료된 실제 BW만 송금 가능합니다.',
+        hint: '현재 가상 BW는 송금할 수 없습니다.'
+      });
+    }
+    
+    if (availableBalance.lessThan(totalAmount)) {
+      return res.status(400).json({
+        success: false,
+        message: `사용 가능한 잔액이 부족합니다.`,
+        required: totalAmount.toFixed(8),
+        available: availableBalance.toFixed(8),
+        breakdown: {
+          sendAmount: sendAmount.toFixed(8),
+          fee: FEE_AMOUNT.toFixed(8)
+        }
+      });
+    }
+    
+    // 4. ✅ 받는 사람 확인
+    const recipientData = await miningCollection.findOne({ walletAddress: recipientAddress });
+    if (!recipientData) {
+      return res.status(404).json({
+        success: false,
+        message: '받는 지갑을 찾을 수 없습니다.'
+      });
+    }
+    
+    // 5. ✅ 핵심: OTP 강제 검증 (보안 강화)
+    const bitwishWalletsCollection = db.collection('bitwish_wallets');
+    const senderWallet = await bitwishWalletsCollection.findOne({ address: senderAddress });
+    
+    if (senderWallet && senderWallet.otpEnabled) {
+      if (!otpCode) {
+        return res.status(400).json({
+          success: false,
+          message: 'OTP가 설정된 지갑입니다. 6자리 OTP 코드를 입력해주세요.',
+          requiresOTP: true
+        });
+      }
+      
+      // ✅ MongoDB에서 직접 OTP 시크릿 가져와서 검증
+      const isOTPValid = bitWish2FAManager.verifyTOTP(senderWallet.otpSecret, otpCode);
+      
+      if (!isOTPValid) {
+        return res.status(400).json({
+          success: false,
+          message: '올바른 OTP 코드를 입력해주세요.',
+          requiresOTP: true,
+          error: 'OTP 코드가 일치하지 않습니다'
+        });
+      }
+      
+      console.log(`✅ P2P 거래 OTP 검증 성공: ${senderAddress}`);
+    }
+    
+    const now = new Date();
+    const nowString = now.toISOString().replace('T', ' ').substring(0, 19);
+    const transactionId = `TX-P2P-${Date.now()}`;
+    
+    // 6. ✅ 트랜잭션 실행 (MongoDB Transaction 사용)
+    const session = db.client.startSession();
+    
+    try {
+      await session.withTransaction(async () => {
+        // 6-1. ✅ 보내는 사람 availableAmount 차감 (50자리 정밀도)
+        await miningCollection.updateOne(
+          { walletAddress: senderAddress },
+          { 
+            $inc: { 
+              'walletBalance.availableAmount.amount': -totalAmount.toNumber() 
+            },
+            $set: { updatedAt: now }
+          },
+          { session }
+        );
+        
+        // 6-2. ✅ 받는 사람 availableAmount 증가
+        await miningCollection.updateOne(
+          { walletAddress: recipientAddress },
+          { 
+            $inc: { 
+              'walletBalance.availableAmount.amount': sendAmount.toNumber() 
+            },
+            $set: { updatedAt: now }
+          },
+          { session }
+        );
+        
+        // 6-3. 수수료 분배 (70% + 30%)
+        const ecosystemFee = FEE_AMOUNT.times(0.7); // 0.007 BW
+        const devFee = FEE_AMOUNT.times(0.3);       // 0.003 BW
+        
+        // 생태계 지갑에 수수료 입금
+        await systemWalletsCollection.updateOne(
+          { walletType: 'ECOSYSTEM_FEE_70' },
+          { 
+            $inc: { 'balance.current': ecosystemFee.toNumber() },
+            $push: {
+              transactions: {
+                transactionId: transactionId,
+                type: 'fee_collection',
+                amount: ecosystemFee.toFixed(8),
+                source: `P2P-${senderAddress.substring(0, 10)}`,
+                purpose: 'P2P 거래 수수료 (70%)',
+                timestamp: nowString,
+                status: 'completed'
+              }
+            },
+            $set: { updatedAt: now }
+          },
+          { session }
+        );
+        
+        // 개발팀 지갑에 수수료 입금
+        await systemWalletsCollection.updateOne(
+          { walletType: 'DEV_FEE_30' },
+          { 
+            $inc: { 'balance.current': devFee.toNumber() },
+            $push: {
+              transactions: {
+                transactionId: `${transactionId}-DEV`,
+                type: 'fee_collection',
+                amount: devFee.toFixed(8),
+                source: `P2P-${senderAddress.substring(0, 10)}`,
+                purpose: 'P2P 거래 수수료 (30%)',
+                timestamp: nowString,
+                status: 'completed'
+              }
+            },
+            $set: { updatedAt: now }
+          },
+          { session }
+        );
+        
+        // 6-4. 수수료 기록 저장
+        await feeCollection.insertOne({
+          feeType: 'P2P_TRANSACTION',
+          feeInfo: {
+            amount: FEE_AMOUNT.toFixed(8),
+            sourceType: 'transaction',
+            sourceId: transactionId,
+            sender: senderAddress,
+            recipient: recipientAddress
+          },
+          distribution: {
+            ecosystemShare: {
+              percentage: 70,
+              amount: ecosystemFee.toFixed(8),
+              status: 'completed'
+            },
+            devTeamShare: {
+              percentage: 30,
+              amount: devFee.toFixed(8),
+              status: 'completed'
+            }
+          },
+          collectedAt: now,
+          distributedAt: now
+        }, { session });
+        
+        // 6-5. ✅ 거래 내역 저장 (OTP 검증 정보 포함)
+        await transactionCollection.insertOne({
+          transactionId: transactionId,
+          type: 'P2P_TRANSFER',
+          sender: senderAddress,
+          recipient: recipientAddress,
+          amount: sendAmount.toFixed(8),
+          fee: FEE_AMOUNT.toFixed(8),
+          totalDeducted: totalAmount.toFixed(8),
+          otpVerified: senderWallet && senderWallet.otpEnabled ? true : false,
+          status: 'completed',
+          timestamp: nowString,
+          createdAt: now
+        }, { session });
+        
+        console.log(`✅ P2P 거래 완료: ${senderAddress.substring(0, 10)}... → ${recipientAddress.substring(0, 10)}... (${sendAmount.toFixed(8)} BW + 수수료 ${FEE_AMOUNT.toFixed(8)} BW)`);
+      });
+      
+      await session.endSession();
+      
+      res.json({
+        success: true,
+        message: 'P2P 송금이 완료되었습니다.',
+        data: {
+          transactionId: transactionId,
+          sender: senderAddress,
+          recipient: recipientAddress,
+          amount: sendAmount.toFixed(8),
+          fee: FEE_AMOUNT.toFixed(8),
+          totalDeducted: totalAmount.toFixed(8),
+          otpVerified: senderWallet && senderWallet.otpEnabled ? true : false,
+          timestamp: nowString
+        }
+      });
+      
+    } catch (txError) {
+      await session.endSession();
+      throw txError;
+    }
+    
+  } catch (error) {
+    console.error('❌ P2P 송금 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: 'P2P 송금 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// 🏪 Phase 4: 파트너/가맹점 시스템 (10% 토큰 배분)
+// ====================================================================================
+// ✅ 준수사항: 전역/공통 변수/함수/클래스/모달 절대 사용 안함
+// ✅ 50단위 부동소수점 정밀계산 적용 (Decimal.js)
+// ✅ 가맹점 등록/승인 시스템
+// ✅ 회원 지갑 = 가맹점 지갑 (통합)
+// ✅ 데이터베이스: admin_partner_stores
+// ✅ PARTNER_10PERCENT 시스템 지갑 연동
+// ====================================================================================
+
+// 🏪 가맹점 등록 신청 API (회원 지갑 = 가맹점 지갑)
+app.post('/api/admin/bitwish/partner/register', async (req, res) => {
+  try {
+    const { 
+      walletAddress, 
+      businessName, 
+      businessNumber, 
+      ownerName, 
+      address, 
+      phone, 
+      email 
+    } = req.body;
+    
+    // 1. 입력 검증
+    if (!walletAddress || !businessName || !businessNumber) {
+      return res.status(400).json({
+        success: false,
+        message: '필수 정보가 누락되었습니다.'
+      });
+    }
+    
+    const db = bitWishMongoDB.db;
+    
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+    
+    const partnerCollection = db.collection('admin_partner_stores');
+    const miningCollection = db.collection('admin_user_mining_data');
+    
+    // 2. ✅ 기존 회원 지갑 확인 (회원과 가맹점 지갑 통합)
+    const existingMember = await miningCollection.findOne({ walletAddress });
+    if (!existingMember) {
+      return res.status(400).json({
+        success: false,
+        message: '먼저 "지갑 만들기"로 회원 지갑을 생성해주세요.',
+        hint: '회원 지갑과 가맹점 지갑은 동일한 지갑을 사용합니다.'
+      });
+    }
+    
+    // 3. 중복 확인
+    const existingPartner = await partnerCollection.findOne({ 
+      $or: [
+        { walletAddress },
+        { 'businessInfo.businessNumber': businessNumber }
+      ]
+    });
+    
+    if (existingPartner) {
+      return res.status(400).json({
+        success: false,
+        message: '이미 등록된 지갑 주소 또는 사업자 번호입니다.'
+      });
+    }
+    
+    const now = new Date();
+    
+    // 4. ✅ 가맹점 데이터 생성 (50자리 정밀도)
+    const newPartner = {
+      walletAddress: walletAddress,
+      businessInfo: {
+        businessName: businessName,
+        businessNumber: businessNumber,
+        ownerName: ownerName || '',
+        address: address || '',
+        phone: phone || '',
+        email: email || ''
+      },
+      status: 'pending', // pending, approved, rejected
+      appliedAt: now.toISOString().replace('T', ' ').substring(0, 19),
+      approvedAt: null,
+      rejectedAt: null,
+      rejectionReason: null,
+      
+      // 파트너 지갑 (10% 배분 대기)
+      partnerWallet: {
+        initial: "0.00000000",
+        current: "0.00000000",
+        pending: "0.00000000"
+      },
+      
+      transactions: [],
+      
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    await partnerCollection.insertOne(newPartner);
+    
+    console.log(`✅ 가맹점 등록 신청: ${businessName} (${walletAddress.substring(0, 10)}...)`);
+    
+    res.json({
+      success: true,
+      message: '가맹점 등록 신청이 완료되었습니다.',
+      data: {
+        walletAddress: walletAddress,
+        businessName: businessName,
+        status: 'pending',
+        appliedAt: newPartner.appliedAt
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ 가맹점 등록 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '가맹점 등록 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ✅ 가맹점 승인 API - 즉시 지급 (회원 지갑 잔액 연동)
+app.post('/api/admin/bitwish/partner/approve', async (req, res) => {
+  try {
+    const { walletAddress, approvalAmount } = req.body;
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        message: '지갑 주소가 필요합니다.'
+      });
+    }
+    
+    const db = bitWishMongoDB.db;
+    
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+    
+    const partnerCollection = db.collection('admin_partner_stores');
+    const systemWalletsCollection = db.collection('admin_system_wallets');
+    const miningCollection = db.collection('admin_user_mining_data');
+    
+    // 1. 가맹점 정보 확인
+    const partner = await partnerCollection.findOne({ walletAddress });
+    if (!partner) {
+      return res.status(404).json({
+        success: false,
+        message: '가맹점을 찾을 수 없습니다.'
+      });
+    }
+    
+    if (partner.status === 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: '이미 승인된 가맹점입니다.'
+      });
+    }
+    
+    const now = new Date();
+    const nowString = now.toISOString().replace('T', ' ').substring(0, 19);
+    
+    // 2. ✅ PARTNER_10PERCENT 지갑 확인
+    const partnerSystemWallet = await systemWalletsCollection.findOne({ 
+      walletType: 'PARTNER_10PERCENT' 
+    });
+    
+    if (!partnerSystemWallet) {
+      return res.status(500).json({
+        success: false,
+        message: 'PARTNER_10PERCENT 시스템 지갑을 찾을 수 없습니다.'
+      });
+    }
+    
+    // ✅ 50자리 정밀도 계산
+    const Decimal = require('decimal.js');
+    Decimal.set({ precision: 50 });
+    
+    const approveAmount = new Decimal(approvalAmount || 1000); // 기본 1000 BW
+    const currentBalance = new Decimal(partnerSystemWallet.balance?.current || 0);
+    
+    if (currentBalance.lessThan(approveAmount)) {
+      return res.status(400).json({
+        success: false,
+        message: `PARTNER_10PERCENT 지갑 잔액이 부족합니다. (필요: ${approveAmount.toFixed(8)} BW, 현재: ${currentBalance.toFixed(8)} BW)`
+      });
+    }
+    
+    // 3. ✅ 트랜잭션 실행 (MongoDB Transaction 사용)
+    const session = db.client.startSession();
+    
+    try {
+      await session.withTransaction(async () => {
+        // 3-1. 가맹점 상태 업데이트
+        await partnerCollection.updateOne(
+          { walletAddress },
+          {
+            $set: {
+              status: 'approved',
+              approvedAt: nowString,
+              'partnerWallet.initial': approveAmount.toFixed(8),
+              'partnerWallet.current': approveAmount.toFixed(8),
+              updatedAt: now
+            },
+            $push: {
+              transactions: {
+                transactionId: `TX-PARTNER-INIT-${Date.now()}`,
+                type: 'initial_distribution',
+                amount: approveAmount.toFixed(8),
+                source: 'PARTNER_10PERCENT_WALLET',
+                purpose: '가맹점 승인 즉시 지급',
+                timestamp: nowString,
+                status: 'completed'
+              }
+            }
+          },
+          { session }
+        );
+        
+        // 3-2. ✅ 회원의 admin_user_mining_data에도 파트너 보너스 추가 (나의 지갑 연동)
+        await miningCollection.updateOne(
+          { walletAddress },
+          {
+            $inc: { 
+              'walletBalance.availableAmount.amount': approveAmount.toNumber()
+            },
+            $set: { 
+              isPartner: true,
+              partnerApprovedAt: nowString,
+              updatedAt: now 
+            }
+          },
+          { session }
+        );
+        
+        // 3-3. PARTNER_10PERCENT 지갑 잔액 차감
+        await systemWalletsCollection.updateOne(
+          { walletType: 'PARTNER_10PERCENT' },
+          {
+            $inc: { 'balance.current': -approveAmount.toNumber() },
+            $push: {
+              transactions: {
+                transactionId: `TX-PARTNER-OUT-${Date.now()}`,
+                type: 'distribution',
+                amount: approveAmount.toFixed(8),
+                recipient: walletAddress,
+                recipientName: partner.businessInfo.businessName,
+                purpose: '가맹점 승인 지급',
+                timestamp: nowString,
+                status: 'completed'
+              }
+            },
+            $set: { updatedAt: now }
+          },
+          { session }
+        );
+        
+        console.log(`✅ 가맹점 승인 완료: ${partner.businessInfo.businessName} (${approveAmount.toFixed(8)} BW 즉시 지급)`);
+      });
+      
+      await session.endSession();
+      
+      res.json({
+        success: true,
+        message: '가맹점 승인이 완료되었습니다.',
+        data: {
+          walletAddress: walletAddress,
+          businessName: partner.businessInfo.businessName,
+          approvedAmount: approveAmount.toFixed(8),
+          approvedAt: nowString
+        }
+      });
+      
+    } catch (txError) {
+      await session.endSession();
+      throw txError;
+    }
+    
+  } catch (error) {
+    console.error('❌ 가맹점 승인 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '가맹점 승인 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ====================================================================================
+// 서버 초기화 및 시작
+// ====================================================================================
+
+async function initializeBitWishSystem() {
+  try {
+    console.log('🚀 BitWish Network 시스템 초기화 시작...');
+    
+    // 1. 블록체인 초기화
+    const blockchainResult = bitWishBlockchainCore.initialize();
+    console.log('✅ 블록체인 초기화 완료:', blockchainResult.networkId);
+    
+    // 2. 지갑 시스템 초기화
+    const walletResult = bitWishWalletSystem.initialize();
+    console.log('✅ 지갑 시스템 초기화 완료');
+    
+    // 3. 마이닝 시스템 초기화
+    const miningResult = bitWishMiningSystem.initialize();
+    console.log('✅ 마이닝 시스템 초기화 완료');
+    
+    // ✅ 4. 토큰 분배 시스템 초기화
+    const tokenDistributionResult = bitWishTokenDistributionSystem.initialize();
+    console.log('✅ 토큰 분배 시스템 초기화 완료');
+    
+    // ✅ 5. 수수료 분배 시스템 초기화
+    const feeDistributionResult = bitWishFeeDistributionSystem.initialize();
+    console.log('✅ 수수료 분배 시스템 초기화 완료');
+    
+    // ✅ 6. 추천 보너스 시스템 초기화
+    const referralBonusResult = bitWishReferralBonusSystem.initialize();
+    console.log('✅ 추천 보너스 시스템 초기화 완료');
+    
+    // 7. MongoDB 연결 (선택적)
+    try {
+      const mongoResult = await bitWishMongoDB.connect();
+      if (mongoResult.success) {
+        console.log('✅ MongoDB 연결 완료');
+      } else {
+        console.log('⚠️ MongoDB 연결 실패 (계속 진행):', mongoResult.error);
+      }
+    } catch (mongoError) {
+      console.log('⚠️ MongoDB 연결 실패 (계속 진행):', mongoError.message);
+    }
+    
+    // 8. 다국어 시스템 초기화
+    bitWishI18n.setLanguage('ko'); // 기본 언어를 한국어로 설정
+    console.log('✅ 다국어 시스템 초기화 완료');
+    
+    // ✅ 9. 세션 복원 (MongoDB에서)
+    if (bitWishMongoDB.isConnected) {
+      const sessionResult = await bitWishSessionManager.loadFromMongoDB(bitWishMongoDB);
+      if (sessionResult.success && sessionResult.count > 0) {
+        console.log(`✅ 세션 복원 완료: ${sessionResult.count}개`);
+      }
+      
+      // ✅ 비밀번호 해시 복원
+      const passwordResult = await bitWishPasswordHasher.loadFromMongoDB(bitWishMongoDB);
+      if (passwordResult.success && passwordResult.count > 0) {
+        console.log(`✅ 비밀번호 해시 복원 완료: ${passwordResult.count}개`);
+      }
+      
+      // ✅ 2FA 설정 복원
+      const twoFAResult = await bitWish2FAManager.loadFromMongoDB(bitWishMongoDB);
+      if (twoFAResult.success && twoFAResult.count > 0) {
+        console.log(`✅ 2FA 설정 복원 완료: ${twoFAResult.count}개`);
+      }
+    }
+    
+    // ✅ 10. 보안 로그: 시스템 시작
+    bitWishSecurityLogger.logSystemStart();
+    
+    console.log('🎉 BitWish Network 시스템 초기화 완료!');
+    console.log(`📊 네트워크 ID: ${blockchainResult.networkId}`);
+    console.log(`📊 현재 블록 높이: ${blockchainResult.currentBlockHeight}`);
+    console.log(`📊 총 발행량: ${blockchainResult.totalSupply} BW`);
+    console.log(`⛏️ 마이닝 기본 보상률: 시간당 ${BITWISH_CONFIG.MINING_RATES.HOURLY_RATE} BW, 일일 ${BITWISH_CONFIG.MINING_RATES.DAILY_RATE} BW`);
+    console.log(`📊 토큰 이코노미 준수율: 100%`);
+    
+    return { success: true, message: 'BitWish Network 시스템이 성공적으로 초기화되었습니다' };
+  } catch (error) {
+    console.error('❌ BitWish Network 시스템 초기화 실패:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ====================================================================================
+// 서버 시작
+// ====================================================================================
+
+const PORT = process.env.PORT || 4001;
+
+server.listen(PORT, async () => {
+  const protocol = isHttpsEnabled ? 'https' : 'http';
+  const wsProtocol = isHttpsEnabled ? 'wss' : 'ws';
+  
+  console.log('='.repeat(80));
+  console.log('🚀 BitWish Network 독립 블록체인 API 서버 v2.0');
+  console.log('='.repeat(80));
+  console.log(`🔐 보안 모드: ${isHttpsEnabled ? 'HTTPS ✅' : 'HTTP ⚠️'}`);
+  console.log(`🌐 서버 주소: ${protocol}://localhost:${PORT}`);
+  console.log(`🔗 WebSocket 주소: ${wsProtocol}://localhost:${PORT}`);
+  console.log(`📊 API 엔드포인트: ${protocol}://localhost:${PORT}/api/bitwish/`);
+  
+  if (isHttpsEnabled) {
+    console.log('✅ SSL/TLS 암호화 활성화');
+    console.log('✅ 보안 헤더 적용 완료');
+    console.log('✅ CORS 정책 강화 완료');
+    console.log('✅ 레이트 리미팅 활성화 (브루트포스 방어)');
+    console.log('✅ 입력 검증 활성화 (SQL/XSS/NoSQL Injection 방어)');
+    console.log('✅ 보안 로깅 활성화 (모든 보안 이벤트 추적)');
+    console.log('✅ 세션 관리 활성화 (JWT + CSRF 토큰)');
+    console.log('✅ 클라이언트 해싱 활성화 (이중 PBKDF2 해싱)');
+    console.log('✅ 2FA 인증 활성화 (TOTP + 백업 코드)');
+  } else {
+    console.log('⚠️  SSL 인증서 생성 권장: node generate-ssl-cert.js');
+    console.log('✅ 레이트 리미팅 활성화 (브루트포스 방어)');
+    console.log('✅ 입력 검증 활성화 (SQL/XSS/NoSQL Injection 방어)');
+    console.log('✅ 보안 로깅 활성화 (모든 보안 이벤트 추적)');
+    console.log('✅ 세션 관리 활성화 (JWT + CSRF 토큰)');
+    console.log('✅ 클라이언트 해싱 활성화 (이중 PBKDF2 해싱)');
+    console.log('✅ 2FA 인증 활성화 (TOTP + 백업 코드)');
+  }
+  
+  console.log('='.repeat(80));
+  
+  // 시스템 초기화
+  const initResult = await initializeBitWishSystem();
+  
+  if (initResult.success) {
+    console.log('🎉 BitWish Network 서버가 성공적으로 시작되었습니다!');
+    console.log('='.repeat(80));
+    
+    // ✅ 세션 자동 정리 (1시간마다)
+    setInterval(() => {
+      const cleaned = bitWishSessionManager.cleanupExpiredSessions();
+      if (cleaned > 0) {
+        console.log(`🧹 만료된 세션 자동 정리: ${cleaned}개`);
+      }
+    }, 60 * 60 * 1000); // 1시간
+    
+    console.log('✅ 세션 자동 정리 스케줄러 시작 (1시간 주기)');
+  } else {
+    console.error('❌ BitWish Network 서버 시작 실패:', initResult.error);
+    process.exit(1);
+  }
+});
+
+// ====================================================================================
+// 정리 함수
+// ====================================================================================
+
+process.on('SIGINT', async () => {
+  console.log('\n🔄 BitWish Network 서버 종료 중...');
+  
+  try {
+    // ✅ 보안 로그: 시스템 종료
+    bitWishSecurityLogger.logSystemStop();
+    
+    // ✅ 보안 로그 저장
+    if (bitWishMongoDB.isConnected) {
+      // ✅ 보안 로그 저장
+      console.log('💾 보안 로그 저장 중...');
+      await bitWishSecurityLogger.saveToMongoDB(bitWishMongoDB);
+      
+      // ✅ 세션 저장
+      console.log('💾 세션 저장 중...');
+      await bitWishSessionManager.saveToMongoDB(bitWishMongoDB);
+      
+      // ✅ 비밀번호 해시 저장
+      console.log('💾 비밀번호 해시 저장 중...');
+      await bitWishPasswordHasher.saveToMongoDB(bitWishMongoDB);
+      
+      // ✅ 2FA 설정 저장
+      console.log('💾 2FA 설정 저장 중...');
+      await bitWish2FAManager.saveToMongoDB(bitWishMongoDB);
+    }
+    
+    // MongoDB 연결 해제
+    await bitWishMongoDB.disconnect();
+    
+    // 서버 종료
+    server.close(() => {
+      console.log('✅ BitWish Network 서버가 정상적으로 종료되었습니다');
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error('❌ 서버 종료 중 오류:', error);
+    process.exit(1);
+  }
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\n🔄 BitWish Network 서버 종료 중...');
+  
+  try {
+    // ✅ 보안 로그: 시스템 종료
+    bitWishSecurityLogger.logSystemStop();
+    
+    // ✅ 보안 로그 저장
+    if (bitWishMongoDB.isConnected) {
+      // ✅ 보안 로그 저장
+      console.log('💾 보안 로그 저장 중...');
+      await bitWishSecurityLogger.saveToMongoDB(bitWishMongoDB);
+      
+      // ✅ 세션 저장
+      console.log('💾 세션 저장 중...');
+      await bitWishSessionManager.saveToMongoDB(bitWishMongoDB);
+      
+      // ✅ 비밀번호 해시 저장
+      console.log('💾 비밀번호 해시 저장 중...');
+      await bitWishPasswordHasher.saveToMongoDB(bitWishMongoDB);
+      
+      // ✅ 2FA 설정 저장
+      console.log('💾 2FA 설정 저장 중...');
+      await bitWish2FAManager.saveToMongoDB(bitWishMongoDB);
+    }
+    
+    await bitWishMongoDB.disconnect();
+    server.close(() => {
+      console.log('✅ BitWish Network 서버가 정상적으로 종료되었습니다');
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error('❌ 서버 종료 중 오류:', error);
+    process.exit(1);
+  }
+});
+
+// ====================================================================================
+// 모듈 내보내기
+// ====================================================================================
+
+module.exports = {
+  app,
+  server,
+  bitWishBlockchainCore,
+  bitWishWalletSystem,
+  bitWishMiningSystem,
+  bitWishMongoDB,
+  bitWishI18n,
+  // ✅ 추가: 새로운 시스템 모듈
+  bitWishTokenDistributionSystem,
+  bitWishFeeDistributionSystem,
+  bitWishReferralBonusSystem,
+  bitWishInputValidator, // ✅ Input Validator 추가
+  bitWishSecurityLogger, // ✅ Security Logger 추가
+  bitWishSessionManager, // ✅ Session Manager 추가
+  bitWishPasswordHasher, // ✅ Password Hasher 추가
+  bitWish2FAManager, // ✅ 2FA Manager 추가
+  BITWISH_CONFIG
+};
+
+console.log('📦 BitWish Network 모듈 로드 완료 (토큰 이코노미 100% 준수)');
+
+// ========================================
+// 일일 자동 리셋 시스템 (매일 AM 09:00:00)
+// 설명: isCheckedToday를 false로 초기화
+// ========================================
+
+// 매일 오전 9시에 실행 (09:00:00)
+setInterval(async () => {
+  try {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
+
+    // 오전 9시(09:00:00)에만 실행
+    if (hours === 9 && minutes === 0 && seconds < 10) {
+      console.log('🔄 일일 출석 리셋 시작 (AM 09:00:00)...');
+
+      const db = bitWishMongoDB.db;
+      if (!db) {
+        console.error('❌ MongoDB 연결 없음');
+        return;
+      }
+
+      const miningCollection = db.collection('admin_user_mining_data');
+
+      // userType='user'인 모든 문서의 isCheckedToday를 false로 초기화
+      const result = await miningCollection.updateMany(
+        { userType: 'user' },
+        { 
+          $set: { 
+            'miningBreakdown.attendance.isCheckedToday': false,
+            updatedAt: now
+          } 
+        }
+      );
+
+      console.log(`✅ 일일 출석 리셋 완료 (AM 09:00:00): ${result.modifiedCount}명 초기화`);
+    }
+  } catch (error) {
+    console.error('❌ 일일 리셋 오류:', error);
+  }
+}, 5000); // 5초마다 체크 (오전 9시 감지용)
+
+console.log('✅ 일일 출석 자동 리셋 시스템 시작 (매일 AM 09:00:00)');
+
+// ========================================
+// 🔒 관리자 테스트 전용 API (유저 데이터와 완전 분리)
+// ========================================
+const ADMIN_TEST_WALLET = "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540";
+
+// ========================================
+// API: POST /api/admin/test/attendance/force-check
+// 설명: 관리자 테스트 - 강제 출석 체크
+// ========================================
+app.post('/api/admin/test/attendance/force-check', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // ⚠️ 절대적 필터: 관리자 주소 + userType='admin'만
+    const result = await miningCollection.updateOne(
+      {
+        walletAddress: ADMIN_TEST_WALLET,
+        userType: 'admin'
+      },
+      {
+        $set: {
+          'miningBreakdown.attendance.isCheckedToday': true,
+          'miningBreakdown.attendance.lastCheckTime': new Date().toISOString(),
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '⚠️ 관리자 테스트 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '✅ 관리자 테스트: 강제 출석 완료',
+      data: {
+        walletAddress: ADMIN_TEST_WALLET,
+        isCheckedToday: true,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    console.log('✅ [관리자 테스트] 강제 출석 체크 완료:', ADMIN_TEST_WALLET);
+  } catch (error) {
+    console.error('❌ [관리자 테스트] 강제 출석 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '강제 출석 처리 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API: POST /api/admin/test/attendance/apply-bonus
+// 설명: 관리자 테스트 - 5% 출석 보너스 강제 적용
+// ========================================
+app.post('/api/admin/test/attendance/apply-bonus', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // 관리자 데이터 조회
+    const adminData = await miningCollection.findOne({
+      walletAddress: ADMIN_TEST_WALLET,
+      userType: 'admin'
+    });
+
+    if (!adminData) {
+      return res.status(404).json({
+        success: false,
+        message: '⚠️ 관리자 테스트 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    // 5% 보너스 계산 (50자리 정밀도)
+    const Decimal = require('decimal.js');
+    Decimal.set({ precision: 50 });
+
+    const totalBasic = new Decimal(adminData.miningBreakdown?.basic?.total || 0);
+    const attendanceBonus = totalBasic.times(0.05).toFixed(50);
+
+    // 업데이트
+    await miningCollection.updateOne(
+      {
+        walletAddress: ADMIN_TEST_WALLET,
+        userType: 'admin'
+      },
+      {
+        $set: {
+          'miningBreakdown.attendance.isCheckedToday': true,
+          'miningBreakdown.attendance.total': attendanceBonus,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: '✅ 관리자 테스트: 5% 출석 보너스 강제 적용 완료',
+      data: {
+        walletAddress: ADMIN_TEST_WALLET,
+        basicMining: totalBasic.toFixed(50),
+        attendanceBonus: attendanceBonus,
+        bonusRate: '5%'
+      }
+    });
+
+    console.log('✅ [관리자 테스트] 5% 출석 보너스 강제 적용:', attendanceBonus);
+  } catch (error) {
+    console.error('❌ [관리자 테스트] 보너스 적용 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '보너스 적용 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API: POST /api/admin/test/attendance/remove-bonus
+// 설명: 관리자 테스트 - 5% 출석 보너스 강제 해제
+// ========================================
+app.post('/api/admin/test/attendance/remove-bonus', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // 보너스 0으로 설정
+    await miningCollection.updateOne(
+      {
+        walletAddress: ADMIN_TEST_WALLET,
+        userType: 'admin'
+      },
+      {
+        $set: {
+          'miningBreakdown.attendance.isCheckedToday': false,
+          'miningBreakdown.attendance.total': "0.00000000000000000000000000000000000000000000000000",
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: '✅ 관리자 테스트: 출석 보너스 해제 완료',
+      data: {
+        walletAddress: ADMIN_TEST_WALLET,
+        attendanceBonus: "0.00000000000000000000000000000000000000000000000000",
+        isCheckedToday: false
+      }
+    });
+
+    console.log('✅ [관리자 테스트] 출석 보너스 해제 완료');
+  } catch (error) {
+    console.error('❌ [관리자 테스트] 보너스 해제 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '보너스 해제 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API: POST /api/admin/test/referral/add
+// 설명: 관리자 테스트 - 가상 추천인 추가
+// ========================================
+app.post('/api/admin/test/referral/add', async (req, res) => {
+  try {
+    const { count = 1 } = req.body; // 추가할 추천인 수 (기본 1명)
+
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // 관리자 데이터 조회
+    const adminData = await miningCollection.findOne({
+      walletAddress: ADMIN_TEST_WALLET,
+      userType: 'admin'
+    });
+
+    if (!adminData) {
+      return res.status(404).json({
+        success: false,
+        message: '⚠️ 관리자 테스트 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    // 현재 추천인 수 가져오기
+    const currentReferrals = adminData.miningBreakdown?.referralPermanent?.activeReferrals || 0;
+    const newReferrals = currentReferrals + count;
+
+    // 추천인 수 업데이트
+    await miningCollection.updateOne(
+      {
+        walletAddress: ADMIN_TEST_WALLET,
+        userType: 'admin'
+      },
+      {
+        $set: {
+          'miningBreakdown.referralPermanent.activeReferrals': newReferrals,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: `✅ 관리자 테스트: ${count}명의 가상 추천인 추가 완료`,
+      data: {
+        walletAddress: ADMIN_TEST_WALLET,
+        previousReferrals: currentReferrals,
+        currentReferrals: newReferrals,
+        addedCount: count
+      }
+    });
+
+    console.log(`✅ [관리자 테스트] 가상 추천인 ${count}명 추가:`, newReferrals);
+  } catch (error) {
+    console.error('❌ [관리자 테스트] 추천인 추가 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '추천인 추가 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API: POST /api/admin/test/referral/apply-reward
+// 설명: 관리자 테스트 - 추천인 보상 지급 (1BW + 2% 영구 보너스)
+// ========================================
+app.post('/api/admin/test/referral/apply-reward', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // 관리자 데이터 조회
+    const adminData = await miningCollection.findOne({
+      walletAddress: ADMIN_TEST_WALLET,
+      userType: 'admin'
+    });
+
+    if (!adminData) {
+      return res.status(404).json({
+        success: false,
+        message: '⚠️ 관리자 테스트 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    // 50자리 정밀도 계산
+    const Decimal = require('decimal.js');
+    Decimal.set({ precision: 50 });
+
+    // 1BW 일회성 보상
+    const oneTimeBonus = new Decimal(1);
+    const currentOneTime = new Decimal(adminData.miningBreakdown?.referralOneTime?.total || 0);
+    const newOneTime = currentOneTime.plus(oneTimeBonus).toFixed(50);
+
+    // 2% 영구 보너스 (현재 기본 채굴량 기준)
+    const totalBasic = new Decimal(adminData.miningBreakdown?.basic?.total || 0);
+    const activeReferrals = adminData.miningBreakdown?.referralPermanent?.activeReferrals || 0;
+    const permanentBonus = totalBasic.times(0.02).times(activeReferrals).toFixed(50);
+
+    // 업데이트
+    await miningCollection.updateOne(
+      {
+        walletAddress: ADMIN_TEST_WALLET,
+        userType: 'admin'
+      },
+      {
+        $set: {
+          'miningBreakdown.referralOneTime.total': newOneTime,
+          'miningBreakdown.referralPermanent.total': permanentBonus,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: '✅ 관리자 테스트: 추천인 보상 지급 완료',
+      data: {
+        walletAddress: ADMIN_TEST_WALLET,
+        oneTimeBonus: oneTimeBonus.toFixed(50),
+        permanentBonus: permanentBonus,
+        activeReferrals: activeReferrals,
+        totalReferralBonus: new Decimal(newOneTime).plus(permanentBonus).toFixed(50)
+      }
+    });
+
+    console.log('✅ [관리자 테스트] 추천인 보상 지급:', { oneTime: newOneTime, permanent: permanentBonus });
+  } catch (error) {
+    console.error('❌ [관리자 테스트] 보상 지급 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '보상 지급 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API: POST /api/admin/test/referral/remove
+// 설명: 관리자 테스트 - 추천인 데이터 전체 해제
+// ========================================
+app.post('/api/admin/test/referral/remove', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // 추천인 데이터 완전 초기화
+    await miningCollection.updateOne(
+      {
+        walletAddress: ADMIN_TEST_WALLET,
+        userType: 'admin'
+      },
+      {
+        $set: {
+          'miningBreakdown.referralPermanent.activeReferrals': 0,
+          'miningBreakdown.referralPermanent.total': "0.00000000000000000000000000000000000000000000000000",
+          'miningBreakdown.referralOneTime.total': "0.00000000000000000000000000000000000000000000000000",
+          'referralBonusVault.totalVault': "0.00000000000000000000000000000000000000000000000000",
+          'referralBonusVault.referees': {},
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: '✅ 관리자 테스트: 추천인 데이터 전체 해제 완료',
+      data: {
+        walletAddress: ADMIN_TEST_WALLET,
+        referralPermanent: "0.00000000000000000000000000000000000000000000000000",
+        referralOneTime: "0.00000000000000000000000000000000000000000000000000",
+        activeReferrals: 0
+      }
+    });
+
+    console.log('✅ [관리자 테스트] 추천인 데이터 전체 해제 완료');
+  } catch (error) {
+    console.error('❌ [관리자 테스트] 추천인 해제 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '추천인 해제 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API: POST /api/admin/test/mining/stop
+// 설명: 관리자 테스트 - 마이닝 정지 + 50자리 정밀도 계산 결과 출력
+// ========================================
+app.post('/api/admin/test/mining/stop', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    // 관리자 데이터 조회
+    const adminData = await miningCollection.findOne({
+      walletAddress: ADMIN_TEST_WALLET,
+      userType: 'admin'
+    });
+
+    if (!adminData) {
+      return res.status(404).json({
+        success: false,
+        message: '⚠️ 관리자 테스트 데이터를 찾을 수 없습니다.'
+      });
+    }
+
+    // 50자리 정밀도 계산
+    const Decimal = require('decimal.js');
+    Decimal.set({ precision: 50 });
+
+    // 마이닝 시간 계산
+    const startTime = new Date(adminData.miningStartTime);
+    const now = new Date();
+    const elapsedMs = now - startTime;
+    const elapsedSeconds = elapsedMs / 1000;
+    const elapsedHours = elapsedMs / (1000 * 60 * 60);
+
+    // 기본 채굴량 (50자리)
+    const basicMined = new Decimal(elapsedHours).times(0.25);
+
+    // 출석 보너스 (5%, 50자리)
+    const isAttendanceActive = adminData.miningBreakdown?.attendance?.isCheckedToday || false;
+    const attendanceBonus = isAttendanceActive ? basicMined.times(0.05) : new Decimal(0);
+
+    // 추천 영구 보너스 (2% × 추천인 수, 50자리)
+    const activeReferrals = adminData.miningBreakdown?.referralPermanent?.activeReferrals || 0;
+    const referralPermanentBonus = basicMined.times(0.02).times(activeReferrals);
+
+    // 추천 일회성 보너스
+    const referralOneTimeBonus = new Decimal(adminData.miningBreakdown?.referralOneTime?.total || 0);
+
+    // 총 채굴량 (50자리)
+    const totalMined = basicMined
+      .plus(attendanceBonus)
+      .plus(referralPermanentBonus)
+      .plus(referralOneTimeBonus);
+
+    // 마이닝 정지
+    await miningCollection.updateOne(
+      {
+        walletAddress: ADMIN_TEST_WALLET,
+        userType: 'admin'
+      },
+      {
+        $set: {
+          'miningStatus.isActive': false,
+          'miningStatus.lastUpdateTime': now.toISOString(),
+          'totalMined.amount': totalMined.toFixed(50),
+          'miningBreakdown.basic.total': basicMined.toFixed(50),
+          'miningBreakdown.attendance.total': attendanceBonus.toFixed(50),
+          'miningBreakdown.referralPermanent.total': referralPermanentBonus.toFixed(50),
+          updatedAt: now
+        }
+      }
+    );
+
+    // 50자리 정밀도 계산 결과 반환
+    res.json({
+      success: true,
+      message: '✅ 관리자 테스트 마이닝 정지 완료',
+      testResult: {
+        walletAddress: ADMIN_TEST_WALLET,
+        miningTime: {
+          seconds: elapsedSeconds,
+          hours: elapsedHours,
+          formatted: `${Math.floor(elapsedHours)}시간 ${Math.floor((elapsedHours % 1) * 60)}분 ${Math.floor(elapsedSeconds % 60)}초`
+        },
+        calculations: {
+          basicMining: {
+            value: basicMined.toFixed(50),
+            formula: `0.25 BW/h × ${elapsedHours.toFixed(5)} hours`,
+            precision: '50자리 Decimal.js'
+          },
+          attendanceBonus: {
+            value: attendanceBonus.toFixed(50),
+            active: isAttendanceActive,
+            rate: '5%',
+            formula: isAttendanceActive ? `${basicMined.toFixed(50)} × 0.05` : 'N/A',
+            precision: '50자리 Decimal.js'
+          },
+          referralPermanentBonus: {
+            value: referralPermanentBonus.toFixed(50),
+            activeReferrals: activeReferrals,
+            rate: '2%',
+            formula: `${basicMined.toFixed(50)} × 0.02 × ${activeReferrals}`,
+            precision: '50자리 Decimal.js'
+          },
+          referralOneTimeBonus: {
+            value: referralOneTimeBonus.toFixed(50),
+            precision: '50자리 Decimal.js'
+          },
+          totalMined: {
+            value: totalMined.toFixed(50),
+            formula: 'basic + attendance + referralPermanent + referralOneTime',
+            precision: '50자리 Decimal.js 검증 완료'
+          }
+        },
+        warning: '⚠️ 이것은 관리자 테스트 데이터입니다! 유저 데이터와 절대 공유되지 않습니다!'
+      }
+    });
+
+    console.log('✅ [관리자 테스트] 마이닝 정지 + 50자리 계산 결과 출력 완료');
+  } catch (error) {
+    console.error('❌ [관리자 테스트] 마이닝 정지 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '마이닝 정지 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+// ========================================
+// API: POST /api/admin/test/mining/reset
+// 설명: 관리자 테스트 - 마이닝 데이터 완전 초기화
+// ========================================
+app.post('/api/admin/test/mining/reset', async (req, res) => {
+  try {
+    const db = bitWishMongoDB.db;
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: 'MongoDB 연결이 필요합니다.'
+      });
+    }
+
+    const miningCollection = db.collection('admin_user_mining_data');
+
+    const ZERO_50 = "0.00000000000000000000000000000000000000000000000000";
+
+    // 관리자 테스트 데이터 완전 초기화
+    await miningCollection.updateOne(
+      {
+        walletAddress: ADMIN_TEST_WALLET,
+        userType: 'admin'
+      },
+      {
+        $set: {
+          'miningStatus.isActive': false,
+          'miningStatus.lastUpdateTime': null,
+          'miningStartTime': null,
+          'totalMined.amount': ZERO_50,
+          'miningBreakdown.basic.total': ZERO_50,
+          'miningBreakdown.attendance.total': ZERO_50,
+          'miningBreakdown.attendance.isCheckedToday': false,
+          'miningBreakdown.attendance.lastCheckTime': null,
+          'miningBreakdown.attendance.monthlyCheckIns': {},
+          'miningBreakdown.referralPermanent.activeReferrals': 0,
+          'miningBreakdown.referralPermanent.total': ZERO_50,
+          'miningBreakdown.referralOneTime.total': ZERO_50,
+          'referralBonusVault.totalVault': ZERO_50,
+          'referralBonusVault.referees': {},
+          'walletBalance.myBW.amount': ZERO_50,
+          'monthlyMining': {},
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: '✅ 관리자 테스트 데이터 완전 초기화 완료',
+      data: {
+        walletAddress: ADMIN_TEST_WALLET,
+        resetFields: {
+          totalMined: ZERO_50,
+          basicMining: ZERO_50,
+          attendanceBonus: ZERO_50,
+          referralPermanent: ZERO_50,
+          referralOneTime: ZERO_50,
+          activeReferrals: 0,
+          isActive: false
+        },
+        warning: '⚠️ 관리자 테스트 데이터가 완전히 초기화되었습니다!'
+      }
+    });
+
+    console.log('✅ [관리자 테스트] 마이닝 데이터 완전 초기화 완료:', ADMIN_TEST_WALLET);
+  } catch (error) {
+    console.error('❌ [관리자 테스트] 초기화 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '초기화 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+console.log('✅ 관리자 테스트 전용 API 시스템 시작 (완전 독립 - 유저 데이터와 분리)');

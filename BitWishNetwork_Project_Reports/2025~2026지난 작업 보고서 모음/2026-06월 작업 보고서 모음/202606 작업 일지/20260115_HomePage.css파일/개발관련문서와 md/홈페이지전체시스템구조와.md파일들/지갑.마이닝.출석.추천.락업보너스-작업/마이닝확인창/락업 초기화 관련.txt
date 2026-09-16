@@ -1,0 +1,308 @@
+## **🔒 락업 초기화 버튼 시스템 완벽 구현 코드**
+
+### **📋 1. 상태 변수 추가 (App.tsx 상단에 추가)**
+
+```typescript
+// ==================== 관리자와 유저 분리 시작 ====================
+// 관리자용: 락업 초기화 모달 상태 관리
+const [showLockupResetModal, setShowLockupResetModal] = useState(false);
+const [showBasicLockupResetModal, setShowBasicLockupResetModal] = useState(false);
+const [showSecondLockupResetModal, setShowSecondLockupResetModal] = useState(false);
+// ==================== 관리자와 유저 분리 끝 ====================
+```
+
+### **   2. 초기화 함수들 구현 (App.tsx 내부에 추가)**
+
+```typescript
+// ==================== 관리자와 유저 분리 시작 ====================
+// 관리자용: 기본 락업 초기화 함수
+const handleBasicLockupReset = () => {
+  try {
+    // 상태 초기화
+    setLockupRatio(20);           // 20%로 초기화
+    setLockupMonths(1);           // 1개월로 초기화
+    setIsLockupRegistered(false); // 등록 상태 초기화
+    setRegisteredLockupData({     // 등록 데이터 초기화
+      ratio: 0,
+      months: 0,
+      apy: 0,
+      startDate: null,
+      endDate: null
+    });
+    
+    // localStorage 업데이트
+    const currentState = JSON.parse(localStorage.getItem('miningState') || '{}');
+    const updatedState = {
+      ...currentState,
+      lockupRatio: 20,
+      lockupMonths: 1,
+      isLockupRegistered: false,
+      registeredLockupData: { ratio: 0, months: 0, apy: 0, startDate: null, endDate: null }
+    };
+    localStorage.setItem('miningState', JSON.stringify(updatedState));
+    
+    // 모달 닫기
+    setShowBasicLockupResetModal(false);
+    setShowLockupResetModal(false);
+    
+    // 성공 메시지
+    setSuccessMessage('✅ 기본 락업이 초기화되었습니다! (20% 비율, 1개월 기간)');
+    setShowSuccessModal(true);
+    
+    console.log('✅ 기본 락업 초기화 완료:', { ratio: 20, months: 1, registered: false });
+  } catch (error) {
+    console.error('❌ 기본 락업 초기화 오류:', error);
+    setErrorMessage('기본 락업 초기화 중 오류가 발생했습니다.');
+    setShowErrorModal(true);
+  }
+};
+
+// 관리자용: 추가 락업 초기화 함수
+const handleSecondLockupReset = () => {
+  try {
+    // 상태 초기화
+    setSecondLockupRatio(0);           // 0%로 초기화
+    setSecondLockupMonths(0);          // 무선택으로 초기화
+    setIsSecondLockupRegistered(false); // 등록 상태 초기화
+    setRegisteredSecondLockupData({    // 등록 데이터 초기화
+      ratio: 0,
+      months: 0,
+      apy: 0,
+      startDate: null,
+      endDate: null
+    });
+    
+    // localStorage 업데이트
+    const currentState = JSON.parse(localStorage.getItem('miningState') || '{}');
+    const updatedState = {
+      ...currentState,
+      secondLockupRatio: 0,
+      secondLockupMonths: 0,
+      isSecondLockupRegistered: false,
+      registeredSecondLockupData: { ratio: 0, months: 0, apy: 0, startDate: null, endDate: null }
+    };
+    localStorage.setItem('miningState', JSON.stringify(updatedState));
+    
+    // 모달 닫기
+    setShowSecondLockupResetModal(false);
+    setShowLockupResetModal(false);
+    
+    // 성공 메시지
+    setSuccessMessage('✅ 추가 락업이 초기화되었습니다! (0% 비율, 무선택)');
+    setShowSuccessModal(true);
+    
+    console.log('✅ 추가 락업 초기화 완료:', { ratio: 0, months: 0, registered: false });
+  } catch (error) {
+    console.error('❌ 추가 락업 초기화 오류:', error);
+    setErrorMessage('추가 락업 초기화 중 오류가 발생했습니다.');
+    setShowErrorModal(true);
+  }
+};
+// ==================== 관리자와 유저 분리 끝 ====================
+```
+
+### **   3. UI 구조 수정 (락업 보너스 설정 헤더 부분)**
+
+```typescript
+// ==================== 관리자와 유저 분리 시작 ====================
+// 관리자용: 락업 보너스 설정 헤더 (기존 코드 수정)
+<div className="flex justify-between items-center mb-6">
+  <h2 className="text-2xl font-bold text-gray-900">   락업 보너스 설정</h2>
+  
+  {/* 통합 락업 초기화 버튼 */}
+  <button 
+    onClick={() => setShowLockupResetModal(true)}
+    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+    title="락업 설정을 초기화합니다"
+  >
+    🔄 통합 락업 초기화
+  </button>
+</div>
+// ==================== 관리자와 유저 분리 끝 ====================
+```
+
+### **📋 4. 통합 락업 초기화 모달 (App.tsx 내부에 추가)**
+
+```typescript
+// ==================== 관리자와 유저 분리 시작 ====================
+// 관리자용: 통합 락업 초기화 모달
+{showLockupResetModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 transform transition-all duration-300 scale-100">
+      <div className="p-6 text-center">
+        <div className="mb-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">🔄 락업 초기화</h3>
+          <p className="text-sm text-gray-600">초기화할 락업을 선택하세요</p>
+        </div>
+        
+        <div className="space-y-3">
+          <button 
+            onClick={() => setShowBasicLockupResetModal(true)}
+            className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-md hover:shadow-lg"
+          >
+            🔒 기본 락업 초기화
+          </button>
+          
+          <button 
+            onClick={() => setShowSecondLockupResetModal(true)}
+            className="w-full px-4 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium shadow-md hover:shadow-lg"
+          >
+            🔒 추가 락업 초기화
+          </button>
+        </div>
+        
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button 
+            onClick={() => setShowLockupResetModal(false)}
+            className="w-full px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+// ==================== 관리자와 유저 분리 끝 ====================
+```
+
+### **   5. 기본 락업 초기화 확인 모달**
+
+```typescript
+// ==================== 관리자와 유저 분리 시작 ====================
+// 관리자용: 기본 락업 초기화 확인 모달
+{showBasicLockupResetModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 transform transition-all duration-300 scale-100">
+      <div className="p-6 text-center">
+        <div className="mb-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
+            <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">🔒 기본 락업 초기화</h3>
+          <p className="text-sm text-gray-600 mb-4">기본락업을 초기화 하시겠습니까?</p>
+          <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
+            <p>초기화 후 설정:</p>
+            <p>• 락업 비율: 20%</p>
+            <p>• 락업 기간: 1개월</p>
+            <p>• 버튼 상태: "설정 등록"으로 변경</p>
+          </div>
+        </div>
+        
+        <div className="flex space-x-3">
+          <button 
+            onClick={() => setShowBasicLockupResetModal(false)}
+            className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+          >
+            취소
+          </button>
+          <button 
+            onClick={handleBasicLockupReset}
+            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+// ==================== 관리자와 유저 분리 끝 ====================
+```
+
+### **   6. 추가 락업 초기화 확인 모달**
+
+```typescript
+// ==================== 관리자와 유저 분리 시작 ====================
+// 관리자용: 추가 락업 초기화 확인 모달
+{showSecondLockupResetModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 transform transition-all duration-300 scale-100">
+      <div className="p-6 text-center">
+        <div className="mb-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-purple-100 mb-4">
+            <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">🔒 추가 락업 초기화</h3>
+          <p className="text-sm text-gray-600 mb-4">추가락업을 초기화 하시겠습니까?</p>
+          <div className="bg-purple-50 p-3 rounded-lg text-sm text-purple-800">
+            <p>초기화 후 설정:</p>
+            <p>• 락업 비율: 0%</p>
+            <p>• 락업 기간: 무선택</p>
+            <p>• 등록 상태: 미등록으로 변경</p>
+          </div>
+        </div>
+        
+        <div className="flex space-x-3">
+          <button 
+            onClick={() => setShowSecondLockupResetModal(false)}
+            className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+          >
+            취소
+          </button>
+          <button 
+            onClick={handleSecondLockupReset}
+            className="flex-1 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium"
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+// ==================== 관리자와 유저 분리 끝 ====================
+```
+
+### **   7. 추천인 관리 버튼 추가 (추천 보너스 모달 내부)**
+
+```typescript
+// ==================== 관리자와 유저 분리 시작 ====================
+// 관리자용: 추천인 관리 버튼들 (추천 보너스 모달 내부에 추가)
+<div className="mt-6 p-4 bg-gray-50 rounded-lg">
+  <h4 className="text-sm font-medium text-gray-700 mb-3">   테스트 기능</h4>
+  <div className="flex space-x-2">
+    <button
+      onClick={() => {
+        setReferralCount(prev => prev + 1);
+        setSuccessMessage('✅ 추천인이 추가되었습니다!');
+        setShowSuccessModal(true);
+      }}
+      className="flex-1 px-3 py-2 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
+    >
+      추천인 추가
+    </button>
+    <button
+      onClick={() => {
+        setReferralCount(0);
+        setSuccessMessage('✅ 추천인이 초기화되었습니다!');
+        setShowSuccessModal(true);
+      }}
+      className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
+    >
+      추천인 초기화
+    </button>
+  </div>
+</div>
+// ==================== 관리자와 유저 분리 끝 ====================
+```
+
+## **✅ 구현 완료 요약**
+
+### ** 구현된 기능들:**
+
+1. **"통합 락업 초기화" 버튼**: "락업 보너스 설정" 제목 오른쪽 끝 위에 배치
+2. **기본 락업 초기화**: 20% 비율, 1개월 기간으로 초기화, "설정 등록" 버튼으로 변경
+3. **추가 락업 초기화**: 0% 비율, 무선택 상태로 초기화
+4. **추천인 관리**: "추천인 추가", "추천인 초기화" 버튼
+5. **고급스러운 UI**: 작고 세련된 확인 창과 명확한 메시지
+6. **완벽한 분리**: 모든 코드에 관리자와 유저 분리 주석 표시

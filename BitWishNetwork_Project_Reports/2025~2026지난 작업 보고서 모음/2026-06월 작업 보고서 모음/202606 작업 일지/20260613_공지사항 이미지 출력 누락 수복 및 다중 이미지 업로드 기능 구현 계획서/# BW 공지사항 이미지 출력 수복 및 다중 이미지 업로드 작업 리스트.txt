@@ -1,0 +1,23 @@
+# BW 공지사항 이미지 출력 수복 및 다중 이미지 업로드 작업 리스트
+
+- [x] 백엔드 API (`bw_community_api.ts`) 다중 이미지 처리 및 서버 측 유효성 검사 구현
+  - [x] `POST /posts` & `PUT /posts/:id`에 `images` 처리 추가
+  - [x] `GET /posts` & `GET /posts/:id`에 `images` 필드 추가
+  - [x] `POST /admin/notices` & `PUT /admin/notices/:id`에 `images` 처리 및 검사 추가
+  - [x] `GET /admin/notices` & `GET /admin/notices/:id`에 `images` 필드 추가
+  - [x] Base64 개수(최대 10개) 및 용량(개당 2MB 이하) 검사 로직 추가
+- [x] 관리자 페이지 UI (`AdminPage.tsx`) 다중 파일 업로드 및 미리보기 개편
+  - [x] `noticeImageBase64` 단일 상태에서 `noticeImagesBase64` 배열 상태로 개편
+  - [x] 파일 `<input>`에 `multiple` 추가 및 파일 용량(2MB), 개수(10개) 클라이언트 검증 추가
+  - [x] 이미지 미리보기 그리드 및 개별 X 버튼 구현
+  - [x] 등록/수정 API 전송 시 `images`로 전송 및 선택 수정 로딩 시 데이터 동기화
+- [x] 커뮤니티 상세 화면 (`BWCommunityWindow.tsx`) 이미지 출력 및 글쓰기 이미지 지원
+  - [x] `Post` 인터페이스에 `images: string[]` 추가
+  - [x] 상세 뷰 본문 하단에 `selectedPost.images` 순회 렌더링 코드 추가
+  - [x] 일반 글쓰기 및 수정 화면에 다중 이미지 업로드 기능 폼 추가 및 백엔드 연동
+- [x] 로컬 빌드 컴파일 테스트 및 검증
+  - [x] `npm run build` 확인
+  - [x] 최종 로컬 환경 동작 및 한글 인코딩 깨짐 여부 확인
+- [x] Git Push 및 실서버 배포 진행
+  - [x] Git 커밋 및 origin/main 브랜치 푸시
+  - [x] 백엔드 서버 실서버 배포 업데이트 진행

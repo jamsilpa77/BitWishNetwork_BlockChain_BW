@@ -1,0 +1,52 @@
+# 🔍 BW 로드맵 다국어 미작동 및 텍스트 누락 분석 보고서
+
+---
+
+## 1. 텍스트 누락 원인 분석
+
+### ❌ 원인: 관리자 대시보드 폼의 하드코딩 기본값 절단
+[AdminPage.tsx:105-110](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/AdminPage/AdminPage.tsx#L105-L110)에 선언된 로드맵 기본 폼 데이터(`roadmapForm`)의 텍스트가 다국어 사전(`LanguageManager.ts`)에 등록된 원본 텍스트보다 축소/절단되어 있습니다.
+
+* **예시 (2단계 설명):**
+  * **실제 로드맵 페이지 원본 (`LanguageManager.ts`)**: 
+    > "외부 공격을 차단하고 초기 자산을 안전하게 보존하기 위한 격리형 제네시스 메인넷이 출범합니다. **이 기간 KYC 승인을 완료한 실사용자 자산의 모의 마이그레이션과 오프라인 블록 검증이 가동됩니다.**"
+  * **관리자 페이지 기본값 (`AdminPage.tsx`)**: 
+    > "외부 공격을 차단하고 초기 자산을 안전하게 보존하기 위한 격리형 제네시스 메인넷이 출범합니다." **(뒷문장 누락)**
+
+관리자 페이지에서 **[💾 작성 완료 및 전체 로드맵 실시간 저장 적용하기]** 버튼을 누르는 순간, 누락되고 절단된 텍스트가 로컬스토리지(`BW_CUSTOM_ROADMAP`)에 그대로 덮어씌워지기 때문에 홈페이지 로드맵의 텍스트가 잘려 보이게 됩니다.
+
+---
+
+## 2. 다국어 (4개국어) 변경 미작동 원인 분석
+
+### ❌ 원인: 단일 언어(한국어) 구조 저장 및 강제 오버라이드
+관리자 페이지에서 로드맵을 수정할 때 다국어별 입력창 없이 **단일 텍스트(한글)**로만 로컬스토리지에 저장하고 있으며, 로드맵 페이지에서는 다국어 설정과 관계없이 이 단일 텍스트를 무조건 화면에 우선 표기하고 있습니다.
+
+* **로드맵 페이지 렌더링 방식 (`RoadmapPage.tsx:75-80`)**:
+  ```typescript
+  const fetchVal = (step: string, field: string, defaultValue: string): string => {
+      // 로컬스토리지(BW_CUSTOM_ROADMAP)에 데이터가 존재하면 다국어 기본값(defaultValue)을 무시하고 반환
+      if (customRoadmap && customRoadmap[step] && customRoadmap[step][field]) {
+          return customRoadmap[step][field];
+      }
+      return defaultValue;
+  };
+  ```
+  관리자 페이지에서 한국어로 문구를 수정 및 저장하면 `customRoadmap`에 한글 데이터만 저장됩니다. 이후 유저가 로드맵 페이지에서 **EN, JA, ZH 버튼**을 눌러 `currentLanguage`를 바꾸더라도, `fetchVal`이 다국어 번역본인 `defaultValue` 대신 로컬스토리지에 저장된 **한글 텍스트를 강제로 리턴**하기 때문에 번역이 작동하지 않게 됩니다.
+
+---
+
+## 💡 해결을 위한 제안 (Implementation Plan Draft)
+
+이 문제를 근본적으로 해결하기 위해 다음의 2단계 패치를 제안합니다.
+
+### [Phase 1] 관리자 폼 초기 텍스트 정합성 맞추기
+* [AdminPage.tsx](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/AdminPage/AdminPage.tsx)의 `roadmapForm` 초기 상태값을 [LanguageManager.ts](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/utils/LanguageManager/LanguageManager.ts) 내 한국어(`ko.roadmap`) 원본과 100% 동일하게 확장 수정합니다.
+
+### [Phase 2] 로드맵 데이터 모델의 다국어(ko/en/ja/zh) 지원 구조 변경
+* **관리자 페이지 수정**:
+  * 전광판 메시지 수정 창처럼 **언어 선택 탭(KO, EN, JA, ZH)**을 추가하여 관리자가 4개 국어별로 로드맵을 각각 입력할 수 있도록 수정합니다.
+  * 데이터 저장 포맷을 `{ step1: { title: { ko: "...", en: "..." } } }` 형태로 확장하여 `BW_CUSTOM_ROADMAP`에 저장합니다.
+* **로드맵 페이지 수정**:
+  * `fetchVal` 함수에 현재 선택된 언어(`currentLanguage`) 인자를 추가하여 해당 국가의 커스텀 텍스트를 우선적으로 가져오도록 수정합니다:
+    `fetchVal('step1', 'title', currentLanguage, getTxt('roadmap.step1.title'))`

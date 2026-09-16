@@ -481,10 +481,10 @@ export class MiningController {
                 const diffSeconds = (now.getTime() - lastSync.getTime()) / 1000;
 
                 if (diffSeconds > 0) {
-                    // 1. 메인 채굴 보상 소급 정산
+                    // 1. 메인 채굴 보상 소급 정산 (조회 전용 소급 가산)
                     await this.calculatePendingReward(miningState);
 
-                    // 2. 추천 보너스 보관함 소급 정산 (공정 3 치료 B 이식)
+                    // 2. 추천 보너스 보관함 소급 정산
                     if (new Decimal(miningState.referralBonusRate || '0').gt(0)) {
                         const baseRate = new Decimal(miningState.currentBaseRate || '0.25');
                         const referralRate = new Decimal(miningState.referralBonusRate || '0');
@@ -496,53 +496,7 @@ export class MiningController {
                             const currentStorage = new Decimal(bonusRecord.referralBonusStorage || '0');
                             const newBonusStorage = currentStorage.plus(referralBonusDelta);
                             bonusRecord.referralBonusStorage = newBonusStorage.toString();
-
-                            // [3공정 수복] referralBonusStorage 정수 1 BW 경계 돌파 시 물리 블록 즉시 소환 (소급 정산 경로)
-                            const bonusLastThreshold = new Decimal((bonusRecord as any).lastBonusBlockThreshold || '0');
-                            const bonusNextThreshold = bonusLastThreshold.plus(1);
-                            if (newBonusStorage.gte(bonusNextThreshold)) {
-                                const bonusBlocksToCreate = newBonusStorage.minus(bonusLastThreshold).floor().toNumber();
-                                if (bonusBlocksToCreate > 0) {
-                                    console.log(`⛏️ [3공정 소급 추천 보너스 블록] ${walletAddress}: ${newBonusStorage.toFixed(4)} BW 도달 → +${bonusBlocksToCreate} 블록 생성`);
-                                    for (let bi = 0; bi < bonusBlocksToCreate; bi++) {
-                                        try {
-                                            await BlockMiningService.onMiningBlock(walletAddress);
-                                            console.log(`✅ [3공정 소급] 추천 보너스 블록 ${bi + 1}/${bonusBlocksToCreate} 생성 완료`);
-                                        } catch (bonusBlockErr) {
-                                            console.error(`❌ [3공정 소급] 추천 보너스 블록 생성 실패:`, bonusBlockErr);
-                                        }
-                                    }
-                                    (bonusRecord as any).lastBonusBlockThreshold = bonusLastThreshold.plus(bonusBlocksToCreate).toString();
-                                    console.log(`📊 [3공정 소급] 추천 보너스 블록 기준점 갱신: ${(bonusRecord as any).lastBonusBlockThreshold} BW`);
-                                }
-                            }
-
                             await bonusRecord.save();
-                        }
-                    }
-
-                    // [소급 정산 블록 +1 카운팅] 1BW 경계 초과 시 자동 블록 생성
-                    const newAccumulatedReward = new Decimal(miningState.accumulatedReward);
-                    const lastThreshold = new Decimal(miningState.lastBlockRewardThreshold || '0');
-                    const nextThreshold = lastThreshold.plus(1);
-
-                    if (newAccumulatedReward.gte(nextThreshold)) {
-                        const blocksToCreate = newAccumulatedReward.minus(lastThreshold).floor().toNumber();
-
-                        if (blocksToCreate > 0) {
-                            console.log(`⛏️ [소급 블록 +1 카운팅] ${walletAddress}: ${newAccumulatedReward.toFixed(4)} BW 도달 → +${blocksToCreate} 블록 생성`);
-
-                            for (let i = 0; i < blocksToCreate; i++) {
-                                try {
-                                    await BlockMiningService.onMiningBlock(walletAddress);
-                                    console.log(`✅ [소급 블록 +1 카운팅] 블록 ${i + 1}/${blocksToCreate} 생성 완료`);
-                                } catch (blockError) {
-                                    console.error(`❌ [소급 블록 +1 카운팅] 블록 생성 실패:`, blockError);
-                                }
-                            }
-
-                            miningState.lastBlockRewardThreshold = lastThreshold.plus(blocksToCreate).toString();
-                            console.log(`📊 [소급 블록 +1 카운팅] 새 기준점: ${miningState.lastBlockRewardThreshold} BW`);
                         }
                     }
                 }

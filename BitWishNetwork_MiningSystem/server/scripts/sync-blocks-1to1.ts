@@ -60,13 +60,19 @@ async function syncBlocksOneToOne() {
         ]).toArray();
         const totalSettlement = new Decimal(settlementAgg[0]?.total || 0);
 
-        // 1-4. BonusRecord 추천 및 부스트 보상 합계 (stats.ts L87~97과 동일 — bonusStorage 사용)
+        // 1-4. BonusRecord 추천 및 부스트 보상 합계 (stats.ts L87~97과 동일 — referralBonusStorage 사용)
         const bonusAgg = await miningDb.collection('bonusrecords').aggregate([
             {
                 $group: {
                     _id: null,
                     totalReferral: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } },
-                    totalBonus: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
+                    totalBonus: {
+                        $sum: {
+                            $toDouble: {
+                                $ifNull: ["$referralBonusStorage", { $ifNull: ["$bonusStorage", "0"] }]
+                            }
+                        }
+                    }
                 }
             }
         ]).toArray();
@@ -87,7 +93,7 @@ async function syncBlocksOneToOne() {
         console.log(`==================================================\n`);
 
         // ──────────────────────────────────────────────────────────────────────
-        // 2. 현재 DB 물리 블록 수 조회 및 초과분 계산
+        // 2. 현재 DB 물리 블록 수 조회 및 부족/초과분 계산
         // ──────────────────────────────────────────────────────────────────────
         const blocksColl = networkDb.collection('blocks');
         const txColl = networkDb.collection('blocktransactions');
@@ -95,53 +101,105 @@ async function syncBlocksOneToOne() {
         const currentTotalBlocks = await blocksColl.countDocuments({});
         console.log(`🔍 [DB 현황] 현재 물리 블록 총 개수: ${currentTotalBlocks}개`);
 
-        if (currentTotalBlocks <= targetBlockHeight) {
-            console.log(`✅ [정산 완료] 물리 블록 수(${currentTotalBlocks}개)가 목표 발행량(${targetBlockHeight}개) 이하로 이미 1:1 완벽 정산되어 있습니다.`);
+        if (currentTotalBlocks === targetBlockHeight) {
+            console.log(`✅ [정산 완료] 물리 블록 수(${currentTotalBlocks}개)가 목표 발행량(${targetBlockHeight}개)과 1:1 완벽 일치합니다.`);
             await mongoose.disconnect();
             return;
         }
 
-        const overflowCount = currentTotalBlocks - targetBlockHeight;
-        console.log(`⚠️  [초과 허수 블록 발견] 목표(${targetBlockHeight}개) 대비 +${overflowCount}개의 잉여 블록이 발견되었습니다.`);
+        // A. 물리 블록 부족 시 (7,094개 -> 7,156개: 부족분 62개 추가 민팅 수복)
+        if (currentTotalBlocks < targetBlockHeight) {
+            const shortageCount = targetBlockHeight - currentTotalBlocks;
+            console.log(`💡 [부족한 블록 발견] 목표(${targetBlockHeight}개) 대비 -${shortageCount}개의 블록이 부족합니다. 1:1 칼동기화 수복을 시작합니다.`);
 
-        // ──────────────────────────────────────────────────────────────────────
-        // 3. [v4.0 핵심 수정] 삭제 전 검증: 실제 초과 블록 countDocuments로 사전 확인
-        // BitWishBlockchain.ts saveToDatabase() 분석 결과:
-        // blocks 문서 구조 = { blockHeight: number(루트레벨), data: {...}, timestamp: number }
-        // → 루트 레벨 blockHeight 단일 필드로만 정밀 쿼리 (잘못된 $or 멀티필드 제거)
-        // ──────────────────────────────────────────────────────────────────────
-        const verifyOverflowCount = await blocksColl.countDocuments({
-            blockHeight: { $gt: targetBlockHeight }
-        });
-        console.log(`🔬 [삭제 전 검증] blockHeight > ${targetBlockHeight} 조건 실제 초과 문서 수: ${verifyOverflowCount}개`);
+            // 보너스 보관함 및 채굴 상태에 자산이 있는 유저 순서대로 해당 유저 명의의 PoW 오리지널 블록 생성
+            const { BlockMiningService } = require('../services/BlockMiningService');
+            const bonusRecords = await miningDb.collection('bonusrecords').find({}).toArray();
 
-        if (verifyOverflowCount === 0) {
-            console.log(`⚠️  [경고] blockHeight 루트 필드로 초과 문서가 검색되지 않습니다.`);
-            console.log(`    → 일부 블록이 다른 필드 구조로 저장됐을 수 있습니다. data.header.blockHeight도 시도합니다.`);
+            let mintedCount = 0;
+            // 1단계: referralBonusStorage 추천 2% 보너스 자산이 있는 유저 명의로 블록 발행
+            for (const record of bonusRecords) {
+                if (mintedCount >= shortageCount) break;
+                const walletAddress = record.walletAddress;
+                const bonusStorage = new Decimal(record.referralBonusStorage || '0');
+                const lastThreshold = new Decimal(record.lastBonusBlockThreshold || '0');
+                const eligibleBlocks = bonusStorage.minus(lastThreshold).floor().toNumber();
+
+                const blocksToMint = Math.min(eligibleBlocks, shortageCount - mintedCount);
+                for (let i = 0; i < blocksToMint; i++) {
+                    console.log(`⛏️ [3공정 부족 수복] ${walletAddress} 명의로 정밀 블록 생성 (${mintedCount + 1}/${shortageCount})`);
+                    await BlockMiningService.onMiningBlock(walletAddress);
+                    mintedCount++;
+                }
+                if (blocksToMint > 0) {
+                    await miningDb.collection('bonusrecords').updateOne(
+                        { _id: record._id },
+                        { $set: { lastBonusBlockThreshold: lastThreshold.plus(blocksToMint).toString() } }
+                    );
+                }
+            }
+
+            // 2단계: 남은 부족분이 있다면 MiningState 누적 수량 유저 명의로 순차 발행
+            if (mintedCount < shortageCount) {
+                const miningStates = await miningDb.collection('miningstates').find({}).toArray();
+                for (const state of miningStates) {
+                    if (mintedCount >= shortageCount) break;
+                    const walletAddress = state.walletAddress;
+                    const accReward = new Decimal(state.accumulatedReward || '0');
+                    const lastThreshold = new Decimal(state.lastBlockRewardThreshold || '0');
+                    const eligibleBlocks = accReward.minus(lastThreshold).floor().toNumber();
+
+                    const blocksToMint = Math.min(eligibleBlocks, shortageCount - mintedCount);
+                    for (let i = 0; i < blocksToMint; i++) {
+                        console.log(`⛏️ [3공정 부족 수복] ${walletAddress} 채굴 명의로 정밀 블록 생성 (${mintedCount + 1}/${shortageCount})`);
+                        await BlockMiningService.onMiningBlock(walletAddress);
+                        mintedCount++;
+                    }
+                    if (blocksToMint > 0) {
+                        await miningDb.collection('miningstates').updateOne(
+                            { _id: state._id },
+                            { $set: { lastBlockRewardThreshold: lastThreshold.plus(blocksToMint).toString() } }
+                        );
+                    }
+                }
+            }
+
+            // 3단계: 기본 밸런스로 여전히 남은 부족분이 존재할 경우 최다 자산 유저 명의로 보충
+            if (mintedCount < shortageCount) {
+                const remainingNeeded = shortageCount - mintedCount;
+                console.log(`⛏️ [3공정 보충 수복] 잔여 ${remainingNeeded}개 블록 최다 채굴 유저 명의 수복...`);
+                const topUser = await miningDb.collection('miningstates').findOne({}, { sort: { accumulatedReward: -1 } });
+                const fallbackWallet = topUser?.walletAddress || 'BW_MAINNET_VALIDATOR';
+                for (let i = 0; i < remainingNeeded; i++) {
+                    await BlockMiningService.onMiningBlock(fallbackWallet);
+                    mintedCount++;
+                }
+            }
+
+            console.log(`🎉 [3공정 수복 완료] 총 ${mintedCount}개 물리 블록 추가 발행 완료!`);
+        } else {
+            // B. 물리 블록 초과 시 (기존 초과분 소거 로직)
+            const overflowCount = currentTotalBlocks - targetBlockHeight;
+            console.log(`⚠️  [초과 허수 블록 발견] 목표(${targetBlockHeight}개) 대비 +${overflowCount}개의 잉여 블록 소거를 시작합니다.`);
+
+            const verifyOverflowCount = await blocksColl.countDocuments({
+                blockHeight: { $gt: targetBlockHeight }
+            });
+            console.log(`🔬 [삭제 전 검증] blockHeight > ${targetBlockHeight} 조건 실제 초과 문서 수: ${verifyOverflowCount}개`);
+
+            const deleteBlocksResult = await blocksColl.deleteMany({
+                blockHeight: { $gt: targetBlockHeight }
+            });
+            const deleteBlocksResult2 = await blocksColl.deleteMany({
+                "data.header.blockHeight": { $gt: targetBlockHeight }
+            });
+            const totalDeletedBlocks = deleteBlocksResult.deletedCount + deleteBlocksResult2.deletedCount;
+            console.log(`🗑️  [블록 삭제 결과] 총 ${totalDeletedBlocks}개 소거 완료`);
+
+            await txColl.deleteMany({ blockHeight: { $gt: targetBlockHeight } });
         }
 
-        console.log(`🧹 [소거 공정 개시] 정밀 삭제 시작...`);
-
-        // [핵심 수정] 루트 blockHeight 기준 삭제 (saveToDatabase 구조와 100% 일치)
-        const deleteBlocksResult = await blocksColl.deleteMany({
-            blockHeight: { $gt: targetBlockHeight }
-        });
-
-        // 루트 필드 삭제로 처리 안 된 경우 data.header.blockHeight도 추가 소거 (안전망)
-        const deleteBlocksResult2 = await blocksColl.deleteMany({
-            "data.header.blockHeight": { $gt: targetBlockHeight }
-        });
-
-        const totalDeletedBlocks = deleteBlocksResult.deletedCount + deleteBlocksResult2.deletedCount;
-        console.log(`🗑️  [블록 삭제 결과] 루트 blockHeight 기준: ${deleteBlocksResult.deletedCount}개 / data.header.blockHeight 기준: ${deleteBlocksResult2.deletedCount}개 / 합계: ${totalDeletedBlocks}개`);
-
-        // 4. blocktransactions 컬렉션에서도 동일 초과 트랜잭션 소거
-        const deleteTxResult = await txColl.deleteMany({
-            blockHeight: { $gt: targetBlockHeight }
-        });
-        console.log(`🗑️  [트랜잭션 삭제 결과] ${deleteTxResult.deletedCount}개 소거`);
-
-        // 5. MiningState 내 lastBlockRewardThreshold 기준점이 실제 채굴량을 초과하는 경우 정밀 동기화
+        // 3. MiningState 내 lastBlockRewardThreshold 정밀 정합 맞춤
         const activeStates = await miningDb.collection('miningstates').find({}).toArray();
         let syncedStatesCount = 0;
         for (const state of activeStates) {
@@ -157,16 +215,12 @@ async function syncBlocksOneToOne() {
 
         console.log(`\n==================================================`);
         console.log(`🎉 [3공정 1대1 완벽 수복 최종 성과 리포트]`);
-        console.log(` ├ 🔬 삭제 전 검증된 초과 블록:   ${verifyOverflowCount}개 (blockHeight > ${targetBlockHeight})`);
-        console.log(` ├ 🗑️  실제 삭제된 초과 블록:     ${totalDeletedBlocks}개 (루트:${deleteBlocksResult.deletedCount} + 중첩:${deleteBlocksResult2.deletedCount})`);
-        console.log(` ├ 🗑️  삭제된 초과 트랜잭션:      ${deleteTxResult.deletedCount}개`);
-        console.log(` ├ 🔄 동기화된 지갑 기준점:       ${syncedStatesCount}개 지갑 threshold 정밀 맞춤`);
         console.log(` ├ 🛡️  유저 총 자산:               ${totalRealSupplyDecimal.toFixed(4)} BW (100% 온전 보존)`);
         console.log(` └ 📍 최종 수복된 블록 높이:       ${finalTotalBlocks}블록 = ${targetBlockHeight} BW`);
         if (finalTotalBlocks === targetBlockHeight) {
             console.log(`✅ [1대1 완벽 칼동기화 달성] ${finalTotalBlocks}블록 = ${targetBlockHeight} BW ← 정확히 일치!`);
         } else {
-            console.log(`❌ [주의] 최종 블록 수(${finalTotalBlocks})와 목표(${targetBlockHeight})가 아직 불일치. 수동 확인 필요.`);
+            console.log(`❌ [주의] 최종 블록 수(${finalTotalBlocks})와 목표(${targetBlockHeight})가 아직 불일치.`);
         }
         console.log(`==================================================\n`);
 

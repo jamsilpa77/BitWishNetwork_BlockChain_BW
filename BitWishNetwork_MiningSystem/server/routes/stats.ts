@@ -83,18 +83,20 @@ router.get('/realtime', async (req, res) => {
         // 실시간 참값 = DB 미정산 저장값 + 현재 흐르고 있는 채굴량 + 과거 정산 누적 합계
         totalMiningReward = totalMiningReward.plus(liveBoost).plus(totalSettlementAmount);
 
-        // 2-2. 가입/추천 보상 총합
+        // 2-2. [1공정 수복] 가입/추천 보상 3대 보관함 (referralRewardStorage + referralBonusStorage + bonusStorage) 100% 무조건 전수 합산
         const bonusRewardAgg = await BonusRecord.aggregate([
             {
                 $group: {
                     _id: null,
                     totalRewardStorage: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } },
-                    totalBonusStorage: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
+                    totalReferralBonusStorage: { $sum: { $toDouble: { $ifNull: ["$referralBonusStorage", "0"] } } },
+                    totalOtherBonusStorage: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
                 }
             }
         ]);
         const totalBonusReward = new Decimal(bonusRewardAgg[0]?.totalRewardStorage || 0)
-            .plus(new Decimal(bonusRewardAgg[0]?.totalBonusStorage || 0));
+            .plus(new Decimal(bonusRewardAgg[0]?.totalReferralBonusStorage || 0))
+            .plus(new Decimal(bonusRewardAgg[0]?.totalOtherBonusStorage || 0));
 
         // 총 발행량 = 채굴 보상 + 보너스 보상
         const currentSupply = totalMiningReward.plus(totalBonusReward);

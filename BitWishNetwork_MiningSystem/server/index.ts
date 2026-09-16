@@ -42,45 +42,6 @@ async function autoRestoreMiningStates() {
         const now = new Date();
         const activeStates = await MiningState.find({ isMining: true });
 
-        // ⚡ [2공정 수복] 전역 발행량 상한 락 (Global Cap Guard) 계산
-        const networkDb = mongoose.connection.useDb('bitwish_network');
-        const miningDb = mongoose.connection.useDb('bitwish_mining');
-
-        const currentBlockCount = await networkDb.collection('blocks').countDocuments();
-
-        // 대시보드 stats.ts 및 BlockMiningService와 100% 동일한 참값 총발행량 공식
-        const baseRewardAgg = await miningDb.collection('miningstates').aggregate([
-            { $group: { _id: null, total: { $sum: { $toDouble: "$accumulatedReward" } } } }
-        ]).toArray();
-        const baseMined = new Decimal(baseRewardAgg[0]?.total || 0);
-
-        const settlementAgg = await miningDb.collection('monthlysettlements').aggregate([
-            { $group: { _id: null, total: { $sum: { $toDouble: "$totalAmount" } } } }
-        ]).toArray();
-        const totalSettled = new Decimal(settlementAgg[0]?.total || 0);
-
-        const bonusRecordAgg = await miningDb.collection('bonusrecords').aggregate([
-            {
-                $group: {
-                    _id: null,
-                    totalReferral: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } },
-                    totalBonus: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
-                }
-            }
-        ]).toArray();
-        const totalBonus = new Decimal(bonusRecordAgg[0]?.totalReferral || 0)
-            .plus(new Decimal(bonusRecordAgg[0]?.totalBonus || 0));
-
-        const totalRealSupply = baseMined.plus(totalSettled).plus(totalBonus);
-        const targetBlockCount = totalRealSupply.floor().toNumber();
-
-        // 물리 블록 수가 실시간 참값 총발행량 정수에 도달/초과했는지 판단하는 상한 락 플래그
-        const isGlobalCapReached = currentBlockCount >= targetBlockCount;
-
-        if (isGlobalCapReached) {
-            console.log(`🔒 [2공정 Global Cap Guard] 메인넷 블록(${currentBlockCount}개) >= 목표 발행량(${targetBlockCount}개) → 새 블록 생성을 100% 차단하고 기준점만 동기화합니다.`);
-        }
-
         for (const state of activeStates) {
             const walletAddress = state.walletAddress;
             const dbAmount = new Decimal(state.accumulatedReward || '0');
@@ -113,8 +74,7 @@ async function autoRestoreMiningStates() {
                     const rawGap = realTimeAmount.minus(lastThreshold).floor().toNumber();
                     const blocksToCreate = Math.min(1, rawGap);
 
-                    // ⚡ [2공정 수복 완료] isGlobalCapReached가 true이면 onMiningBlock() 호출을 100% 금지
-                    if (blocksToCreate > 0 && !isGlobalCapReached) {
+                    if (blocksToCreate > 0) {
                         console.log(`⛏️ [수복 엔진] ${walletAddress}: 1 BW 경계 돌파 → 정밀 블록 1개 생성`);
 
                         try {
@@ -125,12 +85,12 @@ async function autoRestoreMiningStates() {
                         }
                     }
 
-                    // 상한 락 적용 중이어도 지갑 기준점은 최신 정수로 동기화하여 중복 감지 방지
+                    // 지갑 기준점 정밀 동기화 (Global Cap Guard 삭제로 1:1 완벽 반영)
                     updatedThreshold = realTimeAmount.floor().toString();
-                    console.log(`📊 [수복 엔진] 새 기준점 정밀 동기화: ${updatedThreshold} BW (Global Cap Guard: ${isGlobalCapReached ? '잠금' : '해제'})`);
+                    console.log(`📊 [수복 엔진] 새 기준점 정밀 동기화: ${updatedThreshold} BW`);
                 }
 
-                // ⚡ [1공정 수복 완료] Mongoose .save() 반영 누락 결함 완전 차단 → updateOne 직접 강제 저장
+                // [1공정 수복 완료] Mongoose .save() 반영 누락 결함 완전 차단 → updateOne 직접 강제 저장
                 await MiningState.updateOne(
                     { _id: state._id },
                     {
@@ -143,7 +103,6 @@ async function autoRestoreMiningStates() {
                 );
             }
         }
-        // [수복 완율] 글로벌 발행량 대비 누락 물리 블록 전수조사는 서버 최초 가동 시 1회만 수행하고, 30초 주기 반복 실행에서는 소거합니다.
         console.log("✅ [수복 엔진] 모든 유저 데이터 복원 및 실시간 마이닝 수복 검증 완료!");
     } catch (err) {
         console.error("❌ [수복 엔진 에러] 데이터 수복 중 예외 발생:", err);
@@ -156,13 +115,8 @@ async function autoHealBlockTransactions() {
         console.log("🛠️ [수복 엔진] 기존 블록체인에서 모든 유저의 블록 트랜잭션 및 추천 보상 장부를 자동 복원합니다...");
 
         const networkDb = mongoose.connection.useDb('bitwish_network');
-        const miningDb = mongoose.connection.useDb('bitwish_mining');
 
-        // [수정 완료] 하드코딩된 blockHeight > 19 삭제 로직 제거됨
-        // 기존에 테스트 블록 정리용이었으나, 실제 채굴 블록까지 매 재시작마다 삭제하여 블록 누락 원인이었음
-        console.log(`✅ [수복 엔진] 블록 무결성 검증 통과 - 정상 블록 삭제 방지 활성화`);
-
-        // 2. 물리 블록 컬렉션에서 1~19번 채굴 블록 복원
+        // 물리 블록 컬렉션에서 실제 채굴 블록 복원 (가상 100000번대/200000번대 허수 블록 생성 파기)
         const blocks = await networkDb.collection('blocks').find({}).sort({ blockHeight: 1 }).toArray();
         let restoredMinedCount = 0;
 
@@ -194,81 +148,7 @@ async function autoHealBlockTransactions() {
         }
         console.log(`📦 [수복 엔진] 일반 채굴 증명 블록 총 ${restoredMinedCount}개 수복 및 동기화 완료.`);
 
-        // 3. 추천인 정책 보상 블록 (30개) 복원
-        const bonusRecords = await miningDb.collection('bonusrecords').find({}).toArray();
-        let restoredReferralCount = 0;
-
-        for (const record of bonusRecords) {
-            const parentAddress = record.walletAddress;
-            const referralList = record.referralList || [];
-
-            for (let idx = 0; idx < referralList.length; idx++) {
-                const child = referralList[idx];
-                const virtualBlockHeight = 100000 + idx; // 일반 채굴 블록과 겹치지 않는 가상 높이 부여
-                const txId = 'BW_REF_TX_' + child.childWalletAddress;
-
-                const exists = await networkDb.collection('blocktransactions').findOne({ txId: txId });
-                if (!exists) {
-                    await networkDb.collection('blocktransactions').insertOne({
-                        txId: txId,
-                        walletAddress: parentAddress,
-                        blockHeight: virtualBlockHeight,
-                        amount: '1.00000000',
-                        type: 'Referral Reward',
-                        status: 'Confirmed',
-                        createdAt: new Date(child.joinedAt || Date.now())
-                    });
-                    restoredReferralCount++;
-                }
-            }
-        }
-        console.log(`🤝 [수복 엔진] 추천인 정책 보상 블록 총 ${restoredReferralCount}개 수복 및 매핑 완료.`);
-
-        // 4. 가입자(자식) 가입 보상 블록 복원
-        const usersWithParent = await mongoose.model('User').find({ referrerCode: { $ne: null, $exists: true } }).lean();
-        let restoredChildCount = 0;
-
-        for (const user of usersWithParent) {
-            const referrerCode = (user.referrerCode || '').trim();
-            if (referrerCode === '') continue;
-
-            const childAddress = user.walletAddress;
-            const txId = 'BW_REF_CHILD_TX_' + childAddress;
-            const virtualBlockHeight = 200000; // 가입 보상 전용 가상 높이
-
-            const exists = await networkDb.collection('blocktransactions').findOne({ txId: txId });
-            if (!exists) {
-                await networkDb.collection('blocktransactions').insertOne({
-                    txId: txId,
-                    walletAddress: childAddress,
-                    blockHeight: virtualBlockHeight,
-                    amount: '1.00000000',
-                    type: 'Referral Reward',
-                    status: 'Confirmed',
-                    createdAt: new Date(user.createdAt || Date.now())
-                });
-                restoredChildCount++;
-            }
-        }
-        console.log(`👶 [수복 엔진] 가입자 가입 보상 블록 총 ${restoredChildCount}개 수복 완료.`);
-
-        // ═══════════════════════════════════════════════════════════════════════
-        // [2공정 수복 완료] lastBlockRewardThreshold 하향 교정 로직 영구 비활성화
-        // ───────────────────────────────────────────────────────────────────────
-        // 비활성화 사유:
-        //   이 로직은 초기 1회성 수복 목적으로 작성된 코드였으나,
-        //   서버가 재시작될 때마다 반복 실행되면서 아래의 치명적 부작용을 야기했습니다:
-        //
-        //   ❌ 문제: threshold를 낮추면 → 30초 주기 autoRestoreMiningStates() 워커가
-        //            이미 생성이 완료된 과거 블록 구간을 다시 "미생성 구간"으로 오인 →
-        //            서버 재시작마다 불필요한 허수 블록을 계속 생성 (누적 1,000개+ 과생성 원인)
-        //
-        //   ✅ 조치: 본 로직 전체를 영구 비활성화하여 threshold가 기존 DB 값 그대로 유지되도록
-        //            고정. 이로써 30초 워커는 실제 1BW 돌파 시에만 블록을 1개 생성하는
-        //            정상 동작만 수행합니다.
-        // ═══════════════════════════════════════════════════════════════════════
         console.log(`✅ [2공정 수복] lastBlockRewardThreshold 하향 교정 로직 비활성화 — threshold 기존 DB값 유지, 허수 블록 과생성 원천 차단 완료`);
-
         console.log("✅ [수복 엔진] 모든 물리 블록 및 추천 보상 장부 수복 정리가 성공적으로 완료되었습니다!");
 
     } catch (err) {

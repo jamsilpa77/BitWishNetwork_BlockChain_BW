@@ -1,0 +1,13 @@
+[
+  {
+    "_id": "6a2a8ba99a23381541a999e6",
+    "email": "salmani1@naver.com",
+    "password": "$2a$10$HkD5myuXYpxpqGZ/WuWPpujr3j/XG0GOi9z.6Vm1mGFMAC9CGO3r.",
+    "nickname": "관리자",
+    "role": "ADMIN",
+    "isBanned": false,
+    "createdAt": "2026-06-11T10:19:21.785Z",
+    "updatedAt": "2026-06-11T10:19:21.785Z",
+    "__v": 0
+  }
+]

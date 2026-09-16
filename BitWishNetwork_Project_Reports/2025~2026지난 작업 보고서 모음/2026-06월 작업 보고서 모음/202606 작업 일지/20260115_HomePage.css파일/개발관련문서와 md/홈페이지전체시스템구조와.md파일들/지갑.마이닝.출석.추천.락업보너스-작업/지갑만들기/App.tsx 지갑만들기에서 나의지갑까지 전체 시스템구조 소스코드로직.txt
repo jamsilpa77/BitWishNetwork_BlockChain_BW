@@ -1,0 +1,724 @@
+네, 알겠습니다. 네비게이션 상단 "지갑 만들기"부터 "나의 지갑"까지의 전체 지갑 생성 과정을 완벽하게 찾아서 보고하겠습니다.
+
+
+[14 tools called]
+
+네, 알겠습니다. 네비게이션 상단 "지갑 만들기"부터 "나의 지갑"까지의 전체 지갑 생성 과정을 완벽하게 찾아서 보고하겠습니다.
+
+## 🔍 지갑 생성 시스템 전체 구조 분석 보고서
+
+### 1. 지갑 생성 관련 상태 변수들
+
+```typescript
+// 지갑 생성 관련 상태
+const [walletStep, setWalletStep] = useState(1); // 지갑 생성 단계 (1-4)
+const [generatedSeedPhrase, setGeneratedSeedPhrase] = useState(''); // 생성된 시드문구
+const [verificationIndices, setVerificationIndices] = useState<number[]>([]); // 검증 인덱스
+const [verificationInputs, setVerificationInputs] = useState<string[]>([]); // 검증 입력
+const [publicKey, setPublicKey] = useState(''); // 공개키
+const [seedPhrase, setSeedPhrase] = useState(''); // 시드문구
+
+// 지갑 시스템 상태 관리
+const [showWalletDropdown, setShowWalletDropdown] = useState(false); // 지갑 드롭다운
+const [showWalletCreation, setShowWalletCreation] = useState(false); // 지갑 생성 모달
+const [showMyWallet, setShowMyWallet] = useState(false); // 나의 지갑 모달
+const [showWalletInfo, setShowWalletInfo] = useState(false); // 지갑 정보 모달
+const [showNewWalletModal, setShowNewWalletModal] = useState(false); // 새 지갑 만들기 모달
+```
+
+### 2. 지갑 생성 단계별 UI 구조
+
+#### 단계 1: 지갑 생성 시작 화면
+```typescript
+{walletStep === 1 && (
+  <div className="text-center space-y-6">
+    <h3 className="text-2xl font-bold text-gray-900">{t('wallet.startCreation')}</h3>
+    <p className="text-lg text-gray-600">{t('wallet.generate24Words')} {t('wallet.createSecureWallet')}</p>
+    
+    {/* 추천인 코드 입력 */}
+    <div className="max-w-md mx-auto space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          추천인 코드 입력 (선택사항)
+        </label>
+        <input
+          type="text"
+          value={referralCodeInput}
+          onChange={(e) => setReferralCodeInput(e.target.value)}
+          placeholder="추천인 코드를 입력하세요"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+    </div>
+
+    <button 
+      onClick={startWalletCreation}
+      className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg transition-all duration-200 text-lg"
+    >
+      💰 {t('wallet.startCreation')}
+    </button>
+  </div>
+)}
+```
+
+#### 단계 2: 시드문구 표시 화면
+```typescript
+{walletStep === 2 && (
+  <div className="space-y-6">
+    <div className="text-center">
+      <h3 className="text-2xl font-bold text-gray-900 mb-4">🔐 {t('wallet.seedPhrase24Words')}</h3>
+      <p className="text-gray-600 mb-6">{t('seedPhrase.record24WordsSafely')}</p>
+      
+      {/* 추천인 코드 인증 성공 메시지 */}
+      {userReferralSystemState.referralCode && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-center">
+            <div className="text-green-600 text-sm font-medium">
+              ✅ 추천인 코드 인증 완료: {userReferralSystemState.referralCode}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+    
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6" id="seed-phrase-container">
+      <div className="font-mono text-sm bg-white p-4 rounded border break-all leading-relaxed">
+        {generatedSeedPhrase}
+      </div>
+      <div className="flex justify-center space-x-3 mt-4">
+        <button 
+          onClick={copySeedPhrase}
+          className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          📋 {t('wallet.copy')}
+        </button>
+        <button 
+          onClick={() => setWalletStep(3)}
+          className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
+        >
+          ✅ {t('wallet.confirm')}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+#### 단계 3: 시드문구 검증 화면
+```typescript
+{walletStep === 3 && (
+  <div id="seed-phrase-verification-container" className="space-y-6">
+    <div className="text-center">
+      <h3 className="text-2xl font-bold text-gray-900 mb-4">✅ {t('seedPhrase.verification')}</h3>
+      <p className="text-gray-600 mb-6">{t('seedPhrase.enter4RandomWords')} {t('seedPhrase.enter4RandomSelectedWords')}</p>
+    </div>
+    
+    <div className="grid grid-cols-2 gap-4">
+      {verificationIndices.map((index, i) => (
+        <div key={i} className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            {index + 1}번째 단어
+          </label>
+          <input
+            type="text"
+            value={verificationInputs[i]}
+            onChange={(e) => {
+              const newInputs = [...verificationInputs];
+              newInputs[i] = e.target.value;
+              setVerificationInputs(newInputs);
+            }}
+            placeholder={`${index + 1}번째 단어를 입력하세요`}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      ))}
+    </div>
+    
+    <div className="flex justify-center">
+      <button 
+        onClick={validateSeedPhrase}
+        className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
+      >
+        ✅ {t('wallet.confirm')}
+      </button>
+    </div>
+  </div>
+)}
+```
+
+#### 단계 4: 지갑 생성 완료 화면
+```typescript
+{walletStep === 4 && (
+  <div className="text-center space-y-6">
+    <div className="text-6xl mb-4">  </div>
+    <h3 className="text-2xl font-bold text-green-900">지갑 생성 완료!</h3>
+    <p className="text-lg text-gray-600">축하합니다! 새로운 스텔라 지갑이 생성되었습니다</p>
+    
+    <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md mx-auto">
+      <h4 className="font-semibold text-green-800 mb-2">지갑 주소</h4>
+      <div className="font-mono text-sm bg-white p-3 rounded border break-all">
+        {publicKey}
+      </div>
+      <button 
+        onClick={(e) => {
+          navigator.clipboard.writeText(publicKey);
+          alert('지갑 주소가 복사되었습니다!');
+        }}
+        className="mt-3 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
+      >
+        📋 주소 복사
+      </button>
+    </div>
+    
+    <div className="space-y-3">
+      <button 
+        onClick={() => {
+          setShowWalletCreation(false);
+          setSeedPhrase('');
+          setShowMyWallet(true);
+        }}
+        className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        🔑 {t('wallet.myWallet')} 열기
+      </button>
+      <button 
+        onClick={() => setShowWalletCreation(false)}
+        className="px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+      >
+        닫기
+      </button>
+    </div>
+  </div>
+)}
+```
+
+### 3. 지갑 생성 관련 함수들
+
+#### 지갑 생성 시작 함수
+```typescript
+const startWalletCreation = async () => {
+  try {
+    // 추천인 코드가 입력된 경우 자동 검증
+    if (referralCodeInput && referralCodeInput.trim().length > 0) {
+      console.log('🔍 추천인 코드 자동 검증 시작:', referralCodeInput);
+      
+      // 추천인 코드 검증
+      const validationResult = await validateReferralCode(referralCodeInput);
+      
+      if (!validationResult.isValid) {
+        console.log('❌ 추천인 코드 검증 실패');
+        alert(`❌ 추천인 코드 오류: ${validationResult.errorMessage}`);
+        return;
+      }
+      
+      // 추천인 코드 인증 성공
+      setUserReferralSystemState(prev => ({
+        ...prev,
+        referralCode: validationResult.referralCode,
+        referralBonusApplied: true,
+        referrerWalletAddress: validationResult.walletAddress
+      }));
+      
+      console.log('✅ 추천인 코드 인증 성공:', validationResult);
+    }
+    
+    // 지갑 생성 단계 진행
+    setWalletStep(2);
+    
+    // 백엔드에서 시드문구 생성
+    const response = await fetch('http://localhost:4001/wallet/generate-seedphrase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'user_' + Date.now() })
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+      setGeneratedSeedPhrase(data.seedPhrase);
+      setVerificationIndices(data.positions || [0, 6, 12, 18]);
+      setVerificationInputs(['', '', '', '']);
+    }
+  } catch (error) {
+    console.error('시드문구 생성 실패:', error);
+    alert('시드문구 생성에 실패했습니다.');
+  }
+};
+```
+
+#### 시드문구 복사 함수
+```typescript
+const copySeedPhrase = async () => {
+  try {
+    await navigator.clipboard.writeText(generatedSeedPhrase);
+    showCustomAlert(
+      'success',
+      'wallet.seedPhraseCopiedTitle',
+      'wallet.seedPhraseCopiedMessage',
+      'seed-phrase-container'
+    );
+  } catch (error) {
+    console.error('복사 실패:', error);
+    alert('복사에 실패했습니다.');
+  }
+};
+```
+
+#### 시드문구 검증 함수
+```typescript
+const validateSeedPhrase = async () => {
+  try {
+    // 1단계: 로컬 검증
+    const localValidation = validateSeedPhraseLocally();
+    if (!localValidation.isValid) {
+      console.error('❌ 로컬 검증 실패:', localValidation.error);
+      showCustomAlert(
+        'error',
+        'wallet.seedPhraseVerificationFailed',
+        'wallet.seedPhraseInvalidBIP39',
+        'seed-phrase-verification-container'
+      );
+      return;
+    }
+    
+    console.log('✅ 로컬 검증 통과, 백엔드 검증 진행...');
+    
+    // 2단계: 백엔드 검증
+    const backendValidation = await validateSeedPhraseWithBackend();
+    if (!backendValidation.isValid) {
+      console.warn('⚠️ 백엔드 검증 실패, 로컬 검증 결과 사용:', backendValidation.error);
+    } else {
+      console.log('✅ 백엔드 검증도 통과');
+    }
+    
+    // 3단계: 지갑 생성 진행
+    await createWalletFromSeedPhrase();
+    
+  } catch (error) {
+    console.error('검증 실패:', error);
+    showCustomAlert(
+      'error',
+      'wallet.seedPhraseVerificationFailed',
+      'wallet.seedPhraseInvalidBIP39',
+      'seed-phrase-verification-container'
+    );
+  }
+};
+```
+
+#### 지갑 생성 함수
+```typescript
+const createWalletFromSeedPhrase = async () => {
+  try {
+    console.log('🔍 지갑 생성 시작...');
+    
+    const verificationWords: { [key: number]: string } = {};
+    verificationIndices.forEach((index, i) => {
+      verificationWords[index + 1] = verificationInputs[i].trim();
+    });
+
+    console.log('🔍 검증 단어:', verificationWords);
+    console.log('🔍 시드문구:', generatedSeedPhrase);
+    console.log('🔍 시드문구 단어 수:', generatedSeedPhrase.split(' ').length);
+    console.log('🔍 검증 인덱스:', verificationIndices);
+
+    // 로컬 검증이 통과했으므로 직접 지갑 생성 진행
+    console.log('✅ 로컬 검증 통과, 지갑 생성 진행...');
+    
+    const response = await fetch('http://localhost:4001/wallet/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seedPhrase: generatedSeedPhrase,
+        userId: 'user_' + Date.now()
+      })
+    });
+    
+    const createData = await response.json();
+    
+    if (createData.success) {
+      setPublicKey(createData.wallet.address);
+      console.log('✅ 지갑 생성 성공:', createData.wallet.address);
+      
+      // 추천인 코드 인증 처리
+      if (userReferralSystemState.referralCode) {
+        try {
+          await handleUserReferralJoin(userReferralSystemState.referralCode, createData.wallet.address);
+          
+          showCustomAlert(
+            'success',
+            'wallet.referralCodeAuthenticationComplete',
+            'wallet.referralBonusMessage',
+            'seed-phrase-verification-container'
+          );
+        } catch (error) {
+          console.error('🆕 추천인 코드 인증 실패:', error);
+          alert('추천인 코드 인증에 실패했습니다. 지갑은 정상적으로 생성되었습니다.');
+        }
+      }
+      
+      // 지갑 생성 완료 후 추천 보상 지급
+      if (userReferralSystemState.referralCode) {
+        await handleWalletCreationComplete(createData.wallet.address, userReferralSystemState.referralCode);
+      }
+      
+      setWalletStep(4);
+    } else {
+      console.error('❌ 지갑 생성 실패:', createData);
+      showCustomAlert(
+        'error',
+        'wallet.seedPhraseVerificationFailed',
+        'wallet.seedPhraseInvalidBIP39',
+        'seed-phrase-verification-container'
+      );
+    }
+  } catch (error) {
+    console.error('지갑 생성 실패:', error);
+    showCustomAlert(
+      'error',
+      'wallet.seedPhraseVerificationFailed',
+      'wallet.seedPhraseInvalidBIP39',
+      'seed-phrase-verification-container'
+    );
+  }
+};
+```
+
+### 4. 지갑 접근 함수
+
+```typescript
+const accessWallet = async () => {
+  try {
+    // 시드문구가 비어있는지 확인
+    if (!seedPhrase.trim()) {
+      showCustomAlert(
+        'warning',
+        'wallet.passwordRequiredTitle',
+        'wallet.passwordRequiredMessage',
+        'seed-phrase-container'
+      );
+      return;
+    }
+    
+    // 시드문구로 지갑 접근
+    const response = await fetch('http://localhost:4001/wallet/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seedPhrase: seedPhrase.trim(),
+        userId: 'user_' + Date.now()
+      })
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+      setPublicKey(data.wallet.address);
+      // 지갑 정보 표시 모달로 이동
+      setShowMyWallet(false);
+      setShowWalletInfo(true);
+      
+      // 실시간 지갑 데이터 가져오기
+      setTimeout(() => fetchWalletData(), 100);
+      
+      console.log('✅ 지갑 접근 성공:', data.wallet.address);
+    } else {
+      showCustomAlert(
+        'error',
+        'wallet.invalidAddressTitle',
+        'wallet.invalidAddressMessage',
+        'seed-phrase-container'
+      );
+    }
+  } catch (error) {
+    console.error('지갑 접근 실패:', error);
+    showCustomAlert(
+      'error',
+      'wallet.invalidAddressTitle',
+      'wallet.invalidAddressMessage',
+      'seed-phrase-container'
+    );
+  }
+};
+```
+
+### 5. 나의 지갑 모달 UI
+
+```typescript
+{/* 🔑 {t('wallet.myWallet')} 모달 - 시드문구 입력 필수 */}
+{showMyWallet && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowMyWallet(false)}>
+    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
+      {/* 모달 헤더 */}
+      <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">🔑 {t('wallet.myWallet')}</h2>
+        <button 
+          onClick={() => setShowMyWallet(false)}
+          className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
+          title="닫기"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* 시드문구 입력 */}
+      <div className="p-6" id="seed-phrase-container">
+        <div className="text-center mb-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">{t('wallet.access')}</h3>
+          <p className="text-sm text-gray-600">{t('wallet.enter24WordsToVerify')} {t('wallet.enter24WordsToCheckPersonalInfo')}</p>
+        </div>
+        
+        <div className="mb-4">
+          <div className="text-center p-4 bg-gray-100 rounded-lg">
+            <p className="text-gray-600 text-sm">{t('wallet.walletFunctionRemoved')}</p>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('wallet.enter24Words')}
+            </label>
+            <textarea
+              value={seedPhrase}
+              onChange={(e) => setSeedPhrase(e.target.value)}
+              placeholder={t('wallet.enter24WordsPlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-32 resize-none"
+            />
+          </div>
+          
+          <button 
+            onClick={accessWallet}
+            className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200"
+          >
+            🔑 {t('wallet.access')}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+### 6. 지갑 정보 표시 모달
+
+```typescript
+{/* 🆕 원본 프롬프트대로 "{t('wallet.myWallet')}" 페이지 */}
+{showWalletInfo && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowWalletInfo(false)}>
+    <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="p-6">
+        {/* 헤더 */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">🔑 {t('wallet.myWallet')}</h2>
+          <div className="flex items-center space-x-3">
+            {/* 실시간 데이터 새로고침 버튼 */}
+            <button 
+              onClick={fetchWalletData}
+              className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors text-sm"
+            >
+              🔄 새로고침
+            </button>
+            <button 
+              onClick={() => setShowWalletInfo(false)}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        {/* 지갑 주소 */}
+        <div className="mb-6">
+          <h4 className="font-semibold text-gray-800 mb-3">🔑 {t('transfer.myWalletAddress')}</h4>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="font-mono text-sm text-gray-700 break-all mb-3">
+              {publicKey || '지갑 주소를 불러오는 중...'}
+            </div>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(publicKey);
+                alert('지갑 주소가 복사되었습니다!');
+              }}
+              className="px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 transition-colors"
+            >
+              📋 복사
+            </button>
+          </div>
+        </div>
+
+        {/* 실시간 블록체인 데이터 표시 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-semibold text-blue-800 mb-2">   총 BW 보유량</h4>
+            <div className="text-2xl font-bold text-blue-900">
+              {walletData.totalBW} BW
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+            <h4 className="font-semibold text-green-800 mb-2">🔒 락업된 BW</h4>
+            <div className="text-2xl font-bold text-green-900">
+              {walletData.lockedBW} BW
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+### 7. 네비게이션 지갑 드롭다운 메뉴
+
+```typescript
+{/* 지갑 드롭다운 메뉴 */}
+{showWalletDropdown && (
+  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+    <div className="p-4 space-y-3">
+      {/* 지갑 만들기 버튼 */}
+      <button 
+        onClick={() => {
+          setShowWalletDropdown(false);
+          setShowWalletCreation(true);
+        }}
+        className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 text-center"
+      >
+        💰 {t('wallet.createWallet')}
+      </button>
+      
+      {/* {t('wallet.myWallet')} 버튼 */}
+      <button 
+        onClick={() => {
+          setShowWalletDropdown(false);
+          setShowMyWallet(true);
+          //    보안: 시드문구 초기화
+          setSeedPhrase('');
+        }}
+        className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all duration-200 text-center"
+      >
+        🔑 {t('wallet.myWallet')}
+      </button>
+    </div>
+  </div>
+)}
+```
+
+### 8. 지갑 생성 관련 useEffect 훅들
+
+```typescript
+// ==================== 유저용 지갑 생성 완료 시 추천인 코드 자동 발급 useEffect ====================
+useEffect(() => {
+  // 지갑 생성 완료 시 (walletStep === 4) 추천인 코드 자동 발급
+  if (walletStep === 4 && publicKey && !userReferralCodeGenerated) {
+    const autoGenerateUserReferralCode = async () => {
+      try {
+        console.log('   유저용 지갑 생성 완료 - 추천인 코드 자동 발급 시작');
+        
+        // 추천인 코드 생성 로딩 시작
+        setUserReferralCodeLoading(true);
+        
+        // 추천인 코드 생성
+        const referralCode = await generateUserReferralCode(publicKey);
+        
+        // 상태 업데이트
+        setUserReferralCode(referralCode);
+        setUserReferralCodeGenerated(true);
+        setUserReferralCodeLoading(false);
+        
+        console.log('✅ 유저용 추천인 코드 자동 발급 완료:', referralCode);
+      } catch (error) {
+        console.error('❌ 유저용 추천인 코드 자동 발급 실패:', error);
+        setUserReferralCodeLoading(false);
+        // 에러 발생 시에도 사용자에게 알리지 않음 (자동 발급이므로)
+      }
+    };
+    
+    autoGenerateUserReferralCode();
+  }
+}, [walletStep, publicKey, userReferralCodeGenerated]);
+```
+
+### 9. 지갑 데이터베이스 클래스
+
+```typescript
+class WalletDatabase {
+  private wallets: WalletInfo[] = [];
+
+  registerWallet(walletInfo: WalletInfo) {
+    this.wallets.push(walletInfo);
+    this.saveToLocalStorage();
+  }
+
+  getWalletByAddress(address: string): WalletInfo | undefined {
+    return this.wallets.find(wallet => wallet.address === address);
+  }
+
+  getAllWallets(): WalletInfo[] {
+    return this.wallets;
+  }
+
+  private saveToLocalStorage() {
+    try {
+      localStorage.setItem('walletDatabase', JSON.stringify(this.wallets));
+    } catch (error) {
+      console.error('❌ 지갑 데이터베이스 저장 실패:', error);
+    }
+  }
+
+  loadFromLocalStorage() {
+    try {
+      const saved = localStorage.getItem('walletDatabase');
+      if (saved) {
+        this.wallets = JSON.parse(saved);
+        console.log('✅ 지갑 데이터베이스 로드 완료:', this.wallets.length, '개');
+      }
+    } catch (error) {
+      console.error('❌ 지갑 데이터베이스 로드 실패:', error);
+    }
+  }
+}
+```
+
+### 10. 지갑 생성 관련 API 엔드포인트
+
+```typescript
+// 시드문구 생성 API
+POST http://localhost:4001/wallet/generate-seedphrase
+{
+  "userId": "user_1234567890"
+}
+
+// 지갑 생성 API
+POST http://localhost:4001/wallet/create
+{
+  "seedPhrase": "word1 word2 ... word24",
+  "userId": "user_1234567890"
+}
+
+// 시드문구 검증 API
+POST http://localhost:4001/wallet/verify-seedphrase
+{
+  "seedPhrase": "word1 word2 ... word24",
+  "verificationWords": {
+    "1": "word1",
+    "7": "word7",
+    "13": "word13",
+    "19": "word19"
+  }
+}
+```
+
+## 📋 요약
+
+지갑 생성 시스템은 다음과 같은 구조로 되어 있습니다:
+
+1. **네비게이션 드롭다운** → 지갑 만들기/나의 지갑 버튼
+2. **지갑 생성 모달** → 4단계 지갑 생성 과정
+3. **나의 지갑 모달** → 시드문구 입력으로 지갑 접근
+4. **지갑 정보 모달** → 생성된 지갑 정보 표시
+5. **백엔드 API** → 시드문구 생성, 지갑 생성, 검증
+6. **로컬 데이터베이스** → 지갑 정보 저장/관리
+7. **추천인 시스템** → 지갑 생성 시 추천인 코드 연동
+
+모든 코드가 `App.tsx` 파일에 집중되어 있어, 이를 별도 파일로 분리하여 관리하기 쉽게 만들어야 합니다.

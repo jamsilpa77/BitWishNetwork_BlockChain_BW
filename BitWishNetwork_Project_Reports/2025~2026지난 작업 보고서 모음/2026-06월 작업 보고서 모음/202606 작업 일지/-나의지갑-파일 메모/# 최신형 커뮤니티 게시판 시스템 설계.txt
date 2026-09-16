@@ -1,0 +1,552 @@
+# 최신형 커뮤니티 게시판 시스템 설계
+
+요청한 구조를 기준으로 요즘 많이 사용하는 커뮤니티 스타일을 벤치마킹해서 아래 기능들을 포함한 “실전형 커뮤니티 게시판 시스템” 구조로 설계합니다.
+
+벤치마킹 스타일:
+
+* DC Inside 스타일의 빠른 게시판
+* Reddit 스타일 추천/이모지 반응
+* Blind 스타일 인기글 시스템
+* FM Korea 스타일 카테고리형 게시판
+
+---
+
+# 핵심 기능
+
+## 관리자 기능
+
+* 공지사항 등록/수정/삭제
+* 공지 상단 고정
+* 인기 게시물 관리
+* 신고 게시물 관리
+* 회원 정지 기능
+
+---
+
+## 회원 기능
+
+* 게시글 작성
+* 게시글 카테고리 선택
+
+  * 유머
+  * 정보
+  * 자유
+  * 질문
+  * 게임
+  * 익명
+* 이미지 업로드
+* 댓글 작성
+* 대댓글 작성
+* 좋아요 👍
+* 싫어요 👎
+* 하트 ❤️
+* 웃겨요 😂
+* 북마크 🔖
+
+---
+
+## 인기글 알고리즘
+
+예시:
+
+```ts
+score =
+  like * 3 +
+  heart * 5 +
+  funny * 2 -
+  dislike * 2
+```
+
+* 점수 높은 게시물 자동 상단 노출
+* 조회수 증가 반영
+* 최근글 우선 반영
+
+---
+
+## 페이지네이션
+
+* 게시글 20~30개 단위 출력
+* 다음 페이지 버튼
+* 이전 페이지 버튼
+* 페이지 번호 이동
+
+예시:
+
+```text
+[1] [2] [3] [4] [다음]
+```
+
+---
+
+# 추천 기술 스택
+
+| 영역       | 기술                     |
+| -------- | ---------------------- |
+| Frontend | React + Next.js        |
+| Backend  | Node.js + Express      |
+| DB       | PostgreSQL             |
+| ORM      | Prisma                 |
+| Auth     | JWT                    |
+| Upload   | AWS S3 또는 Local Upload |
+| Styling  | TailwindCSS            |
+| Realtime | Socket.io              |
+| Cache    | Redis                  |
+
+---
+
+# 전체 프로젝트 폴더 구조
+
+```bash
+community-system/
+│
+├── frontend/
+│
+├── backend/
+│
+├── database/
+│
+├── uploads/
+│
+├── docs/
+│
+└── docker-compose.yml
+```
+
+---
+
+# FRONTEND 구조
+
+```bash
+frontend/
+│
+├── public/
+│
+├── src/
+│   ├── api/
+│   │   ├── auth.ts
+│   │   ├── post.ts
+│   │   ├── comment.ts
+│   │   └── reaction.ts
+│   │
+│   ├── components/
+│   │   ├── common/
+│   │   │   ├── Header.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   ├── Pagination.tsx
+│   │   │   └── Loading.tsx
+│   │   │
+│   │   ├── board/
+│   │   │   ├── PostCard.tsx
+│   │   │   ├── PostList.tsx
+│   │   │   ├── PostEditor.tsx
+│   │   │   ├── CategoryTabs.tsx
+│   │   │   ├── ReactionBar.tsx
+│   │   │   └── NoticeBanner.tsx
+│   │   │
+│   │   └── comment/
+│   │       ├── CommentList.tsx
+│   │       ├── CommentItem.tsx
+│   │       └── CommentEditor.tsx
+│   │
+│   ├── pages/
+│   │   ├── index.tsx
+│   │   ├── board/
+│   │   │   ├── index.tsx
+│   │   │   ├── write.tsx
+│   │   │   └── [id].tsx
+│   │   │
+│   │   ├── admin/
+│   │   │   ├── notices.tsx
+│   │   │   └── dashboard.tsx
+│   │   │
+│   │   └── auth/
+│   │       ├── login.tsx
+│   │       └── register.tsx
+│   │
+│   ├── store/
+│   │   ├── authStore.ts
+│   │   └── boardStore.ts
+│   │
+│   ├── styles/
+│   │   └── globals.css
+│   │
+│   └── utils/
+│       ├── formatDate.ts
+│       └── calculateHotScore.ts
+│
+├── package.json
+└── next.config.js
+```
+
+---
+
+# BACKEND 구조
+
+```bash
+backend/
+│
+├── src/
+│   ├── config/
+│   │   ├── db.ts
+│   │   └── jwt.ts
+│   │
+│   ├── controllers/
+│   │   ├── auth.controller.ts
+│   │   ├── post.controller.ts
+│   │   ├── comment.controller.ts
+│   │   ├── reaction.controller.ts
+│   │   └── admin.controller.ts
+│   │
+│   ├── routes/
+│   │   ├── auth.routes.ts
+│   │   ├── post.routes.ts
+│   │   ├── comment.routes.ts
+│   │   ├── reaction.routes.ts
+│   │   └── admin.routes.ts
+│   │
+│   ├── middleware/
+│   │   ├── auth.middleware.ts
+│   │   ├── admin.middleware.ts
+│   │   └── upload.middleware.ts
+│   │
+│   ├── services/
+│   │   ├── post.service.ts
+│   │   ├── comment.service.ts
+│   │   └── ranking.service.ts
+│   │
+│   ├── sockets/
+│   │   └── board.socket.ts
+│   │
+│   ├── utils/
+│   │   ├── pagination.ts
+│   │   └── hotScore.ts
+│   │
+│   ├── app.ts
+│   └── server.ts
+│
+├── prisma/
+│   └── schema.prisma
+│
+├── package.json
+└── tsconfig.json
+```
+
+---
+
+# DATABASE 구조
+
+## User 테이블
+
+```prisma
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  nickname  String
+  password  String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+
+  posts     Post[]
+  comments  Comment[]
+}
+```
+
+---
+
+## Post 테이블
+
+```prisma
+model Post {
+  id          Int       @id @default(autoincrement())
+  title       String
+  content     String
+  category    String
+  thumbnail   String?
+  views       Int       @default(0)
+
+  likeCount   Int       @default(0)
+  dislikeCount Int      @default(0)
+  heartCount  Int       @default(0)
+  funnyCount  Int       @default(0)
+
+  hotScore    Float     @default(0)
+
+  isNotice    Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
+
+  authorId    Int
+  author      User      @relation(fields: [authorId], references: [id])
+
+  comments    Comment[]
+}
+```
+
+---
+
+## Comment 테이블
+
+```prisma
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+
+  postId    Int
+  userId    Int
+
+  createdAt DateTime @default(now())
+
+  post      Post @relation(fields: [postId], references: [id])
+  user      User @relation(fields: [userId], references: [id])
+}
+```
+
+---
+
+# 게시글 조회 API
+
+```ts
+GET /api/posts?page=1&category=humor
+```
+
+응답:
+
+```json
+{
+  "posts": [],
+  "totalPages": 10,
+  "currentPage": 1
+}
+```
+
+---
+
+# 게시글 작성 API
+
+```ts
+POST /api/posts
+```
+
+Body:
+
+```json
+{
+  "title": "오늘 개웃긴 썰",
+  "content": "ㅋㅋㅋㅋ",
+  "category": "humor"
+}
+```
+
+---
+
+# 리액션 시스템 로직
+
+## Reaction 타입
+
+```ts
+type ReactionType =
+  | "LIKE"
+  | "DISLIKE"
+  | "HEART"
+  | "FUNNY";
+```
+
+---
+
+## 리액션 처리
+
+```ts
+async function reactPost(postId, type) {
+  switch(type) {
+    case "LIKE":
+      post.likeCount++;
+      break;
+
+    case "DISLIKE":
+      post.dislikeCount++;
+      break;
+
+    case "HEART":
+      post.heartCount++;
+      break;
+
+    case "FUNNY":
+      post.funnyCount++;
+      break;
+  }
+
+  post.hotScore =
+      post.likeCount * 3 +
+      post.heartCount * 5 +
+      post.funnyCount * 2 -
+      post.dislikeCount * 2;
+}
+```
+
+---
+
+# 인기글 자동 정렬
+
+```sql
+ORDER BY hotScore DESC, createdAt DESC
+```
+
+---
+
+# Pagination 컴포넌트
+
+```tsx
+export default function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange
+}) {
+  return (
+    <div className="flex gap-2">
+      {currentPage > 1 && (
+        <button onClick={() => onPageChange(currentPage - 1)}>
+          이전
+        </button>
+      )}
+
+      {[...Array(totalPages)].map((_, i) => (
+        <button
+          key={i}
+          onClick={() => onPageChange(i + 1)}
+        >
+          {i + 1}
+        </button>
+      ))}
+
+      {currentPage < totalPages && (
+        <button onClick={() => onPageChange(currentPage + 1)}>
+          다음
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+# 게시판 메인 화면 구조
+
+```text
+┌────────────────────┐
+│ 로고   검색   로그인 │
+├────────────────────┤
+│ 공지사항 배너       │
+├────────────────────┤
+│ 카테고리 탭         │
+├────────────────────┤
+│ 인기글 TOP 10       │
+├────────────────────┤
+│ 게시글 리스트       │
+│                    │
+│ 제목  댓글 조회수  │
+│ 제목  댓글 조회수  │
+│ 제목  댓글 조회수  │
+├────────────────────┤
+│ 이전 1 2 3 다음    │
+└────────────────────┘
+```
+
+---
+
+# 추천 추가 기능
+
+## 1. 실시간 인기글
+
+Socket.io 사용
+
+```ts
+io.emit("hot-post-update", post);
+```
+
+---
+
+## 2. 게시글 검색
+
+```ts
+GET /api/posts?search=게임
+```
+
+---
+
+## 3. 신고 기능
+
+```ts
+POST /api/report
+```
+
+---
+
+## 4. 관리자 대시보드
+
+* 오늘 가입자 수
+* 인기글
+* 신고 게시물
+* 방문자 수
+
+---
+
+# 추천 UI 스타일
+
+요즘 유행 스타일:
+
+* 다크모드 기본
+* 카드형 게시글
+* hover 애니메이션
+* 둥근 버튼
+* 이모지 반응형 UI
+* 모바일 우선 설계
+
+---
+
+# 실제 제작 순서 추천
+
+## 1단계
+
+회원가입/로그인
+
+## 2단계
+
+게시글 CRUD
+
+## 3단계
+
+댓글 시스템
+
+## 4단계
+
+이모지 리액션
+
+## 5단계
+
+인기글 알고리즘
+
+## 6단계
+
+실시간 기능
+
+## 7단계
+
+관리자 페이지
+
+---
+
+# 최종적으로 완성되는 형태
+
+완성되면 아래 기능들이 있는 “현대형 커뮤니티 플랫폼”이 됩니다.
+
+* 디시 + 레딧 + FM코리아 혼합형
+* 인기글 자동 부스팅
+* 이모지 반응 시스템
+* 공지 상단 고정
+* 페이지네이션
+* 관리자 시스템
+* 실시간 인기글
+* 모바일 반응형
+* 다크모드 지원
+* 확장 가능한 구조

@@ -1,0 +1,86 @@
+import mongoose from 'mongoose';
+import { splitFee64 } from '../utils/decimalUtil';
+
+// 가상의 코어 블록체인 엔진 인스턴스 (기존 메인넷 코어와 바인딩)
+// 실제 프로젝트 환경에 맞춰 import 경로 및 코어 인스턴스 명칭을 유연하게 매핑하세요.
+import { bwChainCore } from './BlockchainService'; 
+
+export interface BlockMiningResult {
+  success: boolean;
+  blockHeight: number;
+  totalBlockCount: number;
+  distributedFee: {
+    ecosystemFund: string;
+    foundationFund: string;
+  };
+}
+
+export class BlockMiningService {
+  
+  /**
+   * [마이닝 블록 생성 및 수수료 즉시 분배 실행 코어]
+   * 마이닝 버튼이 트리거되면 호출되어 블록을 적재하고 장부를 업데이트합니다.
+   * @param walletAddress 채굴을 요청한 유저의 지갑 주소
+   * @param session 단일 DB 트랜잭션 보장을 위한 몽구스 세션 (선택 사항)
+   */
+  public static async onMiningBlock(walletAddress: string, session?: mongoose.ClientSession): Promise<BlockMiningResult> {
+    try {
+      // 1단계: 블록체인 메인넷 코어를 호출하여 새 PoW 블록을 bitwish_network.blocks 컬렉션에 생성 및 저장
+      // 기존 P2P 송금 트랜잭션 검증용 메서드와 격리된 '채굴 전용 블록 생성 기능'을 수행합니다.
+      const newBlock = await bwChainCore.createBlock(walletAddress);
+      const currentHeight = newBlock ? newBlock.height : 0;
+
+      // 2단계: 약속된 고정 채굴 수수료인 0.001 BW를 부동소수점 에러 없이 6:4 비율로 쪼갭니다.
+      const { ecosystemFund, foundationFund } = splitFee64("0.001");
+
+      // 3단계: 자산 오차 방지를 위해 bitwish_network DB 내부의 'network_stats' 컬렉션에 기금 누적액을 원자적으로 반영 ($inc)
+      // 단일 Standalone 환경에서도 완벽한 무결성을 지키기 위해 동일 DB 공간에 원자적 업데이트(upsert)를 수행합니다.
+      const db = mongoose.connection.useDb('bitwish_network');
+      const NetworkStatsModel = db.model('network_stats', new mongoose.Schema({}, { strict: false }));
+
+      await NetworkStatsModel.updateOne(
+        { statsId: "global_mainnet_stats" }, // 글로벌 메인넷 통계 단일 고유 키
+        {
+          $inc: {
+            // Decimal.js로 계산된 문자열 수치를 Float 형태로 캐스팅하여 안전하게 누적
+            ecosystemFundAccumulated: parseFloat(ecosystemFund),
+            foundationFundAccumulated: parseFloat(foundationFund),
+            totalMiningFeesCollected: 0.001
+          }
+        },
+        { upsert: true, session } // 장부가 없으면 자동 생성, 세션이 존재하면 트랜잭션에 참여
+      );
+
+      // 4단계: 실시간 대시보드 갱신을 위해 현재까지 쌓인 전체 블록 개수를 DB에서 직접 실시간 카운팅
+      const totalBlockCount = await this.getTotalBlockCount();
+
+      return {
+        success: true,
+        blockHeight: currentHeight,
+        totalBlockCount: totalBlockCount,
+        distributedFee: { ecosystemFund, foundationFund }
+      };
+
+    } catch (error) {
+      console.error("[블록 마이닝 서비스 에러] 블록 생성 및 수수료 분배 중 예외 발생:", error);
+      // 시스템 무결성을 위해 실패 시 부모 라인으로 에러를 던져 트랜잭션 롤백을 유도하거나 빈 결과 반환
+      throw error;
+    }
+  }
+
+  /**
+   * [전체 블록 수 조회 전용 유틸]
+   * bitwish_network.blocks 컬렉션의 실제 도큐먼트 숫자를 세어 대시보드에 즉시 제공합니다.
+   */
+  public static async getTotalBlockCount(): Promise<number> {
+    try {
+      const db = mongoose.connection.useDb('bitwish_network');
+      const BlockModel = db.model('blocks', new mongoose.Schema({}, { strict: false }));
+      const count = await BlockModel.countDocuments({});
+      return count;
+    } catch (error) {
+      console.error("[블록 카운트 에러] 전체 블록 수를 가져오지 못했습니다:", error);
+      return 0;
+    }
+  }
+}

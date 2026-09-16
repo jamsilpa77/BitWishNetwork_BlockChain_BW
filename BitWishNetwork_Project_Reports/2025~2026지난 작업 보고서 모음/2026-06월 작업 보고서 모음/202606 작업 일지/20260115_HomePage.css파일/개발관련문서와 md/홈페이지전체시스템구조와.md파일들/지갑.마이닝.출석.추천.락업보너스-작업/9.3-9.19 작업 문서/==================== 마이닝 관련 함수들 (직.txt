@@ -1,0 +1,641 @@
+  // ==================== 마이닝 관련 함수들 (직접 구현) ====================
+  
+  // 🎯 출석 보너스 계산 함수
+  const calculateAttendanceBonus = (consecutiveDays: number): { 
+    bonusRate: number; 
+    enhancedRate: number; 
+    description: string;
+    decimalBonusRate: Decimal;
+    decimalEnhancedRate: Decimal;
+  } => {
+    if (consecutiveDays <= 0) {
+      return {
+        bonusRate: 0,
+        enhancedRate: 0.25,
+        description: '❌ 출석 보너스 없음',
+        decimalBonusRate: new Decimal(0),
+        decimalEnhancedRate: new Decimal(0.25)
+      };
+    }
+
+    let bonusRate = 0;
+    let description = '';
+
+    if (consecutiveDays >= 30) {
+      bonusRate = 0.15; // 15%
+      description = '🎉 30일 이상 연속 출석 (15% 보너스)';
+    } else if (consecutiveDays >= 14) {
+      bonusRate = 0.10; // 10%
+      description = '🔥 14일 이상 연속 출석 (10% 보너스)';
+    } else if (consecutiveDays >= 7) {
+      bonusRate = 0.05; // 5%
+      description = '⭐ 7일 이상 연속 출석 (5% 보너스)';
+    } else if (consecutiveDays >= 3) {
+      bonusRate = 0.02; // 2%
+      description = '💫 3일 이상 연속 출석 (2% 보너스)';
+    } else {
+      bonusRate = 0.01; // 1%
+      description = '✨ 1일 이상 연속 출석 (1% 보너스)';
+    }
+
+    const enhancedRate = 0.25 * (1 + bonusRate);
+
+    return {
+      bonusRate,
+      enhancedRate,
+      description,
+      decimalBonusRate: new Decimal(bonusRate),
+      decimalEnhancedRate: new Decimal(enhancedRate)
+    };
+  };
+
+  // 🎯 추천인 보너스 계산 함수 (BigDecimal 기반)
+  const calculateReferralBonusDecimal = (referralCount: number): {
+    bonusRate: Decimal;
+    enhancedRate: Decimal;
+    description: string;
+    maxBonus: number;
+    instantBonus: Decimal;
+    permanentBonusRate: Decimal;
+    cumulativeBonusRate: Decimal;
+    totalBonusRate: Decimal;
+    segmentInfo: {
+      currentSegment: number;
+      segmentRate: number;
+    };
+  } => {
+    const decimalZero = new Decimal(0);
+    const decimalOne = new Decimal(1);
+    const decimalHundred = new Decimal(100);
+
+    if (referralCount <= 0) {
+      return {
+        bonusRate: decimalZero,
+        enhancedRate: decimalZero,
+        description: '❌ 추천인 없음',
+        maxBonus: 0,
+        instantBonus: decimalZero,
+        permanentBonusRate: decimalZero,
+        cumulativeBonusRate: decimalZero,
+        totalBonusRate: decimalZero,
+        segmentInfo: {
+          currentSegment: 0,
+          segmentRate: 0
+        }
+      };
+    }
+
+    // 영구 보너스율 (1.2% 고정)
+    const permanentBonusRate = new Decimal(0.012);
+    
+    // 구간별 추가 보너스율 계산
+    let cumulativeBonusRate = decimalZero;
+    let currentSegment = 0;
+    let segmentRate = 0;
+
+    if (referralCount >= 1) {
+      const segment1Count = Math.min(referralCount, 30);
+      cumulativeBonusRate = cumulativeBonusRate.plus(new Decimal(segment1Count).times(0.012));
+      currentSegment = 1;
+      segmentRate = 0.012;
+    }
+    
+    if (referralCount >= 31) {
+      const segment2Count = Math.min(referralCount - 30, 30);
+      cumulativeBonusRate = cumulativeBonusRate.plus(new Decimal(segment2Count).times(0.009));
+      currentSegment = 2;
+      segmentRate = 0.009;
+    }
+    
+    if (referralCount >= 61) {
+      const segment3Count = Math.min(referralCount - 60, 30);
+      cumulativeBonusRate = cumulativeBonusRate.plus(new Decimal(segment3Count).times(0.006));
+      currentSegment = 3;
+      segmentRate = 0.006;
+    }
+    
+    if (referralCount >= 91) {
+      const segment4Count = referralCount - 90;
+      cumulativeBonusRate = cumulativeBonusRate.plus(new Decimal(segment4Count).times(0.00375));
+      currentSegment = 4;
+      segmentRate = 0.00375;
+    }
+
+    // 총 보너스율 = 영구 보너스율 + 구간별 추가 보너스율
+    const totalBonusRate = permanentBonusRate.plus(cumulativeBonusRate);
+    
+    // 즉시 보너스 (추천인당 1 BW)
+    const instantBonus = new Decimal(referralCount).times(1);
+
+    const description = `👥 추천인 ${referralCount}명 (영구 ${permanentBonusRate.times(100).toFixed(1)}% + 구간별 ${cumulativeBonusRate.times(100).toFixed(3)}% = 총 ${totalBonusRate.times(100).toFixed(3)}%)`;
+
+    return {
+      bonusRate: totalBonusRate,
+      enhancedRate: totalBonusRate,
+      description,
+      maxBonus: 200, // 최대 200명
+      instantBonus,
+      permanentBonusRate,
+      cumulativeBonusRate,
+      totalBonusRate,
+      segmentInfo: {
+        currentSegment,
+        segmentRate
+      }
+    };
+  };
+
+  // 🎯 락업 보너스 계산 함수
+  const calculateLockupBonus = (lockupRatio: number, lockupMonths: number): {
+    baseAPY: number;
+    periodBonus: number;
+    totalAPY: number;
+    monthlyRate: number;
+    enhancedRate: number;
+    description: string;
+  } => {
+    if (lockupRatio <= 0 || lockupMonths <= 0) {
+      return {
+        baseAPY: 0,
+        periodBonus: 0,
+        totalAPY: 0,
+        monthlyRate: 0,
+        enhancedRate: 0.25,
+        description: '❌ 락업 없음'
+      };
+    }
+
+    // 백서 기반 APY 계산
+    const baseAPY = 0.12; // 12% 기본 APY
+    const periodBonus = 0; // 기간 보너스 없음
+    const totalAPY = baseAPY + periodBonus;
+    const monthlyRate = totalAPY / 12; // 월 보상률
+    const enhancedRate = 0.25 * (1 + monthlyRate * (lockupRatio / 100));
+
+    const description = `🔒 락업 ${lockupRatio}% (${lockupMonths}개월, APY ${(totalAPY * 100).toFixed(1)}%)`;
+
+    return {
+      baseAPY,
+      periodBonus,
+      totalAPY,
+      monthlyRate,
+      enhancedRate,
+      description
+    };
+  };
+
+  // 🎯 가맹점 보너스 계산 함수
+  const calculateMerchantBonus = (isMerchant: boolean): {
+    bonusRate: number;
+    enhancedRate: number;
+    description: string;
+    decimalBonusRate: Decimal;
+    decimalEnhancedRate: Decimal;
+  } => {
+    if (!isMerchant) {
+      return {
+        bonusRate: 0,
+        enhancedRate: 0.25,
+        description: '❌ 가맹점 미등록',
+        decimalBonusRate: new Decimal(0),
+        decimalEnhancedRate: new Decimal(0.25)
+      };
+    }
+
+    const bonusRate = 0.05; // 5% 가맹점 보너스
+    const enhancedRate = 0.25 * (1 + bonusRate);
+
+    return {
+      bonusRate,
+      enhancedRate,
+      description: '🏪 가맹점 등록 (5% 보너스)',
+      decimalBonusRate: new Decimal(bonusRate),
+      decimalEnhancedRate: new Decimal(enhancedRate)
+    };
+  };
+
+  // 🎯 출석 보너스 시간 유효성 검사
+  const isAttendanceBonusTimeValid = (): boolean => {
+    const now = new Date();
+    const hour = now.getHours();
+    return hour >= 9 && hour <= 18; // 오전 9시 ~ 오후 6시
+  };
+
+  // 🎯 실시간 마이닝 보상 계산 함수 (BigDecimal 기반)
+  const calculateRealTimeMiningRewardDecimal = () => {
+    const decimalBaseRate = new Decimal(0.25);
+    
+    // 출석 보너스
+    const decimalAttendanceBonus = (consecutiveAttendanceDays > 0 && isAttendanceBonusTimeValid()) ? 
+      new Decimal(calculateAttendanceBonus(consecutiveAttendanceDays).bonusRate) : 
+      new Decimal(0);
+    
+    // 추천인 보너스
+    const referralBonusData = calculateReferralBonusDecimal(referralCount);
+    const decimalReferralBonus = referralBonusData.totalBonusRate;
+    
+    // 락업 보너스
+    const decimalLockupBonus = (isLockupRegistered && lockupRatio > 0) ? 
+      new Decimal(calculateLockupBonus(lockupRatio, lockupMonths).monthlyRate) : 
+      new Decimal(0);
+    
+    // 가맹점 보너스
+    const decimalMerchantBonus = new Decimal(isMerchantRegistered ? calculateMerchantBonus(isMerchantRegistered).bonusRate : 0);
+    
+    // 총 보너스율 계산
+    const decimalOne = new Decimal(1);
+    const decimalTotalBonusRate = decimalOne
+      .plus(decimalAttendanceBonus)
+      .plus(decimalReferralBonus)
+      .plus(decimalLockupBonus)
+      .plus(decimalMerchantBonus);
+    
+    const decimalEnhancedRate = decimalBaseRate.times(decimalTotalBonusRate);
+    const decimalHourlyReward = decimalEnhancedRate;
+    const decimalDailyReward = decimalHourlyReward.times(24);
+    
+    return {
+      baseRate: decimalBaseRate.toNumber(),
+      attendanceBonus: decimalAttendanceBonus.toNumber(),
+      referralBonus: decimalReferralBonus.toNumber(),
+      lockupBonus: decimalLockupBonus.toNumber(),
+      merchantBonus: decimalMerchantBonus.toNumber(),
+      totalBonusRate: decimalTotalBonusRate.toNumber(),
+      enhancedRate: decimalEnhancedRate.toNumber(),
+      hourlyReward: decimalHourlyReward.toNumber(),
+      dailyReward: decimalDailyReward.toNumber(),
+      ui: {
+        attendancePct: decimalAttendanceBonus.times(100).toNumber(),
+        referralPct: decimalReferralBonus.times(100).toNumber(),
+        lockupPct: decimalLockupBonus.times(100).toNumber(),
+        merchantPct: decimalMerchantBonus.times(100).toNumber(),
+        totalPct: decimalTotalBonusRate.times(100).toNumber()
+      }
+    };
+  };
+
+  // 🎯 누적 보상 계산 함수 (BigDecimal 기반)
+  const calculateAccumulatedRewardDecimal = () => {
+    if (!miningStartTime) {
+      return {
+        accumulatedReward: new Decimal(0),
+        totalAccumulatedReward: new Decimal(0),
+        elapsedHours: new Decimal(0),
+        totalEnhancedRate: new Decimal(0.25),
+        lockupVaultReward: new Decimal(0),
+        referralVaultReward: new Decimal(0)
+      };
+    }
+
+    const now = new Date();
+    const elapsedMs = now.getTime() - miningStartTime.getTime();
+    const decimalElapsedHours = new Decimal(elapsedMs).dividedBy(3600000);
+    
+    const rewardData = calculateRealTimeMiningRewardDecimal();
+    const decimalEnhancedRate = new Decimal(rewardData.enhancedRate);
+    const decimalAccumulatedReward = decimalElapsedHours.times(decimalEnhancedRate);
+    
+    // 락업 보관함 계산
+    let decimalLockupVaultReward = new Decimal(0);
+    if (isLockupRegistered && isMiningActive) {
+      const baseRate = new Decimal(0.25);
+      const attendanceBonus = (consecutiveAttendanceDays > 0 && isAttendanceBonusTimeValid()) ? 
+        new Decimal(calculateAttendanceBonus(consecutiveAttendanceDays).bonusRate) : 
+        new Decimal(0);
+      const referralBonus = new Decimal(referralSystemState.totalBonusRate || 0).dividedBy(100);
+      const totalNodeReward = baseRate.times(new Decimal(1).plus(attendanceBonus).plus(referralBonus));
+      
+      const lockupBonusRate = new Decimal(registeredLockupData.apy).dividedBy(100);
+      const lockupBonusPerHour = totalNodeReward.times(lockupBonusRate);
+      const lockupRatioDecimal = new Decimal(registeredLockupData.ratio).dividedBy(100);
+      decimalLockupVaultReward = lockupBonusPerHour.times(decimalElapsedHours).times(lockupRatioDecimal);
+    }
+    
+    // 추천 보관 BW 계산
+    const decimalReferralVaultReward = new Decimal(0);
+    
+    const decimalTotalAccumulatedReward = decimalAccumulatedReward.plus(decimalLockupVaultReward).plus(decimalReferralVaultReward);
+    
+    return {
+      accumulatedReward: decimalAccumulatedReward,
+      totalAccumulatedReward: decimalTotalAccumulatedReward,
+      elapsedHours: decimalElapsedHours,
+      totalEnhancedRate: decimalEnhancedRate,
+      lockupVaultReward: decimalLockupVaultReward,
+      referralVaultReward: decimalReferralVaultReward
+    };
+  };
+
+  // 🎯 추천 보관 BW 계산 함수
+  const calculateReferralStorageBW = (count: number): number => {
+    if (count <= 0) return 0;
+    const baseMiningRate = 0.25;
+    const referralBonusData = calculateReferralBonusDecimal(count);
+    return baseMiningRate * referralBonusData.totalBonusRate.toNumber() * count;
+  };
+
+  // 🎯 가상 더미 마이닝 시작 함수
+  const startVirtualMining = async () => {
+    if (isMiningActive) return;
+
+    try {
+      console.log('🚀 가상 더미 마이닝 시작 (백서 정확한 보너스 공식 적용)...');
+      
+      // 보너스 계산
+      const attendanceBonus = isAttendanceBonusTimeValid() ? calculateAttendanceBonus(consecutiveAttendanceDays) : { bonusRate: 0, enhancedRate: 0.25, description: '❌ 출석 보너스 없음 (시간 제한)', decimalBonusRate: new Decimal(0), decimalEnhancedRate: new Decimal(0.25) };
+      const referralBonus = calculateReferralBonusDecimal(referralCount);
+      const lockupBonus = calculateLockupBonus(lockupRatio, lockupMonths);
+      
+      // 최종 채굴률 계산
+      const totalEnhancedRate = 0.25 * (1 + attendanceBonus.bonusRate + referralBonus.totalBonusRate.toNumber() + lockupBonus.monthlyRate + calculateMerchantBonus(isMerchantRegistered).bonusRate);
+      
+      console.log('✅ 백서 정확한 보너스 설정 즉시 적용:', {
+        출석보너스: `${(attendanceBonus.bonusRate * 100).toFixed(1)}% (${attendanceBonus.description})`,
+        추천보너스: `${(referralBonus.totalBonusRate.toNumber() * 100).toFixed(1)}% (${referralBonus.description})`,
+        락업보너스: `${(lockupBonus.monthlyRate * 100).toFixed(3)}% (${lockupBonus.description})`,
+        가맹점보너스: `${(calculateMerchantBonus(isMerchantRegistered).bonusRate * 100).toFixed(1)}% (${calculateMerchantBonus(isMerchantRegistered).description})`,
+        기본채굴률: '0.25 BW/시간',
+        강화된채굴률: `${totalEnhancedRate.toFixed(6)} BW/시간`,
+        총보너스: `${((attendanceBonus.bonusRate + referralBonus.totalBonusRate.toNumber() + lockupBonus.monthlyRate + calculateMerchantBonus(isMerchantRegistered).bonusRate) * 100).toFixed(1)}%`,
+        일일추가수익: `${((totalEnhancedRate - 0.25) * 24).toFixed(6)} BW/일`,
+        월간추가수익: `${((totalEnhancedRate - 0.25) * 24 * 30).toFixed(6)} BW/월`,
+        연간추가수익: `${((totalEnhancedRate - 0.25) * 24 * 365).toFixed(6)} BW/년`
+      });
+      
+      // API 호출
+      const response = await fetch('http://localhost:4001/virtual-mining/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: authenticatedWalletAddress,
+          userId: 'virtual_user',
+          bonusSettings: {
+            attendanceDays: consecutiveAttendanceDays,
+            referralCount: referralCount,
+            lockupRatio: lockupRatio,
+            lockupMonths: lockupMonths,
+            enhancedMiningRate: totalEnhancedRate,
+            bonusDetails: {
+              attendance: {
+                rate: attendanceBonus.bonusRate,
+                enhancedRate: attendanceBonus.bonusRate,
+                description: attendanceBonus.description
+              },
+              referral: {
+                rate: referralBonus.totalBonusRate.toNumber(),
+                enhancedRate: referralBonus.totalBonusRate.toNumber(),
+                description: referralBonus.description,
+                maxBonus: referralBonus.maxBonus
+              },
+              lockup: {
+                baseAPY: lockupBonus.baseAPY,
+                periodBonus: lockupBonus.periodBonus,
+                totalAPY: lockupBonus.totalAPY,
+                monthlyRate: lockupBonus.monthlyRate,
+                enhancedRate: lockupBonus.enhancedRate,
+                description: lockupBonus.description
+              }
+            }
+          }
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ 가상 더미 마이닝 시작 완료 (보너스 설정 포함):', data);
+        
+        // 마이닝 상태 업데이트
+        setIsMiningActive(true);
+        if (!miningStartTime) {
+          setMiningStartTime(new Date());
+        } else {
+          if (miningStopTime) {
+            const pausedDuration = Date.now() - miningStopTime.getTime();
+            setMiningStartTime(new Date(miningStartTime.getTime() + pausedDuration));
+          }
+        }
+        setMiningStopTime(null);
+        
+        // 실시간 데이터 업데이트
+        setRealTimeBlockchainData(prev => ({
+          ...prev,
+          attendanceBonus: attendanceBonus.bonusRate * 100,
+          referralBonus: referralBonus.totalBonusRate.toNumber() * 100,
+          lockupBonus: lockupBonus.monthlyRate * 100,
+          miningRewards: totalEnhancedRate,
+          lastUpdate: new Date()
+        }));
+        
+        // 상태 저장
+        setTimeout(() => {
+          const miningState = {
+            isMiningActive: true,
+            miningStartTime: new Date().toISOString(),
+            miningStopTime: null,
+            consecutiveAttendanceDays,
+            referralCount,
+            lockupRatio,
+            lockupMonths,
+            attendanceCalendar,
+            walletAddress: authenticatedWalletAddress,
+            tick,
+            realTimeBlockchainData: {
+              attendanceBonus: realTimeBlockchainData.attendanceBonus || 0,
+              referralBonus: realTimeBlockchainData.referralBonus || 0,
+              lockupBonus: realTimeBlockchainData.lockupBonus || 0,
+              miningRewards: realTimeBlockchainData.miningRewards || 0,
+              lastUpdate: new Date().toISOString()
+            }
+          };
+          localStorage.setItem('miningState', JSON.stringify(miningState));
+          console.log('💾 마이닝 시작 상태 저장됨:', miningState);
+        }, 100);
+        
+        setTick(prevTick => prevTick + 1);
+        
+        console.log('✅ 마이닝이 시작되었습니다 (백서 정확한 보너스 공식 즉시 적용됨)');
+        console.log(`🎉 마이닝 시작 완료! 보너스 설정: 출석 ${(attendanceBonus.bonusRate * 100).toFixed(1)}%, 추천 ${(referralBonus.totalBonusRate.toNumber() * 100).toFixed(1)}%, 락업 ${(lockupBonus.monthlyRate * 100).toFixed(3)}%, 강화된 채굴률: ${totalEnhancedRate.toFixed(6)} BW/시간`);
+        
+      } else {
+        const errorData = await response.json();
+        setIsMiningActive(false);
+        setMiningStartTime(null);
+        console.error(`❌ 가상 더미 마이닝 시작 실패: ${errorData.error}`);
+      }
+    } catch (error) {
+      setIsMiningActive(false);
+      setMiningStartTime(null);
+      console.error('❌ 가상 더미 마이닝 시작 오류:', error);
+    }
+  };
+
+  // 🎯 가상 더미 마이닝 정지 함수
+  const stopVirtualMining = async () => {
+    if (!isMiningActive || !miningStartTime) return;
+
+    try {
+      console.log('🛑 가상 더미 마이닝 정지...');
+      
+      // API 호출
+      const response = await fetch('http://localhost:4001/virtual-mining/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: authenticatedWalletAddress
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ 가상 더미 마이닝 정지 완료:', data);
+        
+        // 마이닝 상태 업데이트
+        setIsMiningActive(false);
+        setMiningStopTime(new Date());
+        setPausedElapsedTime(0);
+        
+        // 실시간 데이터 초기화
+        setRealTimeBlockchainData(prev => ({
+          ...prev,
+          miningRewards: 0,
+          lastUpdate: new Date()
+        }));
+        
+        setTick(prevTick => prevTick + 1);
+        
+        // 상태 저장
+        setTimeout(() => {
+          const miningState = {
+            isMiningActive: false,
+            miningStartTime: miningStartTime?.toISOString(),
+            miningStopTime: new Date().toISOString(),
+            consecutiveAttendanceDays,
+            referralCount,
+            lockupRatio,
+            lockupMonths,
+            attendanceCalendar,
+            walletAddress: authenticatedWalletAddress,
+            tick,
+            realTimeBlockchainData: {
+              attendanceBonus: realTimeBlockchainData.attendanceBonus || 0,
+              referralBonus: realTimeBlockchainData.referralBonus || 0,
+              lockupBonus: realTimeBlockchainData.lockupBonus || 0,
+              miningRewards: 0,
+              lastUpdate: new Date().toISOString()
+            }
+          };
+          localStorage.setItem('miningState', JSON.stringify(miningState));
+          console.log('💾 마이닝 정지 상태 저장됨:', miningState);
+        }, 100);
+        
+        console.log('⏸️ 마이닝이 일시 정지되었습니다. 보상 데이터는 보존됩니다.');
+        
+      } else {
+        const errorData = await response.json();
+        console.error(`❌ 가상 더미 마이닝 정지 실패: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('❌ 가상 더미 마이닝 정지 오류:', error);
+    }
+  };
+
+  // 🎯 가상 더미 마이닝 초기화 함수
+  const resetVirtualMining = async () => {
+    try {
+      console.log('🔄 가상 더미 마이닝 초기화...');
+      
+      await stopVirtualMining();
+      
+      // 모든 상태 초기화
+      setIsMiningActive(false);
+      setMiningStartTime(null);
+      
+      // 블록체인 상태 초기화
+      setRealTimeBlockchainData({
+        attendanceBonus: 0,
+        referralCount: 0,
+        referralBonus: 0,
+        additionalBonus: 0,
+        lockupBonus: 0,
+        miningRewards: 0,
+        lastUpdate: new Date()
+      });
+      
+      console.log('🔄 가상 더미 마이닝이 성공적으로 초기화되었습니다');
+    } catch (error) {
+      console.error('❌ 가상 더미 마이닝 초기화 오류:', error);
+    }
+  };
+
+  // 🎯 마이닝 상태 저장 함수
+  const saveMiningState = () => {
+    if (authenticatedWalletAddress) {
+      const safeRealTimeData = {
+        attendanceBonus: realTimeBlockchainData.attendanceBonus || 0,
+        referralBonus: realTimeBlockchainData.referralBonus || 0,
+        lockupBonus: realTimeBlockchainData.lockupBonus || 0,
+        miningRewards: realTimeBlockchainData.miningRewards || 0,
+        lastUpdate: realTimeBlockchainData.lastUpdate instanceof Date 
+          ? realTimeBlockchainData.lastUpdate.toISOString() 
+          : new Date().toISOString()
+      };
+
+      const miningState = {
+        walletAddress: authenticatedWalletAddress,
+        isMiningActive,
+        miningStartTime: miningStartTime?.toISOString(),
+        miningStopTime: miningStopTime?.toISOString(),
+        consecutiveAttendanceDays,
+        referralCount,
+        lockupRatio,
+        lockupMonths,
+        isLockupRegistered,
+        registeredLockupData,
+        secondLockupRatio,
+        secondLockupMonths,
+        isSecondLockupRegistered,
+        registeredSecondLockupData,
+        attendanceCalendar,
+        tick,
+        realTimeBlockchainData: safeRealTimeData,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('miningState', JSON.stringify(miningState));
+      console.log('💾 마이닝 상태 저장됨 (강화된 버전):', miningState);
+    }
+  };
+
+  // 🎯 마이닝 상태 로드 함수
+  const loadMiningState = () => {
+    try {
+      const savedState = localStorage.getItem('miningState');
+      if (savedState) {
+        const miningState = JSON.parse(savedState);
+        
+        if (miningState.walletAddress === authenticatedWalletAddress) {
+          setIsMiningActive(miningState.isMiningActive);
+          if (miningState.miningStartTime) {
+            setMiningStartTime(new Date(miningState.miningStartTime));
+          }
+          if (miningState.miningStopTime) {
+            setMiningStopTime(new Date(miningState.miningStopTime));
+          }
+          setConsecutiveAttendanceDays(miningState.consecutiveAttendanceDays || 0);
+          setReferralCount(miningState.referralCount || 0);
+          setLockupRatio(miningState.lockupRatio !== undefined ? miningState.lockupRatio : 20);
+          setLockupMonths(miningState.lockupMonths !== undefined ? miningState.lockupMonths : 1);
+          
+          setIsLockupRegistered(miningState.isLockupRegistered || false);
+          const lockupData = miningState.registeredLockupData || { ratio: 0, months: 0, apy: 0, startDate: null, endDate: null };
+          setRegisteredLockupData({
+            ...lockupData,
+            startDate: lockupData.startDate ? new Date(lockupData.startDate) : null,
+            endDate: lockupData.endDate ? new Date(lockupData.endDate) : null
+          });
+          
+          setSecondLockupRatio(miningState.secondLockupRatio || 0);
+          setSecondLockupMonths(miningState.secondLockupMonths || 0);
+          setIsSecondLockupRegistered(miningState.isSecondLockupRegistered || false);
+          const secondLockupData = miningState.registeredSecondLockupData || { ratio: 0, months: 0, apy: 0, startDate: null, endDate: null };
+          setRegisteredSecondLockupData({
+            ...secondLockupData,

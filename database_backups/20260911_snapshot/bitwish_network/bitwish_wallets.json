@@ -1,0 +1,21 @@
+[
+  {
+    "_id": "68ef0bdd6bbd5f4c0c020d02",
+    "address": "BW3400308A215518DBEBA170299499020A7D946DB9",
+    "balance": "0.00000000",
+    "availableBalance": "0.00000000",
+    "lockedBalance": "0.00000000",
+    "networkType": "BITWISH_MAINNET",
+    "createdAt": "2025-10-15T02:50:05.539Z",
+    "updatedAt": "2025-10-15T11:33:10.953Z",
+    "lastActivity": "2025-10-15T02:50:05.539Z",
+    "otpSetup": true,
+    "otpEnabled": true,
+    "kycStatus": {
+      "isApplied": false,
+      "isApproved": false,
+      "kycLevel": 0
+    },
+    "otpSecret": "26D5T5LGTTMWO7VQ363KX4AQNTUN3JE2"
+  }
+]

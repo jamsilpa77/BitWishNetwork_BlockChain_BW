@@ -1,0 +1,467 @@
+[
+  {
+    "_id": "68eb7d9682e4fd6e982f9842",
+    "walletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "referralCode": "BWREF-TEST001",
+    "miningStartTime": "2025-10-12 10:06:14",
+    "miningStatus": {
+      "isActive": false,
+      "isPaused": false,
+      "lastUpdateTime": "2025-10-12 10:06:14"
+    },
+    "totalMined": {
+      "amount": "0.00000000",
+      "currency": "BW"
+    },
+    "miningBreakdown": {
+      "basic": {
+        "rate": "0.25000000",
+        "total": "0.00000000"
+      },
+      "attendance": {
+        "rate": "0.05",
+        "total": "0.00000000",
+        "lastCheckIn": null,
+        "isCheckedToday": false,
+        "monthlyCheckIns": {}
+      },
+      "referralOneTime": {
+        "count": 0,
+        "perReferral": "1.00000000",
+        "total": "0.00000000"
+      },
+      "referralPermanent": {
+        "rate": "0.02",
+        "total": "0.00000000",
+        "activeReferrals": 0
+      }
+    },
+    "monthlyMining": {},
+    "referralBonusVault": {
+      "totalVault": "0.00000000",
+      "referees": {}
+    },
+    "kyc": {
+      "status": "none",
+      "submittedAt": null,
+      "approvedDate": null,
+      "rejectedDate": null,
+      "rejectionReason": null,
+      "documents": {
+        "idCard": {
+          "uploaded": false
+        },
+        "fullBodyPhoto": {
+          "uploaded": false
+        },
+        "selfieWithID": {
+          "uploaded": false
+        }
+      },
+      "personalInfo": {},
+      "migrationStartDate": null,
+      "countdown": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0,
+        "totalSeconds": 0,
+        "isActive": false
+      }
+    },
+    "migrationHistory": [],
+    "walletBalance": {
+      "myBW": {
+        "amount": "0.00000000",
+        "type": "virtual",
+        "description": "KYC 승인 후 실제 BW로 전환 대기"
+      },
+      "availableAmount": {
+        "amount": "0.00000000",
+        "type": "real",
+        "sourceWallet": "COMMUNITY_70PERCENT_WALLET",
+        "description": "마이그레이션 완료된 실제 BW"
+      },
+      "referralVaultDisplay": {
+        "amount": "0.00000000",
+        "type": "locked",
+        "description": "추천받은 사람 KYC 승인 후 이동"
+      }
+    },
+    "createdAt": "2025-10-12T10:06:14.887Z",
+    "updatedAt": "2025-10-12T10:06:14.887Z",
+    "userType": "user"
+  },
+  {
+    "_id": "68ec626a06f41e2e9c333b95",
+    "walletAddress": "BWTEST1760322154838",
+    "referralCode": "BWREF-SFY1TP4O",
+    "miningStartTime": "2025-10-13 02:22:34",
+    "miningStatus": {
+      "isActive": true,
+      "isPaused": false,
+      "lastUpdateTime": "2025-10-13 02:22:34"
+    },
+    "totalMined": {
+      "amount": "0.00000000",
+      "currency": "BW"
+    },
+    "miningBreakdown": {
+      "basic": {
+        "rate": "0.25000000",
+        "total": "0.00000000"
+      },
+      "attendance": {
+        "rate": "0.05",
+        "total": "0.00000000",
+        "lastCheckIn": null,
+        "isCheckedToday": false,
+        "monthlyCheckIns": {}
+      },
+      "referralOneTime": {
+        "count": 0,
+        "perReferral": "1.00000000",
+        "total": "0.00000000"
+      },
+      "referralPermanent": {
+        "rate": "0.02",
+        "total": "0.00000000",
+        "activeReferrals": 0
+      }
+    },
+    "monthlyMining": {},
+    "referralBonusVault": {
+      "totalVault": "0.00000000",
+      "referees": {}
+    },
+    "kyc": {
+      "status": "none",
+      "submittedAt": null,
+      "approvedDate": null,
+      "rejectedDate": null,
+      "rejectionReason": null,
+      "documents": {
+        "idCard": {
+          "uploaded": false
+        },
+        "fullBodyPhoto": {
+          "uploaded": false
+        },
+        "selfieWithID": {
+          "uploaded": false
+        }
+      },
+      "personalInfo": {},
+      "migrationStartDate": null,
+      "countdown": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0,
+        "totalSeconds": 0,
+        "isActive": false
+      }
+    },
+    "migrationHistory": [],
+    "walletBalance": {
+      "myBW": {
+        "amount": "0.00000000",
+        "type": "virtual",
+        "description": "KYC 승인 후 실제 BW로 전환 대기"
+      },
+      "availableAmount": {
+        "amount": "0.00000000",
+        "type": "real",
+        "sourceWallet": "COMMUNITY_70PERCENT_WALLET",
+        "description": "마이그레이션 완료된 실제 BW"
+      },
+      "referralVaultDisplay": {
+        "amount": "0.00000000",
+        "type": "locked",
+        "description": "추천받은 사람 KYC 승인 후 이동"
+      }
+    },
+    "createdAt": "2025-10-13T02:22:34.856Z",
+    "updatedAt": "2025-10-13T02:22:34.856Z",
+    "userType": "user"
+  },
+  {
+    "_id": "68ec813bc0103e071f06c2c4",
+    "walletAddress": "BWTEST20251013133403",
+    "referralCode": "BWREF-R6OMH0ID",
+    "miningStartTime": "2025-10-13 04:34:03",
+    "miningStatus": {
+      "isActive": true,
+      "isPaused": false,
+      "lastUpdateTime": "2025-10-13 04:34:03"
+    },
+    "totalMined": {
+      "amount": "0.00000000",
+      "currency": "BW"
+    },
+    "miningBreakdown": {
+      "basic": {
+        "rate": "0.25000000",
+        "total": "0.00000000"
+      },
+      "attendance": {
+        "rate": "0.05",
+        "total": "0.00000000",
+        "lastCheckIn": null,
+        "isCheckedToday": false,
+        "monthlyCheckIns": {}
+      },
+      "referralOneTime": {
+        "count": 0,
+        "perReferral": "1.00000000",
+        "total": "0.00000000"
+      },
+      "referralPermanent": {
+        "rate": "0.02",
+        "total": "0.00000000",
+        "activeReferrals": 0
+      }
+    },
+    "monthlyMining": {},
+    "referralBonusVault": {
+      "totalVault": "0.00000000",
+      "referees": {}
+    },
+    "kyc": {
+      "status": "none",
+      "submittedAt": null,
+      "approvedDate": null,
+      "rejectedDate": null,
+      "rejectionReason": null,
+      "documents": {
+        "idCard": {
+          "uploaded": false
+        },
+        "fullBodyPhoto": {
+          "uploaded": false
+        },
+        "selfieWithID": {
+          "uploaded": false
+        }
+      },
+      "personalInfo": {},
+      "migrationStartDate": null,
+      "countdown": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0,
+        "totalSeconds": 0,
+        "isActive": false
+      }
+    },
+    "migrationHistory": [],
+    "walletBalance": {
+      "myBW": {
+        "amount": "0.00000000",
+        "type": "virtual",
+        "description": "KYC 승인 후 실제 BW로 전환 대기"
+      },
+      "availableAmount": {
+        "amount": "0.00000000",
+        "type": "real",
+        "sourceWallet": "COMMUNITY_70PERCENT_WALLET",
+        "description": "마이그레이션 완료된 실제 BW"
+      },
+      "referralVaultDisplay": {
+        "amount": "0.00000000",
+        "type": "locked",
+        "description": "추천받은 사람 KYC 승인 후 이동"
+      }
+    },
+    "createdAt": "2025-10-13T04:34:03.880Z",
+    "updatedAt": "2025-10-13T04:34:03.880Z",
+    "userType": "user"
+  },
+  {
+    "_id": "68ec817ac0103e071f06c2c8",
+    "walletAddress": "BWTEST20251013133506",
+    "referralCode": "BWREF-GI05XQBR",
+    "miningStartTime": "2025-10-13 04:35:06",
+    "miningStatus": {
+      "isActive": true,
+      "isPaused": false,
+      "lastUpdateTime": "2025-10-13 04:35:06"
+    },
+    "totalMined": {
+      "amount": "0.00000000",
+      "currency": "BW"
+    },
+    "miningBreakdown": {
+      "basic": {
+        "rate": "0.25000000",
+        "total": "0.00000000"
+      },
+      "attendance": {
+        "rate": "0.05",
+        "total": "0.00000000",
+        "lastCheckIn": null,
+        "isCheckedToday": false,
+        "monthlyCheckIns": {}
+      },
+      "referralOneTime": {
+        "count": 0,
+        "perReferral": "1.00000000",
+        "total": "0.00000000"
+      },
+      "referralPermanent": {
+        "rate": "0.02",
+        "total": "0.00000000",
+        "activeReferrals": 0
+      }
+    },
+    "monthlyMining": {},
+    "referralBonusVault": {
+      "totalVault": "0.00000000",
+      "referees": {}
+    },
+    "kyc": {
+      "status": "none",
+      "submittedAt": null,
+      "approvedDate": null,
+      "rejectedDate": null,
+      "rejectionReason": null,
+      "documents": {
+        "idCard": {
+          "uploaded": false
+        },
+        "fullBodyPhoto": {
+          "uploaded": false
+        },
+        "selfieWithID": {
+          "uploaded": false
+        }
+      },
+      "personalInfo": {},
+      "migrationStartDate": null,
+      "countdown": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0,
+        "totalSeconds": 0,
+        "isActive": false
+      }
+    },
+    "migrationHistory": [],
+    "walletBalance": {
+      "myBW": {
+        "amount": "0.00000000",
+        "type": "virtual",
+        "description": "KYC 승인 후 실제 BW로 전환 대기"
+      },
+      "availableAmount": {
+        "amount": "0.00000000",
+        "type": "real",
+        "sourceWallet": "COMMUNITY_70PERCENT_WALLET",
+        "description": "마이그레이션 완료된 실제 BW"
+      },
+      "referralVaultDisplay": {
+        "amount": "0.00000000",
+        "type": "locked",
+        "description": "추천받은 사람 KYC 승인 후 이동"
+      }
+    },
+    "createdAt": "2025-10-13T04:35:06.512Z",
+    "updatedAt": "2025-10-13T04:35:06.512Z",
+    "userType": "user"
+  },
+  {
+    "_id": "68ec9849f6b07250eae90e22",
+    "walletAddress": "BWTEST20251013151225",
+    "userType": "user",
+    "referralCode": "BWREF-9UPBB4UP",
+    "miningStartTime": "2025-10-13 06:12:25",
+    "miningStatus": {
+      "isActive": true,
+      "isPaused": false,
+      "lastUpdateTime": "2025-10-13 06:12:25"
+    },
+    "totalMined": {
+      "amount": "0.00000000",
+      "currency": "BW"
+    },
+    "miningBreakdown": {
+      "basic": {
+        "rate": "0.25000000",
+        "total": "0.00000000"
+      },
+      "attendance": {
+        "rate": "0.05",
+        "total": "0.00000000",
+        "lastCheckIn": null,
+        "isCheckedToday": false,
+        "monthlyCheckIns": {}
+      },
+      "referralOneTime": {
+        "count": 0,
+        "perReferral": "1.00000000",
+        "total": "0.00000000"
+      },
+      "referralPermanent": {
+        "rate": "0.02",
+        "total": "0.00000000",
+        "activeReferrals": 0
+      }
+    },
+    "monthlyMining": {},
+    "referralBonusVault": {
+      "totalVault": "0.00000000",
+      "referees": {}
+    },
+    "kyc": {
+      "status": "none",
+      "submittedAt": null,
+      "approvedDate": null,
+      "rejectedDate": null,
+      "rejectionReason": null,
+      "documents": {
+        "idCard": {
+          "uploaded": false
+        },
+        "fullBodyPhoto": {
+          "uploaded": false
+        },
+        "selfieWithID": {
+          "uploaded": false
+        }
+      },
+      "personalInfo": {},
+      "migrationStartDate": null,
+      "countdown": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0,
+        "totalSeconds": 0,
+        "isActive": false
+      }
+    },
+    "migrationHistory": [],
+    "walletBalance": {
+      "myBW": {
+        "amount": "0.00000000",
+        "type": "virtual",
+        "description": "KYC 승인 후 실제 BW로 전환 대기"
+      },
+      "availableAmount": {
+        "amount": "0.00000000",
+        "type": "real",
+        "sourceWallet": "COMMUNITY_70PERCENT_WALLET",
+        "description": "마이그레이션 완료된 실제 BW"
+      },
+      "referralVaultDisplay": {
+        "amount": "0.00000000",
+        "type": "locked",
+        "description": "추천받은 사람 KYC 승인 후 이동"
+      }
+    },
+    "createdAt": "2025-10-13T06:12:25.643Z",
+    "updatedAt": "2025-10-13T06:12:25.643Z"
+  }
+]

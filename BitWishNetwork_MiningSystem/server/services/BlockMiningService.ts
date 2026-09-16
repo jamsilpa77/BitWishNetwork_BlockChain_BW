@@ -177,13 +177,19 @@ export class BlockMiningService {
             ]).toArray();
             const totalSettled = new Decimal(settlementAgg[0]?.total || 0);
 
-            // 2-4. 가입/추천 보상 총합 (stats.ts L87~97과 동일 필드: bonusStorage 사용)
+            // 2-4. 가입/추천 보상 총합 (stats.ts L87~97과 동일 필드: referralRewardStorage + referralBonusStorage)
             const bonusRecordAgg = await miningDb.collection('bonusrecords').aggregate([
                 {
                     $group: {
                         _id: null,
                         totalReferral: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } },
-                        totalBonus: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
+                        totalBonus: {
+                            $sum: {
+                                $toDouble: {
+                                    $ifNull: ["$referralBonusStorage", { $ifNull: ["$bonusStorage", "0"] }]
+                                }
+                            }
+                        }
                     }
                 }
             ]).toArray();

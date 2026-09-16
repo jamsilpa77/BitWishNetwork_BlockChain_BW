@@ -1,0 +1,46 @@
+[
+  {
+    "_id": "68ea6aae33a6ca0f8e3cd2cd",
+    "address": "BW245E6918938BF6EC0CB99AF588CBB3C85D54D05F",
+    "userId": null,
+    "createdAt": "2025-10-11T14:33:18.331Z",
+    "isActive": true,
+    "hasPassword": false,
+    "lastActivity": "2025-10-11T14:33:18.331Z"
+  },
+  {
+    "_id": "68ea6d0833a6ca0f8e3cd2ce",
+    "address": "BW3400308A215518DBEBA170299499020A7D946DB9",
+    "balance": "0.000000000000000000000000000000000000000000000000000",
+    "userId": null,
+    "seedHash": null,
+    "createdAt": "2025-10-11T14:43:20.956Z",
+    "isActive": true,
+    "hasPassword": true,
+    "lastActivity": "2025-10-11T14:43:20.956Z"
+  },
+  {
+    "_id": "68eb4597af39126d411326a3",
+    "address": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "createdAt": "2025-10-12T06:07:19.471Z",
+    "isActive": true,
+    "hasPassword": false,
+    "lastActivity": "2025-10-12T06:07:19.471Z"
+  },
+  {
+    "_id": "68eb4597af39126d411326a4",
+    "address": "BWD961BB3CEEE4E6AB10118608F9A45F6022698734",
+    "createdAt": "2025-10-12T06:07:19.471Z",
+    "isActive": true,
+    "hasPassword": false,
+    "lastActivity": "2025-10-12T06:07:19.471Z"
+  },
+  {
+    "_id": "68eb4597af39126d411326a5",
+    "address": "BW5636508E4E58860153EDA4DDAB51077F2273FC20",
+    "createdAt": "2025-10-12T06:07:19.471Z",
+    "isActive": true,
+    "hasPassword": false,
+    "lastActivity": "2025-10-12T06:07:19.471Z"
+  }
+]

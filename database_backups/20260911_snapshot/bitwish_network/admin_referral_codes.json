@@ -1,0 +1,204 @@
+[
+  {
+    "_id": "68eb8221c35dd33ccaea88c5",
+    "referralCode": "BWREF-A1B2C3D4",
+    "ownerWalletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "usage": {
+      "totalUses": 3,
+      "activeReferrals": 3,
+      "usedBy": [
+        {
+          "walletAddress": "BWD961BB123456789",
+          "usedAt": "2025-01-10 10:30:00",
+          "status": "active"
+        },
+        {
+          "walletAddress": "BW56365012345678",
+          "usedAt": "2025-01-08 14:20:00",
+          "status": "active"
+        },
+        {
+          "walletAddress": "BW78901234567890",
+          "usedAt": "2025-01-05 09:15:00",
+          "status": "active"
+        }
+      ]
+    },
+    "createdAt": "2025-01-12T14:30:22.000Z",
+    "updatedAt": "2025-01-12T15:30:22.000Z"
+  },
+  {
+    "_id": "68eb8221c35dd33ccaea88c6",
+    "referralCode": "BWREF-X9Y8Z7W6",
+    "ownerWalletAddress": "BWD961BB460B70E2BFE25D3E6B8070593A4107A541",
+    "usage": {
+      "totalUses": 1,
+      "activeReferrals": 1,
+      "usedBy": [
+        {
+          "walletAddress": "BW11111111111111",
+          "usedAt": "2025-01-15 11:00:00",
+          "status": "active"
+        }
+      ]
+    },
+    "createdAt": "2025-01-13T10:15:30.000Z",
+    "updatedAt": "2025-01-15T11:00:00.000Z"
+  },
+  {
+    "_id": "68eb8221c35dd33ccaea88c7",
+    "referralCode": "BWREF-M5N4P3Q2",
+    "ownerWalletAddress": "BW56365012345678ABCDEFGH",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-01-14T08:20:10.000Z",
+    "updatedAt": "2025-01-14T08:20:10.000Z"
+  },
+  {
+    "_id": "68ec626a06f41e2e9c333b94",
+    "referralCode": "BWREF-SFY1TP4O",
+    "ownerWalletAddress": "BWTEST1760322154838",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-13T02:22:34.856Z",
+    "updatedAt": "2025-10-13T02:22:34.856Z"
+  },
+  {
+    "_id": "68ec813bc0103e071f06c2c3",
+    "referralCode": "BWREF-R6OMH0ID",
+    "ownerWalletAddress": "BWTEST20251013133403",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-13T04:34:03.880Z",
+    "updatedAt": "2025-10-13T04:34:03.880Z"
+  },
+  {
+    "_id": "68ec817ac0103e071f06c2c7",
+    "referralCode": "BWREF-GI05XQBR",
+    "ownerWalletAddress": "BWTEST20251013133506",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-13T04:35:06.512Z",
+    "updatedAt": "2025-10-13T04:35:06.512Z"
+  },
+  {
+    "_id": "68ec9849f6b07250eae90e21",
+    "referralCode": "BWREF-9UPBB4UP",
+    "ownerWalletAddress": "BWTEST20251013151225",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-13T06:12:25.643Z",
+    "updatedAt": "2025-10-13T06:12:25.643Z"
+  },
+  {
+    "_id": "68f1e44952ef1508788b92f9",
+    "referralCode": "BWREF-8CFYYP31",
+    "ownerWalletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-17T06:38:01.605Z",
+    "updatedAt": "2025-10-17T06:38:01.605Z"
+  },
+  {
+    "_id": "68f1e44d52ef1508788b92fb",
+    "referralCode": "BWREF-SBFG9U75",
+    "ownerWalletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-17T06:38:05.803Z",
+    "updatedAt": "2025-10-17T06:38:05.803Z"
+  },
+  {
+    "_id": "68f1e62c52ef1508788b92fd",
+    "referralCode": "BWREF-VJBHJIZC",
+    "ownerWalletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-17T06:46:04.300Z",
+    "updatedAt": "2025-10-17T06:46:04.300Z"
+  },
+  {
+    "_id": "68f1e6e1ea598b99c069f361",
+    "referralCode": "BWREF-H42H8ZZM",
+    "ownerWalletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-17T06:49:05.863Z",
+    "updatedAt": "2025-10-17T06:49:05.863Z"
+  },
+  {
+    "_id": "68f1e9deea598b99c069f363",
+    "referralCode": "BWREF-WKWBGZJ7",
+    "ownerWalletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-17T07:01:50.111Z",
+    "updatedAt": "2025-10-17T07:01:50.111Z"
+  },
+  {
+    "_id": "68f1f26fea598b99c069f365",
+    "referralCode": "BWREF-6KN41LGM",
+    "ownerWalletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-17T07:38:23.673Z",
+    "updatedAt": "2025-10-17T07:38:23.673Z"
+  },
+  {
+    "_id": "68f1f527ea598b99c069f367",
+    "referralCode": "BWREF-X3S4VYO5",
+    "ownerWalletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-17T07:49:59.324Z",
+    "updatedAt": "2025-10-17T07:49:59.324Z"
+  },
+  {
+    "_id": "68f1fae7ea598b99c069f369",
+    "referralCode": "BWREF-JZCE581G",
+    "ownerWalletAddress": "BW2E45DA460B70E2BFE25D3E6B8070593A4107A540",
+    "usage": {
+      "totalUses": 0,
+      "activeReferrals": 0,
+      "usedBy": []
+    },
+    "createdAt": "2025-10-17T08:14:31.002Z",
+    "updatedAt": "2025-10-17T08:14:31.002Z"
+  }
+]

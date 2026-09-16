@@ -1,0 +1,1022 @@
+stellarService.ts 서비스의 완전한 소스코드를 작성하겠습니다.
+
+# **📄 stellarService.ts 완전 구현**
+
+**위치**: `Node_HomePage/src/services/stellarService.ts`
+
+```typescript
+import { 
+  Server, 
+  Keypair, 
+  Asset, 
+  Operation, 
+  TransactionBuilder, 
+  Networks, 
+  BASE_FEE, 
+  Memo, 
+  MemoType,
+  Account,
+  Horizon,
+  Transaction,
+  xdr
+} from 'stellar-sdk';
+import Decimal from 'decimal.js';
+
+// ====================================================================================
+// 🎯 타입 정의
+// ====================================================================================
+
+export interface StellarConfig {
+  network: 'testnet' | 'mainnet';
+  horizonUrl: string;
+  passphrase: string;
+  baseFee: number;
+  timeout: number;
+}
+
+export interface StellarAccount {
+  accountId: string;
+  secretKey: string;
+  publicKey: string;
+  balances: StellarBalance[];
+  sequence: string;
+  subentryCount: number;
+  flags: {
+    authRequired: boolean;
+    authRevocable: boolean;
+    authImmutable: boolean;
+  };
+  thresholds: {
+    lowThreshold: number;
+    medThreshold: number;
+    highThreshold: number;
+  };
+  signers: StellarSigner[];
+  data: Record<string, string>;
+}
+
+export interface StellarBalance {
+  assetType: string;
+  assetCode?: string;
+  assetIssuer?: string;
+  balance: string;
+  limit?: string;
+  buyingLiabilities?: string;
+  sellingLiabilities?: string;
+  isAuthorized?: boolean;
+  isAuthorizedToMaintainLiabilities?: boolean;
+  lastModifiedLedger?: number;
+  sponsor?: string;
+}
+
+export interface StellarTransaction {
+  id: string;
+  hash: string;
+  ledger: number;
+  createdAt: string;
+  sourceAccount: string;
+  sourceAccountSequence: string;
+  feeAccount?: string;
+  feeCharged: string;
+  operationCount: number;
+  envelopeXdr: string;
+  resultXdr: string;
+  resultMetaXdr: string;
+  feeMetaXdr: string;
+  memo?: string;
+  memoType?: string;
+  signatures: string[];
+  validAfter?: string;
+  validBefore?: string;
+}
+
+export interface StellarOperation {
+  id: string;
+  pagingToken: string;
+  sourceAccount: string;
+  type: string;
+  typeI: number;
+  createdAt: string;
+  transactionHash: string;
+  transactionSuccessful: boolean;
+  assetType?: string;
+  assetCode?: string;
+  assetIssuer?: string;
+  from?: string;
+  to?: string;
+  amount?: string;
+  price?: string;
+  priceR?: {
+    n: number;
+    d: number;
+  };
+  buyingAssetType?: string;
+  buyingAssetCode?: string;
+  buyingAssetIssuer?: string;
+  sellingAssetType?: string;
+  sellingAssetCode?: string;
+  sellingAssetIssuer?: string;
+  offerId?: string;
+  offerIdSeller?: string;
+  amountBought?: string;
+  amountSold?: string;
+  trustor?: string;
+  trustee?: string;
+  trustorMuxed?: string;
+  trusteeMuxed?: string;
+  trustorMuxedId?: string;
+  trusteeMuxedId?: string;
+  asset?: string;
+  limit?: string;
+  authorize?: boolean;
+  authorizeToMaintainLiabilities?: boolean;
+  sponsor?: string;
+  beginSponsor?: string;
+  endSponsor?: string;
+  sourceAssetType?: string;
+  sourceAssetCode?: string;
+  sourceAssetIssuer?: string;
+  destination?: string;
+  destinationMuxed?: string;
+  destinationMuxedId?: string;
+  homeDomain?: string;
+  inflationDest?: string;
+  clearFlags?: number;
+  setFlags?: number;
+  masterKeyWeight?: number;
+  lowThreshold?: number;
+  medThreshold?: number;
+  highThreshold?: number;
+  signer?: {
+    key: string;
+    weight: number;
+  };
+  signerKey?: string;
+  signerWeight?: number;
+  dataName?: string;
+  dataValue?: string;
+  dataAccount?: string;
+  dataAccountMuxed?: string;
+  dataAccountMuxedId?: string;
+  bumpTo?: string;
+  path?: string[];
+  sourceAmount?: string;
+  destinationMin?: string;
+  destinationAssetType?: string;
+  destinationAssetCode?: string;
+  destinationAssetIssuer?: string;
+  destinationAmount?: string;
+  price?: string;
+  priceR?: {
+    n: number;
+    d: number;
+  };
+  buyingAssetType?: string;
+  buyingAssetCode?: string;
+  buyingAssetIssuer?: string;
+  sellingAssetType?: string;
+  sellingAssetCode?: string;
+  sellingAssetIssuer?: string;
+  offerId?: string;
+  offerIdSeller?: string;
+  amountBought?: string;
+  amountSold?: string;
+  trustor?: string;
+  trustee?: string;
+  trustorMuxed?: string;
+  trusteeMuxed?: string;
+  trustorMuxedId?: string;
+  trusteeMuxedId?: string;
+  asset?: string;
+  limit?: string;
+  authorize?: boolean;
+  authorizeToMaintainLiabilities?: boolean;
+  sponsor?: string;
+  beginSponsor?: string;
+  endSponsor?: string;
+  sourceAssetType?: string;
+  sourceAssetCode?: string;
+  sourceAssetIssuer?: string;
+  destination?: string;
+  destinationMuxed?: string;
+  destinationMuxedId?: string;
+  homeDomain?: string;
+  inflationDest?: string;
+  clearFlags?: number;
+  setFlags?: number;
+  masterKeyWeight?: number;
+  lowThreshold?: number;
+  medThreshold?: number;
+  highThreshold?: number;
+  signer?: {
+    key: string;
+    weight: number;
+  };
+  signerKey?: string;
+  signerWeight?: number;
+  dataName?: string;
+  dataValue?: string;
+  dataAccount?: string;
+  dataAccountMuxed?: string;
+  dataAccountMuxedId?: string;
+  bumpTo?: string;
+  path?: string[];
+  sourceAmount?: string;
+  destinationMin?: string;
+  destinationAssetType?: string;
+  destinationAssetCode?: string;
+  destinationAssetIssuer?: string;
+  destinationAmount?: string;
+}
+
+export interface StellarPayment {
+  from: string;
+  to: string;
+  amount: string;
+  asset: string;
+  memo?: string;
+  memoType?: string;
+}
+
+export interface StellarTrustline {
+  assetType: string;
+  assetCode?: string;
+  assetIssuer?: string;
+  limit: string;
+  balance: string;
+  buyingLiabilities?: string;
+  sellingLiabilities?: string;
+  isAuthorized?: boolean;
+  isAuthorizedToMaintainLiabilities?: boolean;
+  lastModifiedLedger?: number;
+  sponsor?: string;
+}
+
+export interface StellarOffer {
+  id: string;
+  pagingToken: string;
+  seller: string;
+  selling: {
+    assetType: string;
+    assetCode?: string;
+    assetIssuer?: string;
+  };
+  buying: {
+    assetType: string;
+    assetCode?: string;
+    assetIssuer?: string;
+  };
+  amount: string;
+  price: string;
+  priceR: {
+    n: number;
+    d: number;
+  };
+  lastModifiedLedger: number;
+  lastModifiedTime: string;
+  sponsor?: string;
+}
+
+export interface StellarError {
+  type: string;
+  title: string;
+  status: number;
+  detail: string;
+  instance: string;
+  extras?: Record<string, any>;
+}
+
+// ====================================================================================
+// 🎯 스텔라 서비스 클래스
+// ====================================================================================
+
+export class StellarService {
+  private server: Server;
+  private config: StellarConfig;
+  private network: Networks;
+
+  constructor(config: StellarConfig) {
+    this.config = config;
+    this.network = config.network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+    this.server = new Server(config.horizonUrl);
+  }
+
+  // ====================================================================================
+  // 🎯 연결 및 설정
+  // ====================================================================================
+
+  async connect(): Promise<boolean> {
+    try {
+      const response = await this.server.ledgers().order('desc').limit(1).call();
+      return response.records.length > 0;
+    } catch (error) {
+      console.error('Failed to connect to Stellar network:', error);
+      return false;
+    }
+  }
+
+  getNetwork(): string {
+    return this.config.network;
+  }
+
+  getHorizonUrl(): string {
+    return this.config.horizonUrl;
+  }
+
+  // ====================================================================================
+  // 🎯 계정 관리
+  // ====================================================================================
+
+  async createAccount(): Promise<{ accountId: string; secretKey: string; publicKey: string }> {
+    const keypair = Keypair.random();
+    return {
+      accountId: keypair.publicKey(),
+      secretKey: keypair.secret(),
+      publicKey: keypair.publicKey()
+    };
+  }
+
+  async getAccount(accountId: string): Promise<StellarAccount> {
+    try {
+      const account = await this.server.loadAccount(accountId);
+      
+      return {
+        accountId: account.accountId(),
+        secretKey: '', // 보안상 반환하지 않음
+        publicKey: account.accountId(),
+        balances: account.balances.map(balance => ({
+          assetType: balance.asset_type,
+          assetCode: balance.asset_code,
+          assetIssuer: balance.asset_issuer,
+          balance: balance.balance,
+          limit: balance.limit,
+          buyingLiabilities: balance.buying_liabilities,
+          sellingLiabilities: balance.selling_liabilities,
+          isAuthorized: balance.is_authorized,
+          isAuthorizedToMaintainLiabilities: balance.is_authorized_to_maintain_liabilities,
+          lastModifiedLedger: balance.last_modified_ledger,
+          sponsor: balance.sponsor
+        })),
+        sequence: account.sequenceNumber(),
+        subentryCount: account.subentry_count,
+        flags: {
+          authRequired: account.flags.auth_required,
+          authRevocable: account.flags.auth_revocable,
+          authImmutable: account.flags.auth_immutable
+        },
+        thresholds: {
+          lowThreshold: account.thresholds.low_threshold,
+          medThreshold: account.thresholds.med_threshold,
+          highThreshold: account.thresholds.high_threshold
+        },
+        signers: account.signers.map(signer => ({
+          key: signer.key,
+          weight: signer.weight,
+          type: signer.type,
+          sponsor: signer.sponsor
+        })),
+        data: account.data
+      };
+    } catch (error) {
+      throw new Error(`Failed to load account: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getAccountBalances(accountId: string): Promise<StellarBalance[]> {
+    try {
+      const account = await this.server.loadAccount(accountId);
+      return account.balances.map(balance => ({
+        assetType: balance.asset_type,
+        assetCode: balance.asset_code,
+        assetIssuer: balance.asset_issuer,
+        balance: balance.balance,
+        limit: balance.limit,
+        buyingLiabilities: balance.buying_liabilities,
+        sellingLiabilities: balance.selling_liabilities,
+        isAuthorized: balance.is_authorized,
+        isAuthorizedToMaintainLiabilities: balance.is_authorized_to_maintain_liabilities,
+        lastModifiedLedger: balance.last_modified_ledger,
+        sponsor: balance.sponsor
+      }));
+    } catch (error) {
+      throw new Error(`Failed to load account balances: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getAccountData(accountId: string): Promise<Record<string, string>> {
+    try {
+      const account = await this.server.loadAccount(accountId);
+      return account.data;
+    } catch (error) {
+      throw new Error(`Failed to load account data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // ====================================================================================
+  // 🎯 트랜잭션 관리
+  // ====================================================================================
+
+  async createTransaction(
+    sourceAccount: string,
+    operations: Operation[],
+    memo?: string,
+    memoType?: MemoType
+  ): Promise<Transaction> {
+    try {
+      const account = await this.server.loadAccount(sourceAccount);
+      const transaction = new TransactionBuilder(account, {
+        fee: BASE_FEE,
+        networkPassphrase: this.network
+      });
+
+      operations.forEach(op => transaction.addOperation(op));
+
+      if (memo) {
+        if (memoType) {
+          transaction.addMemo(Memo[memoType](memo));
+        } else {
+          transaction.addMemo(Memo.text(memo));
+        }
+      }
+
+      transaction.setTimeout(this.config.timeout);
+      return transaction.build();
+    } catch (error) {
+      throw new Error(`Failed to create transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async submitTransaction(transaction: Transaction): Promise<StellarTransaction> {
+    try {
+      const response = await this.server.submitTransaction(transaction);
+      
+      return {
+        id: response.id,
+        hash: response.hash,
+        ledger: response.ledger,
+        createdAt: response.created_at,
+        sourceAccount: response.source_account,
+        sourceAccountSequence: response.source_account_sequence,
+        feeAccount: response.fee_account,
+        feeCharged: response.fee_charged,
+        operationCount: response.operation_count,
+        envelopeXdr: response.envelope_xdr,
+        resultXdr: response.result_xdr,
+        resultMetaXdr: response.result_meta_xdr,
+        feeMetaXdr: response.fee_meta_xdr,
+        memo: response.memo,
+        memoType: response.memo_type,
+        signatures: response.signatures,
+        validAfter: response.valid_after,
+        validBefore: response.valid_before
+      };
+    } catch (error) {
+      throw new Error(`Failed to submit transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getTransaction(transactionHash: string): Promise<StellarTransaction> {
+    try {
+      const response = await this.server.transactions().transaction(transactionHash).call();
+      
+      return {
+        id: response.id,
+        hash: response.hash,
+        ledger: response.ledger,
+        createdAt: response.created_at,
+        sourceAccount: response.source_account,
+        sourceAccountSequence: response.source_account_sequence,
+        feeAccount: response.fee_account,
+        feeCharged: response.fee_charged,
+        operationCount: response.operation_count,
+        envelopeXdr: response.envelope_xdr,
+        resultXdr: response.result_xdr,
+        resultMetaXdr: response.result_meta_xdr,
+        feeMetaXdr: response.fee_meta_xdr,
+        memo: response.memo,
+        memoType: response.memo_type,
+        signatures: response.signatures,
+        validAfter: response.valid_after,
+        validBefore: response.valid_before
+      };
+    } catch (error) {
+      throw new Error(`Failed to get transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getAccountTransactions(
+    accountId: string,
+    limit: number = 10,
+    order: 'asc' | 'desc' = 'desc'
+  ): Promise<StellarTransaction[]> {
+    try {
+      const response = await this.server
+        .transactions()
+        .forAccount(accountId)
+        .order(order)
+        .limit(limit)
+        .call();
+
+      return response.records.map(record => ({
+        id: record.id,
+        hash: record.hash,
+        ledger: record.ledger,
+        createdAt: record.created_at,
+        sourceAccount: record.source_account,
+        sourceAccountSequence: record.source_account_sequence,
+        feeAccount: record.fee_account,
+        feeCharged: record.fee_charged,
+        operationCount: record.operation_count,
+        envelopeXdr: record.envelope_xdr,
+        resultXdr: record.result_xdr,
+        resultMetaXdr: record.result_meta_xdr,
+        feeMetaXdr: record.fee_meta_xdr,
+        memo: record.memo,
+        memoType: record.memo_type,
+        signatures: record.signatures,
+        validAfter: record.valid_after,
+        validBefore: record.valid_before
+      }));
+    } catch (error) {
+      throw new Error(`Failed to get account transactions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // ====================================================================================
+  // 🎯 결제 관리
+  // ====================================================================================
+
+  async sendPayment(
+    fromSecretKey: string,
+    to: string,
+    amount: string,
+    asset: string = 'XLM',
+    memo?: string
+  ): Promise<StellarTransaction> {
+    try {
+      const fromKeypair = Keypair.fromSecret(fromSecretKey);
+      const fromAccount = await this.server.loadAccount(fromKeypair.publicKey());
+
+      const transaction = new TransactionBuilder(fromAccount, {
+        fee: BASE_FEE,
+        networkPassphrase: this.network
+      });
+
+      const paymentAsset = asset === 'XLM' ? Asset.native() : Asset.fromCode(asset);
+      
+      transaction.addOperation(
+        Operation.payment({
+          destination: to,
+          asset: paymentAsset,
+          amount: amount
+        })
+      );
+
+      if (memo) {
+        transaction.addMemo(Memo.text(memo));
+      }
+
+      transaction.setTimeout(this.config.timeout);
+      const builtTransaction = transaction.build();
+      builtTransaction.sign(fromKeypair);
+
+      return await this.submitTransaction(builtTransaction);
+    } catch (error) {
+      throw new Error(`Failed to send payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getPaymentHistory(
+    accountId: string,
+    limit: number = 10
+  ): Promise<StellarOperation[]> {
+    try {
+      const response = await this.server
+        .payments()
+        .forAccount(accountId)
+        .order('desc')
+        .limit(limit)
+        .call();
+
+      return response.records.map(record => ({
+        id: record.id,
+        pagingToken: record.paging_token,
+        sourceAccount: record.source_account,
+        type: record.type,
+        typeI: record.type_i,
+        createdAt: record.created_at,
+        transactionHash: record.transaction_hash,
+        transactionSuccessful: record.transaction_successful,
+        assetType: record.asset_type,
+        assetCode: record.asset_code,
+        assetIssuer: record.asset_issuer,
+        from: record.from,
+        to: record.to,
+        amount: record.amount,
+        price: record.price,
+        priceR: record.price_r,
+        buyingAssetType: record.buying_asset_type,
+        buyingAssetCode: record.buying_asset_code,
+        buyingAssetIssuer: record.buying_asset_issuer,
+        sellingAssetType: record.selling_asset_type,
+        sellingAssetCode: record.selling_asset_code,
+        sellingAssetIssuer: record.selling_asset_issuer,
+        offerId: record.offer_id,
+        offerIdSeller: record.offer_id_seller,
+        amountBought: record.amount_bought,
+        amountSold: record.amount_sold,
+        trustor: record.trustor,
+        trustee: record.trustee,
+        trustorMuxed: record.trustor_muxed,
+        trusteeMuxed: record.trustee_muxed,
+        trustorMuxedId: record.trustor_muxed_id,
+        trusteeMuxedId: record.trustee_muxed_id,
+        asset: record.asset,
+        limit: record.limit,
+        authorize: record.authorize,
+        authorizeToMaintainLiabilities: record.authorize_to_maintain_liabilities,
+        sponsor: record.sponsor,
+        beginSponsor: record.begin_sponsor,
+        endSponsor: record.end_sponsor,
+        sourceAssetType: record.source_asset_type,
+        sourceAssetCode: record.source_asset_code,
+        sourceAssetIssuer: record.source_asset_issuer,
+        destination: record.destination,
+        destinationMuxed: record.destination_muxed,
+        destinationMuxedId: record.destination_muxed_id,
+        homeDomain: record.home_domain,
+        inflationDest: record.inflation_dest,
+        clearFlags: record.clear_flags,
+        setFlags: record.set_flags,
+        masterKeyWeight: record.master_key_weight,
+        lowThreshold: record.low_threshold,
+        medThreshold: record.med_threshold,
+        highThreshold: record.high_threshold,
+        signer: record.signer,
+        signerKey: record.signer_key,
+        signerWeight: record.signer_weight,
+        dataName: record.data_name,
+        dataValue: record.data_value,
+        dataAccount: record.data_account,
+        dataAccountMuxed: record.data_account_muxed,
+        dataAccountMuxedId: record.data_account_muxed_id,
+        bumpTo: record.bump_to,
+        path: record.path,
+        sourceAmount: record.source_amount,
+        destinationMin: record.destination_min,
+        destinationAssetType: record.destination_asset_type,
+        destinationAssetCode: record.destination_asset_code,
+        destinationAssetIssuer: record.destination_asset_issuer,
+        destinationAmount: record.destination_amount
+      }));
+    } catch (error) {
+      throw new Error(`Failed to get payment history: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // ====================================================================================
+  // 🎯 자산 관리
+  // ====================================================================================
+
+  async createTrustline(
+    accountSecretKey: string,
+    assetCode: string,
+    assetIssuer: string,
+    limit: string = '922337203685.4775807'
+  ): Promise<StellarTransaction> {
+    try {
+      const accountKeypair = Keypair.fromSecret(accountSecretKey);
+      const account = await this.server.loadAccount(accountKeypair.publicKey());
+
+      const transaction = new TransactionBuilder(account, {
+        fee: BASE_FEE,
+        networkPassphrase: this.network
+      });
+
+      transaction.addOperation(
+        Operation.changeTrust({
+          asset: Asset.fromCode(assetCode, assetIssuer),
+          limit: limit
+        })
+      );
+
+      transaction.setTimeout(this.config.timeout);
+      const builtTransaction = transaction.build();
+      builtTransaction.sign(accountKeypair);
+
+      return await this.submitTransaction(builtTransaction);
+    } catch (error) {
+      throw new Error(`Failed to create trustline: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getTrustlines(accountId: string): Promise<StellarTrustline[]> {
+    try {
+      const account = await this.server.loadAccount(accountId);
+      return account.balances
+        .filter(balance => balance.asset_type !== 'native')
+        .map(balance => ({
+          assetType: balance.asset_type,
+          assetCode: balance.asset_code,
+          assetIssuer: balance.asset_issuer,
+          limit: balance.limit || '0',
+          balance: balance.balance,
+          buyingLiabilities: balance.buying_liabilities,
+          sellingLiabilities: balance.selling_liabilities,
+          isAuthorized: balance.is_authorized,
+          isAuthorizedToMaintainLiabilities: balance.is_authorized_to_maintain_liabilities,
+          lastModifiedLedger: balance.last_modified_ledger,
+          sponsor: balance.sponsor
+        }));
+    } catch (error) {
+      throw new Error(`Failed to get trustlines: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // ====================================================================================
+  // 🎯 오퍼 관리
+  // ====================================================================================
+
+  async createOffer(
+    accountSecretKey: string,
+    selling: { assetCode: string; assetIssuer: string },
+    buying: { assetCode: string; assetIssuer: string },
+    amount: string,
+    price: string
+  ): Promise<StellarTransaction> {
+    try {
+      const accountKeypair = Keypair.fromSecret(accountSecretKey);
+      const account = await this.server.loadAccount(accountKeypair.publicKey());
+
+      const transaction = new TransactionBuilder(account, {
+        fee: BASE_FEE,
+        networkPassphrase: this.network
+      });
+
+      const sellingAsset = selling.assetCode === 'XLM' 
+        ? Asset.native() 
+        : Asset.fromCode(selling.assetCode, selling.assetIssuer);
+      
+      const buyingAsset = buying.assetCode === 'XLM' 
+        ? Asset.native() 
+        : Asset.fromCode(buying.assetCode, buying.assetIssuer);
+
+      transaction.addOperation(
+        Operation.manageOffer({
+          selling: sellingAsset,
+          buying: buyingAsset,
+          amount: amount,
+          price: price,
+          offerId: '0' // 새 오퍼 생성
+        })
+      );
+
+      transaction.setTimeout(this.config.timeout);
+      const builtTransaction = transaction.build();
+      builtTransaction.sign(accountKeypair);
+
+      return await this.submitTransaction(builtTransaction);
+    } catch (error) {
+      throw new Error(`Failed to create offer: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getOffers(accountId: string): Promise<StellarOffer[]> {
+    try {
+      const response = await this.server.offers().forAccount(accountId).call();
+      
+      return response.records.map(record => ({
+        id: record.id,
+        pagingToken: record.paging_token,
+        seller: record.seller,
+        selling: {
+          assetType: record.selling.asset_type,
+          assetCode: record.selling.asset_code,
+          assetIssuer: record.selling.asset_issuer
+        },
+        buying: {
+          assetType: record.buying.asset_type,
+          assetCode: record.buying.asset_code,
+          assetIssuer: record.buying.asset_issuer
+        },
+        amount: record.amount,
+        price: record.price,
+        priceR: record.price_r,
+        lastModifiedLedger: record.last_modified_ledger,
+        lastModifiedTime: record.last_modified_time,
+        sponsor: record.sponsor
+      }));
+    } catch (error) {
+      throw new Error(`Failed to get offers: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // ====================================================================================
+  // 🎯 유틸리티 함수
+  // ====================================================================================
+
+  async getAccountSequence(accountId: string): Promise<string> {
+    try {
+      const account = await this.server.loadAccount(accountId);
+      return account.sequenceNumber();
+    } catch (error) {
+      throw new Error(`Failed to get account sequence: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getAccountSubentryCount(accountId: string): Promise<number> {
+    try {
+      const account = await this.server.loadAccount(accountId);
+      return account.subentry_count;
+    } catch (error) {
+      throw new Error(`Failed to get account subentry count: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getAccountFlags(accountId: string): Promise<{ authRequired: boolean; authRevocable: boolean; authImmutable: boolean }> {
+    try {
+      const account = await this.server.loadAccount(accountId);
+      return {
+        authRequired: account.flags.auth_required,
+        authRevocable: account.flags.auth_revocable,
+        authImmutable: account.flags.auth_immutable
+      };
+    } catch (error) {
+      throw new Error(`Failed to get account flags: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getAccountThresholds(accountId: string): Promise<{ lowThreshold: number; medThreshold: number; highThreshold: number }> {
+    try {
+      const account = await this.server.loadAccount(accountId);
+      return {
+        lowThreshold: account.thresholds.low_threshold,
+        medThreshold: account.thresholds.med_threshold,
+        highThreshold: account.thresholds.high_threshold
+      };
+    } catch (error) {
+      throw new Error(`Failed to get account thresholds: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // ====================================================================================
+  // 🎯 에러 처리
+  // ====================================================================================
+
+  private handleStellarError(error: any): StellarError {
+    if (error.response) {
+      const response = error.response;
+      return {
+        type: response.data?.type || 'Unknown',
+        title: response.data?.title || 'Error',
+        status: response.status,
+        detail: response.data?.detail || 'Unknown error occurred',
+        instance: response.data?.instance || '',
+        extras: response.data?.extras
+      };
+    }
+    
+    return {
+      type: 'NetworkError',
+      title: 'Network Error',
+      status: 0,
+      detail: error.message || 'Network error occurred',
+      instance: '',
+      extras: { originalError: error }
+    };
+  }
+
+  // ====================================================================================
+  // 🎯 설정 업데이트
+  // ====================================================================================
+
+  updateConfig(newConfig: Partial<StellarConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+    this.network = this.config.network === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+    this.server = new Server(this.config.horizonUrl);
+  }
+
+  getConfig(): StellarConfig {
+    return { ...this.config };
+  }
+}
+
+// ====================================================================================
+// 🎯 기본 설정 및 인스턴스
+// ====================================================================================
+
+const defaultConfig: StellarConfig = {
+  network: 'testnet',
+  horizonUrl: 'https://horizon-testnet.stellar.org',
+  passphrase: Networks.TESTNET,
+  baseFee: BASE_FEE,
+  timeout: 30
+};
+
+export const stellarService = new StellarService(defaultConfig);
+
+// ====================================================================================
+// 🎯 편의 함수들
+// ====================================================================================
+
+export const formatStellarAmount = (amount: string, decimals: number = 7): string => {
+  return new Decimal(amount).toFixed(decimals);
+};
+
+export const parseStellarAmount = (amount: string): string => {
+  return new Decimal(amount).toString();
+};
+
+export const isValidStellarAddress = (address: string): boolean => {
+  try {
+    Keypair.fromPublicKey(address);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const isValidStellarSecret = (secret: string): boolean => {
+  try {
+    Keypair.fromSecret(secret);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const getAssetString = (asset: { assetCode?: string; assetIssuer?: string }): string => {
+  if (!asset.assetCode) return 'XLM';
+  if (!asset.assetIssuer) return asset.assetCode;
+  return `${asset.assetCode}:${asset.assetIssuer}`;
+};
+
+// ====================================================================================
+// 🎯 기본 내보내기
+// ====================================================================================
+
+export default StellarService;
+```
+
+## ** 주요 기능 및 특징**
+
+### **1. 완전한 스텔라 블록체인 연동**
+- 계정 생성 및 관리
+- 잔액 조회 및 관리
+- 트랜잭션 생성 및 제출
+- 결제 처리
+
+### **2. 고급 기능 지원**
+- 자산(Asset) 관리
+- 트러스트라인 생성
+- 오퍼 생성 및 관리
+- 계정 데이터 관리
+
+### **3. 타입 안전성**
+- TypeScript 완전 지원
+- 모든 스텔라 SDK 타입 정의
+- 컴파일 타임 타입 체크
+
+### **4. 에러 처리**
+- 상세한 에러 정보 제공
+- 네트워크 에러 처리
+- 스텔라 특화 에러 처리
+
+### **5. 유틸리티 함수**
+- 주소 유효성 검사
+- 시크릿 키 유효성 검사
+- 금액 포맷팅
+- 자산 문자열 생성
+
+### **6. 설정 관리**
+- 네트워크 설정 (테스트넷/메인넷)
+- Horizon URL 설정
+- 타임아웃 설정
+- 수수료 설정
+
+### **7. 사용 예시**
+
+```typescript
+// 계정 생성
+const { accountId, secretKey } = await stellarService.createAccount();
+
+// 계정 정보 조회
+const account = await stellarService.getAccount(accountId);
+
+// 결제 전송
+const transaction = await stellarService.sendPayment(
+  secretKey,
+  'destination-address',
+  '10.5',
+  'XLM',
+  'Payment memo'
+);
+
+// 잔액 조회
+const balances = await stellarService.getAccountBalances(accountId);
+
+// 트랜잭션 히스토리
+const transactions = await stellarService.getAccountTransactions(accountId, 20);
+```
+
+이 서비스는 BitWish Network의 스텔라 블록체인 연동을 위한 완전한 솔루션입니다! 🎉

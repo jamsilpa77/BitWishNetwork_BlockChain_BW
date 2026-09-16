@@ -1,0 +1,92 @@
+// 유저용 마이닝 데이터 초기화 스크립트
+const mongoose = require('mongoose');
+const User = require('../src/models/User');
+
+async function initUserMiningData() {
+  try {
+    console.log('🚀 유저용 마이닝 데이터 초기화 시작...');
+    
+    // MongoDB 연결
+    await mongoose.connect('mongodb://127.0.0.1:27017/bitwish_blockchain', {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    
+    console.log('✅ MongoDB 연결 성공');
+    
+    // 모든 사용자의 마이닝 데이터 초기화
+    const result = await User.updateMany(
+      { 'miningData': { $exists: false } },
+      {
+        $set: {
+          'miningData': {
+            walletAddress: '',
+            isMiningActive: false,
+            miningStartTime: null,
+            miningStopTime: null,
+            fixedHourlyReward: 0.25,
+            fixedDailyReward: 6.0,
+            attendanceBonus: 0,
+            referralBonus: 0,
+            lockupBonus: 0,
+            totalBonusRate: 0,
+            referralCount: 0,
+            referralStorageBW: 0,
+            isLockupRegistered: false,
+            lockupRatio: 0,
+            lockupMonths: 0,
+            lockupAPY: 0,
+            basicLockupVault: 0,
+            additionalLockupVault: 0,
+            totalAccumulatedReward: 0,
+            availableReward: 0,
+            isSecondPasswordSet: false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        }
+      }
+    );
+    
+    console.log(`✅ 유저용 마이닝 데이터 초기화 완료: ${result.modifiedCount}개 사용자 업데이트`);
+    
+    // 기존 사용자의 마이닝 데이터 리셋
+    const resetResult = await User.updateMany(
+      { 'miningData': { $exists: true } },
+      {
+        $set: {
+          'miningData.isMiningActive': false,
+          'miningData.miningStartTime': null,
+          'miningData.miningStopTime': null,
+          'miningData.attendanceBonus': 0,
+          'miningData.referralBonus': 0,
+          'miningData.lockupBonus': 0,
+          'miningData.totalBonusRate': 0,
+          'miningData.referralCount': 0,
+          'miningData.referralStorageBW': 0,
+          'miningData.isLockupRegistered': false,
+          'miningData.basicLockupVault': 0,
+          'miningData.additionalLockupVault': 0,
+          'miningData.totalAccumulatedReward': 0,
+          'miningData.availableReward': 0,
+          'miningData.updatedAt': new Date()
+        }
+      }
+    );
+    
+    console.log(`✅ 기존 사용자 마이닝 데이터 리셋 완료: ${resetResult.modifiedCount}개 사용자 업데이트`);
+    
+    // 전체 사용자 수 조회
+    const totalUsers = await User.countDocuments();
+    console.log(`📊 전체 사용자 수: ${totalUsers}명`);
+    
+    console.log('🎉 유저용 마이닝 데이터 초기화 완료!');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ 초기화 실패:', error);
+    process.exit(1);
+  }
+}
+
+// 스크립트 실행
+initUserMiningData();

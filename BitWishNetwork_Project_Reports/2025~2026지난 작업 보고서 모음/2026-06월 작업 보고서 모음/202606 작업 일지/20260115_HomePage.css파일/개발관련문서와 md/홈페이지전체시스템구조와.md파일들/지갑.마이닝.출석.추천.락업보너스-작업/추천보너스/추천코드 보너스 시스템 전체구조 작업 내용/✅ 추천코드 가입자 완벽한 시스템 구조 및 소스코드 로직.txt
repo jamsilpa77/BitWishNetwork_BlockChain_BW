@@ -1,0 +1,568 @@
+네, 완벽하게 이해했습니다!
+
+## ** 완벽한 이해 설명**
+
+### **요구사항 분석**
+1. **"실시간 마이닝 보상" 창 중앙 아래쪽에 "추천 보상 0BW" 표시**
+2. **추천코드로 가입자 발생 시 즉시 1BW씩 증가**
+3. **지갑으로 1BW가 가는 것을 "추천 보상 BW"로 이동**
+4. **유저/관리자 완전 분리 (공통 변수 절대 금지)**
+
+### **시스템 구조 이해**
+- **기존**: 1BW → 지갑 잔액 직접 반영
+- **변경**: 1BW → "추천 보상 BW" 보관함으로 이동
+- **표시**: 실시간 마이닝 보상창에 "추천 보상 0BW" 항목 추가
+- **증가**: 추천 가입자 발생 시마다 +1BW씩 누적
+
+---
+
+## ** 완벽한 시스템 구조 및 소스코드 로직**
+
+### **1. 유저/관리자 완전 분리 상태 변수 추가**
+
+```typescript
+// ==================== 유저용 추천 보상 BW 보관함 상태 ====================
+const [userReferralRewardBW, setUserReferralRewardBW] = useState(() => {
+  try {
+    const savedState = localStorage.getItem('userReferralRewardBW');
+    return savedState ? JSON.parse(savedState) : 0;
+  } catch (error) {
+    return 0;
+  }
+});
+
+// ==================== 관리자용 추천 보상 BW 보관함 상태 ====================
+const [adminReferralRewardBW, setAdminReferralRewardBW] = useState(() => {
+  try {
+    const savedState = localStorage.getItem('adminReferralRewardBW');
+    return savedState ? JSON.parse(savedState) : 0;
+  } catch (error) {
+    return 0;
+  }
+});
+```
+◆◆◆◆◆
+
+네, 알겠습니다! **1. 유저/관리자 완전 분리 상태 변수 추가** 작업만 진행하고, 절대 작업할 코드 이외에는 어떠한 코드도 추가, 변경, 수정하지 않겠습니다.
+
+
+[2 tools called]
+
+✅ **1. 유저/관리자 완전 분리 상태 변수 추가** 완료!
+
+추가된 코드:
+- **유저용 추천 보상 BW 보관함 상태**: `userReferralRewardBW`, `setUserReferralRewardBW`
+- **관리자용 추천 보상 BW 보관함 상태**: `adminReferralRewardBW`, `setAdminReferralRewardBW`
+- **localStorage 초기화**: 각각 독립적인 저장소 사용
+- **에러 처리**: try-catch로 안전한 초기화
+
+절대 작업할 코드 이외에는 어떠한 코드도 추가, 변경, 수정하지 않았습니다.
+
+◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆
+
+
+### **2. localStorage 저장 함수 (완전 분리)**
+
+```typescript
+// ==================== 유저용 추천 보상 BW 저장 함수 ====================
+const saveUserReferralRewardBW = () => {
+  try {
+    const userReferralRewardData = {
+      rewardBW: userReferralRewardBW,
+      lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem('userReferralRewardBW', JSON.stringify(userReferralRewardData));
+    console.log('✅ 유저용 추천 보상 BW 저장 완료:', userReferralRewardData);
+  } catch (error) {
+    console.error('❌ 유저용 추천 보상 BW 저장 실패:', error);
+  }
+};
+
+// ==================== 관리자용 추천 보상 BW 저장 함수 ====================
+const saveAdminReferralRewardBW = () => {
+  try {
+    const adminReferralRewardData = {
+      rewardBW: adminReferralRewardBW,
+      lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem('adminReferralRewardBW', JSON.stringify(adminReferralRewardData));
+    console.log('✅ 관리자용 추천 보상 BW 저장 완료:', adminReferralRewardData);
+  } catch (error) {
+    console.error('❌ 관리자용 추천 보상 BW 저장 실패:', error);
+  }
+};
+```
+◆◆◆◆◆
+
+네, 알겠습니다! **2. localStorage 저장 함수 (완전 분리)** 작업만 진행하고, 절대 작업할 코드 이외에는 어떠한 코드도 추가, 변경, 수정하지 않겠습니다.
+
+
+[2 tools called]
+
+✅ **2. localStorage 저장 함수 (완전 분리)** 완료!
+
+추가된 함수:
+- **유저용 추천 보상 BW 저장 함수**: `saveUserReferralRewardBW()`
+- **관리자용 추천 보상 BW 저장 함수**: `saveAdminReferralRewardBW()`
+
+각 함수의 특징:
+- **완전 분리**: 각각 독립적인 localStorage 키 사용
+- **에러 처리**: try-catch로 안전한 저장
+- **데이터 구조**: `rewardBW`와 `lastUpdated` 포함
+- **로그 출력**: 저장 성공/실패 로그
+
+절대 작업할 코드 이외에는 어떠한 코드도 추가, 변경, 수정하지 않았습니다.
+
+◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆
+
+
+### **3. 수정된 1BW 즉시 지급 함수 (지갑 → 추천 보상 BW로 이동)**
+
+```typescript
+// ==================== 유저용 1BW 즉시 지급 함수 (수정) ====================
+const handleUserInstantBonusPayment = async (referralCode: string) => {
+  try {
+    console.log('   유저용 1BW 추천 보상 BW로 이동 시작');
+    
+    // 유저 지갑 주소 확인
+    if (!authenticatedWalletAddress) {
+      throw new Error('유저 지갑 주소가 없습니다.');
+    }
+    
+    // 1BW 추천 보상 BW로 이동 (지갑 잔액에 반영하지 않음)
+    const instantBonus = 1.0;
+    
+    // ✅ 추천 보상 BW 보관함에 추가
+    setUserReferralRewardBW(prev => prev + instantBonus);
+    
+    // localStorage에 저장
+    saveUserReferralRewardBW();
+    
+    console.log(`✅ 유저용 1BW 추천 보상 BW로 이동 완료: ${instantBonus} BW`);
+    return { success: true, amount: instantBonus };
+    
+  } catch (error) {
+    console.error('❌ 유저용 1BW 추천 보상 BW 이동 실패:', error);
+    throw error;
+  }
+};
+
+// ==================== 관리자용 1BW 즉시 지급 함수 (수정) ====================
+const handleAdminInstantBonusPayment = async (referralCode: string) => {
+  try {
+    console.log('💰 관리자용 1BW 추천 보상 BW로 이동 시작');
+    
+    // 관리자 지갑 주소 확인
+    if (!authenticatedWalletAddress) {
+      throw new Error('관리자 지갑 주소가 없습니다.');
+    }
+    
+    // 1BW 추천 보상 BW로 이동 (지갑 잔액에 반영하지 않음)
+    const instantBonus = 1.0;
+    
+    // ✅ 추천 보상 BW 보관함에 추가
+    setAdminReferralRewardBW(prev => prev + instantBonus);
+    
+    // localStorage에 저장
+    saveAdminReferralRewardBW();
+    
+    console.log(`✅ 관리자용 1BW 추천 보상 BW로 이동 완료: ${instantBonus} BW`);
+    return { success: true, amount: instantBonus };
+    
+  } catch (error) {
+    console.error('❌ 관리자용 1BW 추천 보상 BW 이동 실패:', error);
+    throw error;
+  }
+};
+```
+◆◆◆◆◆
+
+네, 알겠습니다! **3. 수정된 1BW 즉시 지급 함수 (지갑 → 추천 보상 BW로 이동)** 작업만 진행하고, 절대 작업할 코드 이외에는 어떠한 코드도 추가, 변경, 수정하지 않겠습니다.
+
+
+[6 tools called]
+
+✅ **3. 수정된 1BW 즉시 지급 함수 (지갑 → 추천 보상 BW로 이동)** 완료!
+
+수정된 내용:
+- **유저용 1BW 즉시 지급 함수**: 지갑 잔액 → 추천 보상 BW 보관함으로 변경
+- **관리자용 1BW 즉시 지급 함수**: 새로 추가 (완전 분리)
+
+주요 변경사항:
+1. **지갑 잔액 업데이트 제거**: `setUserBalance(prev => prev + instantBonus)` 삭제
+2. **추천 보상 BW 보관함 추가**: `setUserReferralRewardBW(prev => prev + instantBonus)` 추가
+3. **localStorage 저장 변경**: `saveUserReferralRewardBW()` 사용
+4. **로그 메시지 수정**: "추천 보상 BW로 이동"으로 변경
+5. **관리자용 함수 추가**: 완전 분리된 독립 함수
+
+절대 작업할 코드 이외에는 어떠한 코드도 추가, 변경, 수정하지 않았습니다.
+
+◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆
+
+
+### **4. 수정된 추천인 가입 처리 함수**
+
+```typescript
+// ==================== 유저용 추천인 가입 처리 (수정) ====================
+const handleUserReferralCodeSubmit = async (referralCode: string) => {
+  try {
+    console.log('   유저용 추천인 코드 입력 처리 시작:', referralCode);
+    
+    // 추천인 코드 검증
+    const validationResult = await validateReferralCode(referralCode);
+    
+    if (validationResult.isValid) {
+      // 상호간 인증 및 보상 지급 처리
+      const joinResult = await handleUserReferralJoin(referralCode, authenticatedWalletAddress);
+      
+      if (joinResult.success) {
+        // ✅ 유저 전용 상태 업데이트
+        setUserReferralSystemState(prev => ({
+          ...prev,
+          referralCode: referralCode,
+          referrerAddress: validationResult.referrerAddress || '',
+          referralBonusApplied: true,
+          referralBonusRate: validationResult.bonusRate || 0
+        }));
+        
+        // ✅ 1BW 추천 보상 BW로 이동 (지갑 잔액에 반영하지 않음)
+        await handleUserInstantBonusPayment(referralCode);
+        
+        // 추천인 수 증가 (유저용)
+        setUserReferralCount(prev => prev + 1);
+        
+        // 보너스율 업데이트 (유저용)
+        const newBonus = calculateUserReferralBonus(userReferralCount + 1);
+        setUserReferralBonus(newBonus);
+        
+        alert(`✅ 유저용 추천인 가입 성공!\n\n보상 지급:\n- 추천인: 1 BW → 추천 보상 BW보관함\n- 가입자: 1 BW → 추천 보상 BW보관함`);
+        
+        console.log('✅ 유저용 추천인 가입 성공:', joinResult.data);
+      }
+    } else {
+      alert(`❌ 유저용 추천인 코드 오류: ${validationResult.errorMessage}`);
+    }
+  } catch (error) {
+    console.error('❌ 유저용 추천인 코드 입력 처리 실패:', error);
+    alert('❌ 추천인 코드 처리에 실패했습니다. 다시 시도해주세요.');
+  }
+};
+
+// ==================== 관리자용 추천인 가입 처리 (수정) ====================
+const handleAdminReferralCodeSubmit = async (referralCode: string) => {
+  try {
+    console.log('   관리자용 추천인 코드 입력 처리 시작:', referralCode);
+    
+    // 추천인 코드 검증
+    const validationResult = await validateReferralCode(referralCode);
+    
+    if (validationResult.isValid) {
+      // 상호간 인증 및 보상 지급 처리
+      const joinResult = await handleAdminReferralJoin(referralCode, authenticatedWalletAddress);
+      
+      if (joinResult.success) {
+        // ✅ 관리자 전용 상태 업데이트
+        setAdminReferralSystemState(prev => ({
+          ...prev,
+          referralCode: referralCode,
+          referrerAddress: validationResult.referrerAddress || '',
+          referralBonusApplied: true,
+          referralBonusRate: validationResult.bonusRate || 0
+        }));
+        
+        // ✅ 1BW 추천 보상 BW로 이동 (지갑 잔액에 반영하지 않음)
+        await handleAdminInstantBonusPayment(referralCode);
+        
+        // 추천인 수 증가 (관리자용)
+        setAdminReferralCount(prev => prev + 1);
+        
+        // 보너스율 업데이트 (관리자용)
+        const newBonus = calculateAdminReferralBonus(adminReferralCount + 1);
+        setAdminReferralBonus(newBonus);
+        
+        alert(`✅ 관리자용 추천인 가입 성공!\n\n보상 지급:\n- 추천인: 1 BW → 추천 보상 BW보관함\n- 가입자: 1 BW → 추천 보상 BW보관함`);
+        
+        console.log('✅ 관리자용 추천인 가입 성공:', joinResult.data);
+      }
+    } else {
+      alert(`❌ 관리자용 추천인 코드 오류: ${validationResult.errorMessage}`);
+    }
+  } catch (error) {
+    console.error('❌ 관리자용 추천인 코드 입력 처리 실패:', error);
+    alert('❌ 추천인 코드 처리에 실패했습니다. 다시 시도해주세요.');
+  }
+};
+```
+◆◆◆◆◆
+
+네, 알겠습니다! **4. 수정된 추천인 가입 처리 함수** 작업만 진행하고, 절대 작업할 코드 이외에는 어떠한 코드도 추가, 변경, 수정하지 않겠습니다.
+
+
+[6 tools called]
+
+✅ **4. 수정된 추천인 가입 처리 함수** 완료!
+
+수정된 내용:
+- **유저용 추천인 가입 처리 함수**: 1BW 추천 보상 BW로 이동 로직 추가
+- **관리자용 추천인 가입 처리 함수**: 1BW 추천 보상 BW로 이동 로직 추가
+
+주요 변경사항:
+1. **1BW 즉시 지급 호출 추가**: `await handleUserInstantBonusPayment(referralCode)` / `await handleAdminInstantBonusPayment(referralCode)`
+2. **알림 메시지 수정**: "1 BW → 추천 보상 BW보관함"으로 변경
+3. **완전 분리**: 유저/관리자 각각 독립적인 함수 사용
+
+절대 작업할 코드 이외에는 어떠한 코드도 추가, 변경, 수정하지 않았습니다.
+
+◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆
+
+
+네, 맞습니다! 제가 잘못된 위치에 추가했습니다.
+
+## **5번 수정 코드 (올바른 위치에 "추천 보상 BW" 추가)**
+
+### **관리자용 "실시간 마이닝 보상" 창 수정**
+
+```typescript
+// ==================== 관리자용 실시간 마이닝 보상창에 "추천 보상 BW" 추가 ====================
+<h3 className="text-lg font-bold text-green-700 text-center mb-3">실시간 마이닝 보상 (관리자용)</h3>
+<div className="grid grid-cols-2 gap-4">
+  {/* 누적 보상 */}
+  <div className="text-center">
+    <div className="text-2xl font-bold text-green-600 mb-2">
+      {(() => {
+        tick; // tick을 참조하여 tick 변경 시 재계산 유발
+        if (!miningStartTime) return '0.00000000';
+        
+        // 🎯 실제 마이닝 시간 기반 보상 계산
+        const now = new Date();
+        const elapsedHours = (now.getTime() - miningStartTime.getTime()) / (1000 * 60 * 60);
+        
+        // 🎯 관리자용 실시간 보상 계산 (백서 정확한 공식)
+        const rewardData = calculateAdminRealTimeMiningRewardDecimal();
+        const hourlyReward = rewardData.hourlyReward;
+        
+        // 🎯 누적 보상 계산 (실제 마이닝 시간 기반)
+        const accumulatedReward = elapsedHours * hourlyReward;
+        
+        return accumulatedReward.toFixed(8);
+      })()} BW
+    </div>
+    <p className="text-sm text-green-700">누적 보상</p>
+  </div>
+  
+  {/* 진행 시간 */}
+  <div className="text-center">
+    <div className="text-2xl font-bold text-green-600 mb-2 tabular-nums">
+      {(() => {
+        tick; // tick을 참조하여 tick 변경 시 재계산 유발
+        if (!miningStartTime) return '00:00:00';
+        
+        const currentTime = new Date();
+        const totalElapsedTime = currentTime.getTime() - miningStartTime.getTime();
+        
+        // 🎯 BigDecimal 기반 정확한 시간 계산
+        const decimalTotalElapsedTime = new Decimal(totalElapsedTime);
+        const decimalSecondsPerMinute = new Decimal(60 * 1000);
+        const decimalMinutesPerHour = new Decimal(60);
+        
+        const decimalTotalMinutes = decimalTotalElapsedTime.dividedBy(decimalSecondsPerMinute);
+        const decimalHours = decimalTotalMinutes.dividedBy(decimalMinutesPerHour).floor();
+        const decimalMinutes = decimalTotalMinutes.modulo(decimalMinutesPerHour).floor();
+        const decimalSeconds = decimalTotalElapsedTime.dividedBy(new Decimal(1000)).modulo(new Decimal(60)).floor();
+        
+        const hours = decimalHours.toNumber();
+        const minutes = decimalMinutes.toNumber();
+        const seconds = decimalSeconds.toNumber();
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      })()}
+    </div>
+    <p className="text-sm text-green-700">진행 시간</p>
+  </div>
+</div>
+
+{/* 🎯 추천 보상 BW 표시 (중앙 아래쪽, 다른 색상, 작게) */}
+<div className="text-center mt-4">
+  <div className="text-sm font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-lg inline-block">
+    추천 보상 {adminReferralRewardBW.toFixed(1)}BW
+  </div>
+</div>
+
+<div className="text-center mt-3">
+  <p className="text-sm text-green-700">
+    {isMiningActive ? '현재 마이닝 진행 중' : '마이닝이 정지됨'}
+  </p>
+</div>
+```
+
+### **유저용 "실시간 마이닝 보상" 창 수정**
+
+```typescript
+// ==================== 유저용 실시간 마이닝 보상창에 "추천 보상 BW" 추가 ====================
+{(userIsMiningActive || (!userIsMiningActive && userMiningStartTime)) && (() => {
+  // ✅ 렌더링 시점에 총 경과 시간을 계산합니다.
+  let totalElapsedTime = 0; // ✅ 누적 시간 초기화
+  if (userMiningStartTime) {
+    if (userIsMiningActive) {
+      //    마이닝 진행 중: 실시간으로 경과 시간 계산
+      totalElapsedTime = Date.now() - userMiningStartTime.getTime();
+    } else {
+      // 🎯 마이닝 정지됨: 정지 시간까지만 계산 (고정)
+      totalElapsedTime = userMiningStopTime ? 
+        userMiningStopTime.getTime() - userMiningStartTime.getTime() : 0;
+    }
+  }
+
+  // ✅ 시간을 시:분:초 형식으로 변환
+  const hours = Math.floor(totalElapsedTime / (1000 * 60 * 60));
+  const minutes = Math.floor((totalElapsedTime % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((totalElapsedTime % (1000 * 60)) / 1000);
+
+  // ✅ 총 보상 계산 (실시간)
+  const totalRewards = totalElapsedTime > 0 ? 
+    (totalElapsedTime / (1000 * 60 * 60)) * 0.25 : 0; // 시간당 0.25 BW
+
+  return (
+    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 mb-6">
+      <h3 className="text-lg font-bold text-green-700 text-center mb-3">⚡ 실시간 마이닝 보상</h3>
+      
+      <div className="grid grid-cols-2 gap-4">
+        {/* 누적 보상 */}
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-600 mb-2">
+            {totalRewards.toFixed(8)} BW
+          </div>
+          <p className="text-sm text-green-700">누적 보상</p>
+        </div>
+        
+        {/* 진행 시간 */}
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-600 mb-2 tabular-nums">
+            {`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`}
+          </div>
+          <p className="text-sm text-green-700">진행 시간</p>
+        </div>
+      </div>
+
+      {/* 🎯 추천 보상 BW 표시 (중앙 아래쪽, 다른 색상, 작게) */}
+      <div className="text-center mt-4">
+        <div className="text-sm font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-lg inline-block">
+          추천 보상 {userReferralRewardBW.toFixed(1)}BW
+        </div>
+      </div>
+
+      <div className="text-center mt-3">
+        <p className="text-sm text-green-700">
+          {userIsMiningActive ? '현재 마이닝 진행 중' : '마이닝이 정지됨'}
+        </p>
+      </div>
+    </div>
+  );
+})()}
+```
+
+**핵심 변경사항:**
+1. **관리자용**: 13543줄 "실시간 마이닝 보상 (관리자용)" 창에 "추천 보상 BW" 추가
+2. **유저용**: 유저용 실시간 마이닝 보상창에 "추천 보상 BW" 추가
+3. **위치**: 누적 보상/진행 시간 아래, "현재 마이닝 진행 중" 텍스트 위
+4. **스타일**: 오렌지색, 작은 크기, 중앙 정렬
+
+이제 올바른 위치에 "추천 보상 BW"가 표시될 것입니다!
+◆◆◆◆◆
+
+
+[9 tools called]
+
+✅ **5번 수정 코드 (올바른 위치에 "추천 보상 BW" 추가)** 완료!
+
+**수정 완료된 위치:**
+
+1. **관리자용 "실시간 마이닝 보상 (관리자용)" 창** (13600-13605줄):
+   - 누적 보상/진행 시간 아래, "현재 마이닝 진행 중" 텍스트 위에 추가
+   - `adminReferralRewardBW` 변수 사용
+
+2. **유저용 "실시간 마이닝 보상" 창** (14238-14243줄):
+   - 누적 보상/진행 시간 아래, "현재 마이닝 진행 중" 텍스트 위에 추가
+   - `userReferralRewardBW` 변수 사용
+
+3. **잘못된 위치의 UI 제거**:
+   - 13123줄과 14043줄의 잘못된 위치에 있던 "추천 보상 BW" UI 제거
+
+**UI 특징:**
+- **위치**: 중앙 아래쪽 (`text-center mt-4`)
+- **색상**: 오렌지색 (`text-orange-600 bg-orange-50`)
+- **크기**: 작게 (`text-sm`)
+- **스타일**: 둥근 모서리 (`rounded-lg inline-block`)
+
+이제 "실시간 마이닝 보상" 창에서 올바른 위치에 "추천 보상 BW"가 표시될 것입니다!
+
+◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆
+
+
+### **6. useEffect로 localStorage 자동 저장**
+
+```typescript
+// ==================== 유저용 추천 보상 BW 자동 저장 ====================
+useEffect(() => {
+  saveUserReferralRewardBW();
+}, [userReferralRewardBW]);
+
+// ==================== 관리자용 추천 보상 BW 자동 저장 ====================
+useEffect(() => {
+  saveAdminReferralRewardBW();
+}, [adminReferralRewardBW]);
+```
+◆◆◆◆◆
+
+
+[8 tools called]
+
+✅ **6. useEffect로 localStorage 자동 저장** 완료!
+
+**추가된 코드:**
+
+1. **유저용 추천 보상 BW 자동 저장** (9101-9104줄):
+   ```typescript
+   // ==================== 유저용 추천 보상 BW 자동 저장 ====================
+   useEffect(() => {
+     saveUserReferralRewardBW();
+   }, [userReferralRewardBW]);
+   ```
+
+2. **관리자용 추천 보상 BW 자동 저장** (9106-9109줄):
+   ```typescript
+   // ==================== 관리자용 추천 보상 BW 자동 저장 ====================
+   useEffect(() => {
+     saveAdminReferralRewardBW();
+   }, [adminReferralRewardBW]);
+   ```
+
+**기능:**
+- `userReferralRewardBW` 상태가 변경될 때마다 자동으로 `localStorage`에 저장
+- `adminReferralRewardBW` 상태가 변경될 때마다 자동으로 `localStorage`에 저장
+- 추천인 가입 시 1BW 지급 후 자동으로 데이터가 영구 저장됨
+
+절대 작업할 코드 이외에는 어떠한 코드도 추가, 변경, 수정하지 않았습니다.
+
+◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆◆
+
+
+## ** 완벽한 시스템 구조 요약**
+
+### **데이터 흐름**
+```
+추천인 가입 발생 → 1BW 즉시 지급 → 추천 보상 BW 보관함 → 실시간 마이닝 보상창 표시
+```
+
+### **완전 분리 구조**
+- **유저용**: `userReferralRewardBW` + `userReferralRewardBW` localStorage
+- **관리자용**: `adminReferralRewardBW` + `adminReferralRewardBW` localStorage
+- **공통 변수**: 절대 사용하지 않음
+
+### **핵심 변경사항**
+1. **1BW 지급 방식**: 지갑 잔액 → 추천 보상 BW 보관함
+2. **UI 표시**: 실시간 마이닝 보상창 중앙 아래쪽에 "추천 보상 0BW" 표시
+3. **완전 분리**: 유저/관리자 독립적인 상태 관리
+4. **실시간 업데이트**: 추천 가입자 발생 시마다 +1BW씩 증가
+
+**이 구조로 구현하면 요구사항을 완벽하게 만족할 수 있습니다!**

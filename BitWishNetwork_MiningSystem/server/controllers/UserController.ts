@@ -13,7 +13,6 @@ import User from '../models/User';
 import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
 import Decimal from 'decimal.js';
-import { BlockMiningService } from '../services/BlockMiningService';
 
 export class UserController {
 
@@ -223,17 +222,7 @@ export class UserController {
             const refCurrentReward = new Decimal(referrerBonusRecord.referralRewardStorage || '0');
             referrerBonusRecord.referralRewardStorage = refCurrentReward.plus(1).toString();
             await referrerBonusRecord.save();
-            console.log(`[REFERRAL] Referrer bonus perfectly updated - Reward: ${referrerBonusRecord.referralRewardStorage}`);
-
-            // [2공정 수복] 추천인 1 BW 보상 발생 시 메인넷 물리 블록 1개 즉시 실시간 마이닝 적재
-            try {
-                await BlockMiningService.onMiningBlock(referrer.walletAddress);
-                console.log(`📦 [2공정 수복] 추천 보상 블록 소환 완료! Validator: ${referrer.walletAddress}`);
-            } catch (blockErr) {
-                console.error(`❌ [2공정 수복] 추천인 보상 물리 블록 소환 실패:`, blockErr);
-            }
-
-            // [Phase 2 최종완성] 2. 단순 +1 명수놀이 파기, '진짜 식별된 명단 숫자'로 마이닝 속도 연동 결합
+            // [필수 로직 복원] 추천인의 실제 추천 명단 수(realReferralCount) 기반 마이닝 속도 2% 연동 결합
             const realReferralCount = referrerBonusRecord.referralList.length;
 
             const updatedMiningState = await MiningState.findOneAndUpdate(
@@ -243,7 +232,6 @@ export class UserController {
             );
 
             if (updatedMiningState) {
-                // 실존하는 명단 수(realReferralCount) 기반으로 2% 배율 철저 계산
                 const initialBonus = new Decimal(0.02);
                 const newReferralRate = initialBonus.plus(new Decimal(realReferralCount).mul(0.02));
 
@@ -299,72 +287,6 @@ export class UserController {
             }
             await newUserMiningState.save();
             console.log(`[REFERRAL] New user 2% policy engine restored: ${newWalletAddress}`);
-
-            // [2공정 수복] 신규 가입자(자식) 가입 보상 1 BW 지급과 동시에 메인넷 물리 블록 1개 즉시 실시간 마이닝 적재
-            try {
-                await BlockMiningService.onMiningBlock(newWalletAddress);
-                console.log(`📦 [2공정 수복] 신규 가입 보상 블록 소환 완료! Validator: ${newWalletAddress}`);
-            } catch (childBlockErr) {
-                console.error(`❌ [2공정 수복] 신규 가입자 보상 물리 블록 소환 실패:`, childBlockErr);
-            }
-
-            // blocktransactions 컬렉션에 실시간 가입 보상 및 추천 보상 블록 트랜잭션 기록
-            const mongooseObj = require('mongoose');
-            const networkDb = mongooseObj.connection.useDb('bitwish_network');
-            let BlockTxModel: any;
-            try {
-                BlockTxModel = networkDb.model('BlockTransaction');
-            } catch {
-                const BlockTxSchema = new mongooseObj.Schema({
-                    txId: { type: String, required: true, unique: true },
-                    walletAddress: { type: String, required: true, index: true },
-                    blockHeight: { type: Number, required: true },
-                    amount: { type: String, default: '1.00000000' },
-                    type: { type: String, default: 'Minting' },
-                    status: { type: String, default: 'Confirmed' }
-                }, { timestamps: { createdAt: true, updatedAt: false } });
-                BlockTxSchema.index({ walletAddress: 1, blockHeight: -1 });
-                BlockTxModel = networkDb.model('BlockTransaction', BlockTxSchema);
-            }
-
-            // 1. 추천인(부모) 블록 트랜잭션 실시간 생성
-            const parentTxId = 'BW_REF_TX_' + newWalletAddress;
-            const parentBlockHeight = 100000 + (realReferralCount - 1);
-            await BlockTxModel.findOneAndUpdate(
-                { txId: parentTxId },
-                {
-                    $setOnInsert: {
-                        txId: parentTxId,
-                        walletAddress: referrer.walletAddress,
-                        blockHeight: parentBlockHeight,
-                        amount: '1.00000000',
-                        type: 'Referral Reward',
-                        status: 'Confirmed'
-                    }
-                },
-                { upsert: true, new: true }
-            );
-            console.log(`[REFERRAL] Real-time parent BlockTransaction created for ${referrer.walletAddress}`);
-
-            // 2. 가입자(자식) 블록 트랜잭션 실시간 생성
-            const childTxId = 'BW_REF_CHILD_TX_' + newWalletAddress;
-            const childBlockHeight = 200000;
-            await BlockTxModel.findOneAndUpdate(
-                { txId: childTxId },
-                {
-                    $setOnInsert: {
-                        txId: childTxId,
-                        walletAddress: newWalletAddress,
-                        blockHeight: childBlockHeight,
-                        amount: '1.00000000',
-                        type: 'Referral Reward',
-                        status: 'Confirmed'
-                    }
-                },
-                { upsert: true, new: true }
-            );
-            console.log(`[REFERRAL] Real-time child BlockTransaction created for ${newWalletAddress}`);
-
             console.log(`[REFERRAL] Process completed successfully`);
         } catch (error) {
             console.error('[REFERRAL] Error:', error);

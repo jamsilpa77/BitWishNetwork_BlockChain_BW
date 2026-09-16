@@ -1,0 +1,272 @@
+[
+  {
+    "_id": "68eb8098d83317dac42cc29c",
+    "feeType": "BLOCK_GENERATION",
+    "feeInfo": {
+      "amount": "0.00100000",
+      "sourceType": "block",
+      "sourceId": "BLOCK-00001"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00070000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00030000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-01-12T15:30:22.000Z",
+    "distributedAt": "2025-01-12T15:30:23.000Z"
+  },
+  {
+    "_id": "68eb8098d83317dac42cc29d",
+    "feeType": "P2P_TRANSACTION",
+    "feeInfo": {
+      "amount": "0.01000000",
+      "sourceType": "transaction",
+      "sourceId": "TX-00001"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00700000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00300000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-01-12T16:45:10.000Z",
+    "distributedAt": "2025-01-12T16:45:11.000Z"
+  },
+  {
+    "_id": "68eb8098d83317dac42cc29e",
+    "feeType": "BLOCK_GENERATION",
+    "feeInfo": {
+      "amount": "0.00100000",
+      "sourceType": "block",
+      "sourceId": "BLOCK-00002"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00070000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00030000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-01-12T17:20:30.000Z",
+    "distributedAt": "2025-01-12T17:20:31.000Z"
+  },
+  {
+    "_id": "68ec602c789dfa6f9a3c9970",
+    "feeType": "BLOCK_GENERATION",
+    "feeInfo": {
+      "amount": "0.00100000",
+      "sourceType": "block",
+      "sourceId": "BLOCK-4"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00070000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00030000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-10-13T02:13:00.326Z",
+    "distributedAt": "2025-10-13T02:13:00.326Z"
+  },
+  {
+    "_id": "68ec6194789dfa6f9a3c9972",
+    "feeType": "BLOCK_GENERATION",
+    "feeInfo": {
+      "amount": "0.00100000",
+      "sourceType": "block",
+      "sourceId": "BLOCK-5"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00070000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00030000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-10-13T02:19:00.601Z",
+    "distributedAt": "2025-10-13T02:19:00.601Z"
+  },
+  {
+    "_id": "68ec61e0789dfa6f9a3c9974",
+    "feeType": "BLOCK_GENERATION",
+    "feeInfo": {
+      "amount": "0.00100000",
+      "sourceType": "block",
+      "sourceId": "BLOCK-6"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00070000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00030000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-10-13T02:20:16.270Z",
+    "distributedAt": "2025-10-13T02:20:16.270Z"
+  },
+  {
+    "_id": "68ec626a06f41e2e9c333b93",
+    "feeType": "BLOCK_GENERATION",
+    "feeInfo": {
+      "amount": "0.00100000",
+      "sourceType": "block",
+      "sourceId": "BLOCK-7"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00070000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00030000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-10-13T02:22:34.856Z",
+    "distributedAt": "2025-10-13T02:22:34.856Z"
+  },
+  {
+    "_id": "68ec813bc0103e071f06c2c2",
+    "feeType": "BLOCK_GENERATION",
+    "feeInfo": {
+      "amount": "0.00100000",
+      "sourceType": "block",
+      "sourceId": "BLOCK-8"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00070000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00030000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-10-13T04:34:03.880Z",
+    "distributedAt": "2025-10-13T04:34:03.880Z"
+  },
+  {
+    "_id": "68ec817ac0103e071f06c2c6",
+    "feeType": "BLOCK_GENERATION",
+    "feeInfo": {
+      "amount": "0.00100000",
+      "sourceType": "block",
+      "sourceId": "BLOCK-9"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00070000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00030000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-10-13T04:35:06.512Z",
+    "distributedAt": "2025-10-13T04:35:06.512Z"
+  },
+  {
+    "_id": "68ec9849f6b07250eae90e20",
+    "feeType": "BLOCK_GENERATION",
+    "feeInfo": {
+      "amount": "0.00100000",
+      "sourceType": "block",
+      "sourceId": "BLOCK-10"
+    },
+    "distribution": {
+      "ecosystemShare": {
+        "percentage": 70,
+        "amount": "0.00070000",
+        "walletAddress": "BW_ECOSYSTEM_FEE_70_WALLET_ADDRESS_12345678",
+        "walletType": "ECOSYSTEM_FEE_70",
+        "status": "completed"
+      },
+      "devTeamShare": {
+        "percentage": 30,
+        "amount": "0.00030000",
+        "walletAddress": "BW_DEV_FEE_30_WALLET_ADDRESS_12345678",
+        "walletType": "DEV_FEE_30",
+        "status": "completed"
+      }
+    },
+    "collectedAt": "2025-10-13T06:12:25.643Z",
+    "distributedAt": "2025-10-13T06:12:25.643Z"
+  }
+]

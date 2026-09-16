@@ -1,0 +1,158 @@
+##    **BitWish Network 홈페이지 & 지갑 마이닝 시스템 폴더 구조 보고서**
+
+### **1. 루트 디렉토리 구조**
+```
+BitWishBlockChain_node_Homepage/
+├── Node_HomePage/                    # 메인 프론트엔드 프로젝트
+├── BitWishBlockChain/               # 백엔드 블록체인 서버
+├── tools/                          # 개발 도구들
+├── v최종 완성된 지갑 만들기 시스템 소스코드 로직v.md
+└── 기타 문서들...
+```
+
+### **2. 프론트엔드 (Node_HomePage) 구조**
+```
+Node_HomePage/
+├── src/
+│   ├── components/                 # React 컴포넌트들
+│   │   ├── wallet/                # 지갑 관련 컴포넌트
+│   │   │   ├── WalletCreation.tsx     # 지갑 생성 (3단계 프로세스)
+│   │   │   ├── WalletBalance.tsx      # 나의 지갑 (잔액 관리)
+│   │   │   ├── WalletRecovery.tsx     # 지갑 복구
+│   │   │   ├── WalletSettings.tsx     # 지갑 설정
+│   │   │   └── WalletTransaction.tsx  # 지갑 거래
+│   │   ├── mining/                # 마이닝 관련 컴포넌트
+│   │   │   └── user/
+│   │   │       ├── UserLockupBonus.tsx
+│   │   │       └── UserHalvingSystem.tsx
+│   │   ├── common/                # 공통 컴포넌트
+│   │   │   ├── ErrorModal.tsx
+│   │   │   └── ReferralGuideMessage.tsx
+│   │   └── bonus/                 # 보너스 관련 컴포넌트
+│   ├── pages/                     # 페이지 컴포넌트
+│   │   └── HomePage.tsx           # 메인 홈페이지
+│   ├── hooks/                     # 커스텀 훅들
+│   │   ├── useWallet.ts
+│   │   ├── useWalletAuth.ts
+│   │   ├── useWalletCreation.ts
+│   │   ├── useMiningState.ts
+│   │   ├── useReferralSystem.ts
+│   │   ├── useAttendanceSystem.ts
+│   │   ├── useLockupSystem.ts
+│   │   └── useErrorState.ts
+│   ├── services/                  # API 서비스들
+│   │   ├── walletService.ts
+│   │   ├── miningService.ts
+│   │   ├── referralService.ts
+│   │   ├── attendanceService.ts
+│   │   ├── lockupService.ts
+│   │   └── storageService.ts
+│   ├── types/                     # TypeScript 타입 정의
+│   │   ├── index.ts
+│   │   └── wallet.ts
+│   ├── utils/                     # 유틸리티 함수들
+│   │   ├── errorHandler.ts
+│   │   └── logger.ts
+│   ├── i18n/                      # 다국어 지원
+│   │   ├── index.ts               # i18n 설정
+│   │   └── locales/               # 언어 파일들
+│   │       ├── ko.json            # 한국어
+│   │       ├── en.json            # 영어
+│   │       ├── zh.json            # 중국어
+│   │       └── ja.json            # 일본어
+│   ├── config/                    # 설정 파일들
+│   │   └── stellarConfig.ts       # 스텔라 설정
+│   ├── styles/                    # 스타일 파일들
+│   │   └── attendance.css
+│   ├── App.tsx                    # 메인 앱 컴포넌트
+│   ├── main.tsx                   # 앱 진입점
+│   └── index.css                  # 글로벌 스타일
+├── public/                        # 정적 파일들
+│   └── vite.svg
+├── dist/                         # 빌드 결과물
+├── node_modules/                 # 의존성 패키지들
+├── package.json                  # 프로젝트 설정
+├── package-lock.json
+├── tsconfig.json                 # TypeScript 설정
+├── tsconfig.node.json
+├── tailwind.config.js            # Tailwind CSS 설정
+├── postcss.config.js
+├── vite.config.ts                # Vite 설정
+└── simple-server.js              # 백엔드 API 서버
+```
+
+### **3. 백엔드 (BitWishBlockChain) 구조**
+```
+BitWishBlockChain/
+├── bitwish_chain/                # 메인 블록체인 서버
+│   ├── src/                      # 소스 코드
+│   │   ├── [60개 TypeScript 파일들]
+│   ├── dist/                     # 컴파일된 파일들
+│   ├── scripts/                  # 스크립트들
+│   ├── node_modules/
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── nodemon.json
+└── Node_HomePage/                # 프론트엔드 (중복)
+```
+
+### **4. 개발 도구 (tools) 구조**
+```
+tools/
+├── mongodb/                      # MongoDB 도구들
+│   ├── data/
+│   ├── mongosh/
+│   └── server/
+└── node-portable/                # Node.js 포터블 버전
+```
+
+### **5. 핵심 기능별 파일 분류**
+
+#### **5.1 지갑 시스템**
+- **생성**: `WalletCreation.tsx` (3단계 프로세스)
+- **관리**: `WalletBalance.tsx` (잔액, QR코드, 거래)
+- **복구**: `WalletRecovery.tsx` (시드문구로 복구)
+- **설정**: `WalletSettings.tsx` (지갑 설정)
+- **거래**: `WalletTransaction.tsx` (송금/받기)
+
+#### **5.2 마이닝 시스템**
+- **사용자 마이닝**: `UserLockupBonus.tsx`, `UserHalvingSystem.tsx`
+- **마이닝 서비스**: `miningService.ts`
+- **마이닝 상태**: `useMiningState.ts`
+
+#### **5.3 보너스 시스템**
+- **출석 보너스**: `attendanceService.ts`, `useAttendanceSystem.ts`
+- **추천 보너스**: `referralService.ts`, `useReferralSystem.ts`
+- **락업 보너스**: `lockupService.ts`, `useLockupSystem.ts`
+
+#### **5.4 다국어 지원**
+- **설정**: `i18n/index.ts`
+- **언어 파일**: `locales/ko.json`, `en.json`, `zh.json`, `ja.json`
+
+### **6. API 엔드포인트 구조**
+```
+simple-server.js (포트 4001)
+├── POST /wallet/create           # 지갑 생성
+├── GET /wallet/balance           # 잔액 조회
+├── GET /wallet/transactions      # 트랜잭션 조회
+├── POST /wallet/send             # 송금
+├── POST /wallet/recover          # 지갑 복구
+├── POST /wallet/kyc              # KYC 인증
+├── POST /wallet/otp              # OTP 설정
+└── GET /health                   # 헬스 체크
+```
+
+### **7. 개발 환경 설정**
+- **프론트엔드**: Vite + React + TypeScript + Tailwind CSS
+- **백엔드**: Node.js + Express + Stellar SDK
+- **데이터베이스**: MongoDB (로컬)
+- **다국어**: react-i18next
+- **상태관리**: React Hooks
+
+### **8. 빌드 및 배포**
+- **개발 서버**: `npm run dev` (포트 4000)
+- **백엔드 서버**: `node simple-server.js` (포트 4001)
+- **빌드**: `npm run build`
+- **배포**: `dist/` 폴더
+
+이 구조는 홈페이지와 지갑 마이닝 시스템을 완벽하게 지원하는 모듈화된 아키텍처입니다.

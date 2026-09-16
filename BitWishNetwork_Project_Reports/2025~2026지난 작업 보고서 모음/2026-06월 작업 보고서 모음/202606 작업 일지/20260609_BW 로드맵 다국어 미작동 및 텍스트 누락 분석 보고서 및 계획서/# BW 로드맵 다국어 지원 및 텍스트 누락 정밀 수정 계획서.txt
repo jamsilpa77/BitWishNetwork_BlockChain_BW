@@ -1,0 +1,42 @@
+# BW 로드맵 다국어 지원 및 텍스트 누락 정밀 수정 계획서
+
+본 작업 계획서는 관리자 페이지 로드맵 편집기의 텍스트 누락(축소) 현상을 해결하고, 저장 시 다국어(한/영/일/중) 번역 기능이 무력화되는 설계를 바로잡기 위함입니다.
+
+---
+
+## Proposed Changes
+
+### 1. 관리자 도구 수정
+
+#### [MODIFY] [AdminPage.tsx](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/AdminPage/AdminPage.tsx)
+
+* **변경 1**: 로드맵 폼 상태(`roadmapForm`)의 데이터 모델을 언어별(`ko`/`en`/`ja`/`zh`) 다중 뎁스로 확장 및 원본과 동일하게 전체 문구(누락 없음) 복원.
+  * 구버전 데이터(단일 언어 형식) 감지 시 자동으로 `ko` 필드 하위로 마이그레이션하는 fail-safe 장치 추가.
+* **변경 2**: 로드맵 편집기 탭에서 수정할 대상 언어 상태 변수(`roadmapEditorLang`) 추가.
+* **변경 3**: UI 렌더링 시 **[한국어 | English | 日本語 | 中文]** 언어 선택 탭 뷰를 추가하여 4개 국어 데이터를 각각 편집할 수 있도록 마크업 배치.
+
+---
+
+### 2. 사용자용 로드맵 페이지 수정
+
+#### [MODIFY] [RoadmapPage.tsx](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/RoadmapPage/RoadmapPage.tsx)
+
+* **변경 1**: `fetchVal` 내부 로직에 현재 페이지 언어 설정(`currentLanguage`)을 대조하는 필터링 조건 추가.
+  * `customRoadmap[currentLanguage][step][field]`가 존재하면 해당 언어의 커스텀 텍스트를 출력.
+  * 하위 호환성을 위해 구버전 플랫 데이터(예: `customRoadmap[step][field]`)는 `ko` 환경에서만 예외 표기하고 타 언어에서는 기본 사전값으로 롤백.
+
+---
+
+### 3. 스타일 추가
+
+#### [MODIFY] [AdminPage.css](file:///c:/BitWishNetwork_BlockChainMainnet/BitWishNetwork_MiningSystem/src/components/AdminPage/AdminPage.css)
+* 로드맵 편집기 내 다국어 선택 탭에 맞는 스타일 정의 추가 (`.roadmap-lang-tabs`, `.roadmap-lang-tab-btn` 등).
+
+---
+
+## Verification Plan
+
+### Manual Verification
+1. 관리자 도구(`testadmin`)의 로드맵 탭 입장 시 4개 언어 탭이 정상 노출되는지 확인.
+2. 각 탭에서 텍스트 수정 후 저장.
+3. 사용자 로드맵 페이지(`/roadmap`)에 접속하여 우측 상단 언어 변경 시, 관리자가 입력한 국문/영문/일문/중문 텍스트가 깨지지 않고 실시간으로 변환되어 출력되는지 확인.

@@ -1,0 +1,598 @@
+stellarConfig.ts 설정 파일의 완전한 소스코드를 작성하겠습니다.
+
+# **📄 stellarConfig.ts 완전 구현**
+
+**위치**: `Node_HomePage/src/config/stellarConfig.ts`
+
+```typescript
+import { Networks } from 'stellar-sdk';
+import Decimal from 'decimal.js';
+
+// ====================================================================================
+// 🎯 스텔라 네트워크 설정
+// ====================================================================================
+
+export const STELLAR_NETWORKS = {
+  testnet: {
+    name: 'Testnet',
+    horizonUrl: 'https://horizon-testnet.stellar.org',
+    passphrase: Networks.TESTNET,
+    networkId: 'testnet',
+    isMainnet: false,
+    description: 'Stellar Test Network for development and testing'
+  },
+  mainnet: {
+    name: 'Mainnet',
+    horizonUrl: 'https://horizon.stellar.org',
+    passphrase: Networks.PUBLIC,
+    networkId: 'mainnet',
+    isMainnet: true,
+    description: 'Stellar Main Network for production'
+  }
+} as const;
+
+export type StellarNetwork = keyof typeof STELLAR_NETWORKS;
+
+// ====================================================================================
+// 🎯 BW 토큰 설정
+// ====================================================================================
+
+export const BW_TOKEN_CONFIG = {
+  // 기본 토큰 정보
+  assetCode: 'BW',
+  assetIssuer: 'GABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234', // 실제 발행자 주소로 변경 필요
+  totalSupply: new Decimal('21000000000'), // 210억 개
+  decimals: 7,
+  name: 'BitWish Token',
+  symbol: 'BW',
+  description: 'BitWish Network Native Token',
+  
+  // 토큰 분배 계획
+  distribution: {
+    mining: new Decimal('10500000000'), // 50% - 마이닝
+    team: new Decimal('2100000000'),    // 10% - 팀
+    development: new Decimal('2100000000'), // 10% - 개발
+    marketing: new Decimal('2100000000'),   // 10% - 마케팅
+    reserve: new Decimal('4200000000')      // 20% - 준비금
+  },
+  
+  // 토큰 메타데이터
+  metadata: {
+    version: '1.0.0',
+    website: 'https://bitwish.network',
+    whitepaper: 'https://bitwish.network/whitepaper',
+    github: 'https://github.com/bitwish-network',
+    twitter: 'https://twitter.com/bitwish_network',
+    telegram: 'https://t.me/bitwish_network',
+    discord: 'https://discord.gg/bitwish'
+  }
+} as const;
+
+// ====================================================================================
+// 🎯 마이닝 설정
+// ====================================================================================
+
+export const MINING_CONFIG = {
+  // 기본 마이닝 설정
+  baseReward: new Decimal('100'), // 기본 보상 (BW)
+  blockTime: 10, // 블록 생성 시간 (초)
+  difficultyAdjustment: 2016, // 난이도 조정 주기 (블록 수)
+  maxSupply: BW_TOKEN_CONFIG.totalSupply,
+  
+  // 마이닝 보상 감소 (할빙)
+  halving: {
+    enabled: true,
+    blockInterval: 210000, // 210,000 블록마다 할빙
+    reductionRate: 0.5, // 50% 감소
+    maxHalvings: 32 // 최대 32회 할빙
+  },
+  
+  // 마이닝 풀 설정
+  pool: {
+    enabled: true,
+    minPayout: new Decimal('1'), // 최소 지급액
+    payoutInterval: 24 * 60 * 60 * 1000, // 24시간마다 지급
+    fee: new Decimal('0.01') // 1% 수수료
+  },
+  
+  // 마이닝 알고리즘
+  algorithm: {
+    name: 'Proof of Work + Stellar Consensus Protocol',
+    hashFunction: 'SHA256',
+    targetTime: 10, // 목표 블록 시간
+    maxDifficulty: 1000000, // 최대 난이도
+    minDifficulty: 1 // 최소 난이도
+  }
+} as const;
+
+// ====================================================================================
+// 🎯 보너스 시스템 설정
+// ====================================================================================
+
+export const BONUS_CONFIG = {
+  // 출석 보너스
+  attendance: {
+    enabled: true,
+    baseBonus: new Decimal('10'), // 기본 출석 보너스
+    consecutiveMultiplier: new Decimal('0.1'), // 연속 출석 배수
+    maxConsecutiveDays: 30, // 최대 연속 출석일
+    maxBonus: new Decimal('100'), // 최대 출석 보너스
+    resetAfterMiss: 3 // 3일 연속 미출석 시 리셋
+  },
+  
+  // 추천인 보너스
+  referral: {
+    enabled: true,
+    referrerBonus: new Decimal('50'), // 추천인 보너스
+    refereeBonus: new Decimal('25'), // 피추천인 보너스
+    commissionRate: new Decimal('0.1'), // 10% 수수료
+    maxLevels: 3, // 최대 추천 레벨
+    levelRates: [
+      new Decimal('0.1'), // 1레벨: 10%
+      new Decimal('0.05'), // 2레벨: 5%
+      new Decimal('0.02') // 3레벨: 2%
+    ]
+  },
+  
+  // 락업 보너스
+  lockup: {
+    enabled: true,
+    basicLockup: {
+      minAmount: new Decimal('1000'), // 최소 락업 금액
+      maxAmount: new Decimal('1000000'), // 최대 띨업 금액
+      minDuration: 30, // 최소 락업 기간 (일)
+      maxDuration: 365, // 최대 락업 기간 (일)
+      bonusRates: {
+        30: new Decimal('0.05'),   // 30일: 5%
+        90: new Decimal('0.15'),   // 90일: 15%
+        180: new Decimal('0.30'),  // 180일: 30%
+        365: new Decimal('0.60')   // 365일: 60%
+      }
+    },
+    secondLockup: {
+      enabled: true,
+      minAmount: new Decimal('5000'), // 최소 2차 락업 금액
+      maxAmount: new Decimal('5000000'), // 최대 2차 락업 금액
+      minDuration: 90, // 최소 2차 락업 기간 (일)
+      maxDuration: 730, // 최대 2차 락업 기간 (일)
+      bonusRates: {
+        90: new Decimal('0.10'),   // 90일: 10%
+        180: new Decimal('0.25'),  // 180일: 25%
+        365: new Decimal('0.50'),  // 365일: 50%
+        730: new Decimal('1.00')   // 730일: 100%
+      }
+    }
+  },
+  
+  // 가맹점 보너스
+  merchant: {
+    enabled: true,
+    bonusRate: new Decimal('1.25'), // 125% 보너스
+    minTransactionAmount: new Decimal('100'), // 최소 거래 금액
+    maxDailyBonus: new Decimal('10000'), // 일일 최대 보너스
+    approvalRequired: true, // 승인 필요
+    kycRequired: true // KYC 필요
+  },
+  
+  // 첫 지갑 보너스
+  firstWallet: {
+    enabled: true,
+    bonusAmount: new Decimal('100'), // 첫 지갑 보너스
+    oneTimeOnly: true, // 한 번만 지급
+    minBalance: new Decimal('0') // 최소 잔액 조건
+  },
+  
+  // 레벨업 보너스
+  levelUp: {
+    enabled: true,
+    levels: [
+      { level: 1, minReferrals: 0, bonus: new Decimal('0') },
+      { level: 2, minReferrals: 5, bonus: new Decimal('100') },
+      { level: 3, minReferrals: 15, bonus: new Decimal('300') },
+      { level: 4, minReferrals: 30, bonus: new Decimal('600') },
+      { level: 5, minReferrals: 50, bonus: new Decimal('1000') },
+      { level: 6, minReferrals: 100, bonus: new Decimal('2000') },
+      { level: 7, minReferrals: 200, bonus: new Decimal('4000') },
+      { level: 8, minReferrals: 500, bonus: new Decimal('10000') },
+      { level: 9, minReferrals: 1000, bonus: new Decimal('25000') },
+      { level: 10, minReferrals: 2000, bonus: new Decimal('50000') }
+    ]
+  }
+} as const;
+
+// ====================================================================================
+// 🎯 보안 설정
+// ====================================================================================
+
+export const SECURITY_CONFIG = {
+  // 암호화 설정
+  encryption: {
+    algorithm: 'AES-256-GCM',
+    keyLength: 32,
+    ivLength: 16,
+    tagLength: 16
+  },
+  
+  // 해시 설정
+  hashing: {
+    algorithm: 'SHA-256',
+    saltLength: 32,
+    iterations: 100000
+  },
+  
+  // OTP 설정
+  otp: {
+    algorithm: 'SHA1',
+    digits: 6,
+    period: 30,
+    window: 2,
+    issuer: 'BitWish Network'
+  },
+  
+  // API 보안
+  api: {
+    rateLimit: {
+      windowMs: 15 * 60 * 1000, // 15분
+      maxRequests: 100, // 최대 요청 수
+      skipSuccessfulRequests: false
+    },
+    cors: {
+      origin: ['https://bitwish.network', 'https://localhost:3000'],
+      credentials: true
+    },
+    helmet: {
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          connectSrc: ["'self'", "https://horizon.stellar.org", "https://horizon-testnet.stellar.org"]
+        }
+      }
+    }
+  },
+  
+  // 세션 설정
+  session: {
+    secret: process.env.SESSION_SECRET || 'bitwish-session-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24시간
+    }
+  }
+} as const;
+
+// ====================================================================================
+// 🎯 데이터베이스 설정
+// ====================================================================================
+
+export const DATABASE_CONFIG = {
+  // MongoDB 설정
+  mongodb: {
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/bitwish',
+    options: {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      bufferMaxEntries: 0
+    }
+  },
+  
+  // Redis 설정 (캐싱)
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD,
+    db: 0,
+    retryDelayOnFailover: 100,
+    maxRetriesPerRequest: 3
+  }
+} as const;
+
+// ====================================================================================
+// 🎯 로깅 설정
+// ====================================================================================
+
+export const LOGGING_CONFIG = {
+  level: process.env.LOG_LEVEL || 'info',
+  format: 'combined',
+  transports: [
+    {
+      type: 'console',
+      level: 'debug'
+    },
+    {
+      type: 'file',
+      filename: 'logs/error.log',
+      level: 'error'
+    },
+    {
+      type: 'file',
+      filename: 'logs/combined.log',
+      level: 'info'
+    }
+  ],
+  maxFiles: 5,
+  maxSize: '10m'
+} as const;
+
+// ====================================================================================
+// 🎯 환경 설정
+// ====================================================================================
+
+export const ENVIRONMENT_CONFIG = {
+  development: {
+    network: 'testnet' as StellarNetwork,
+    debug: true,
+    logLevel: 'debug',
+    cors: {
+      origin: true,
+      credentials: true
+    }
+  },
+  production: {
+    network: 'mainnet' as StellarNetwork,
+    debug: false,
+    logLevel: 'warn',
+    cors: {
+      origin: ['https://bitwish.network'],
+      credentials: true
+    }
+  },
+  test: {
+    network: 'testnet' as StellarNetwork,
+    debug: true,
+    logLevel: 'error',
+    cors: {
+      origin: true,
+      credentials: true
+    }
+  }
+} as const;
+
+// ====================================================================================
+// 🎯 현재 환경 설정
+// ====================================================================================
+
+export const CURRENT_ENV = process.env.NODE_ENV || 'development';
+export const CURRENT_CONFIG = ENVIRONMENT_CONFIG[CURRENT_ENV as keyof typeof ENVIRONMENT_CONFIG];
+
+// ====================================================================================
+// 🎯 스텔라 네트워크 설정
+// ====================================================================================
+
+export const STELLAR_CONFIG = {
+  network: CURRENT_CONFIG.network,
+  horizonUrl: STELLAR_NETWORKS[CURRENT_CONFIG.network].horizonUrl,
+  passphrase: STELLAR_NETWORKS[CURRENT_CONFIG.network].passphrase,
+  networkId: STELLAR_NETWORKS[CURRENT_CONFIG.network].networkId,
+  isMainnet: STELLAR_NETWORKS[CURRENT_CONFIG.network].isMainnet
+};
+
+// ====================================================================================
+// 🎯 유틸리티 함수
+// ====================================================================================
+
+export const getNetworkConfig = (network: StellarNetwork) => {
+  return STELLAR_NETWORKS[network];
+};
+
+export const isMainnet = (): boolean => {
+  return STELLAR_CONFIG.isMainnet;
+};
+
+export const getHorizonUrl = (): string => {
+  return STELLAR_CONFIG.horizonUrl;
+};
+
+export const getPassphrase = (): string => {
+  return STELLAR_CONFIG.passphrase;
+};
+
+export const getTokenConfig = () => {
+  return BW_TOKEN_CONFIG;
+};
+
+export const getMiningConfig = () => {
+  return MINING_CONFIG;
+};
+
+export const getBonusConfig = () => {
+  return BONUS_CONFIG;
+};
+
+export const getSecurityConfig = () => {
+  return SECURITY_CONFIG;
+};
+
+export const getDatabaseConfig = () => {
+  return DATABASE_CONFIG;
+};
+
+export const getLoggingConfig = () => {
+  return LOGGING_CONFIG;
+};
+
+// ====================================================================================
+// 🎯 설정 검증 함수
+// ====================================================================================
+
+export const validateConfig = (): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  
+  // 토큰 설정 검증
+  if (BW_TOKEN_CONFIG.totalSupply.lte(0)) {
+    errors.push('Total supply must be greater than 0');
+  }
+  
+  if (BW_TOKEN_CONFIG.decimals < 0 || BW_TOKEN_CONFIG.decimals > 18) {
+    errors.push('Decimals must be between 0 and 18');
+  }
+  
+  // 마이닝 설정 검증
+  if (MINING_CONFIG.baseReward.lte(0)) {
+    errors.push('Base mining reward must be greater than 0');
+  }
+  
+  if (MINING_CONFIG.blockTime <= 0) {
+    errors.push('Block time must be greater than 0');
+  }
+  
+  // 보너스 설정 검증
+  if (BONUS_CONFIG.attendance.baseBonus.lt(0)) {
+    errors.push('Attendance bonus must be non-negative');
+  }
+  
+  if (BONUS_CONFIG.referral.commissionRate.gt(1)) {
+    errors.push('Referral commission rate must not exceed 100%');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+// ====================================================================================
+// 🎯 설정 업데이트 함수
+// ====================================================================================
+
+export const updateNetworkConfig = (network: StellarNetwork): void => {
+  const config = STELLAR_NETWORKS[network];
+  STELLAR_CONFIG.network = network;
+  STELLAR_CONFIG.horizonUrl = config.horizonUrl;
+  STELLAR_CONFIG.passphrase = config.passphrase;
+  STELLAR_CONFIG.networkId = config.networkId;
+  STELLAR_CONFIG.isMainnet = config.isMainnet;
+};
+
+export const updateTokenConfig = (updates: Partial<typeof BW_TOKEN_CONFIG>): void => {
+  Object.assign(BW_TOKEN_CONFIG, updates);
+};
+
+export const updateMiningConfig = (updates: Partial<typeof MINING_CONFIG>): void => {
+  Object.assign(MINING_CONFIG, updates);
+};
+
+export const updateBonusConfig = (updates: Partial<typeof BONUS_CONFIG>): void => {
+  Object.assign(BONUS_CONFIG, updates);
+};
+
+// ====================================================================================
+// 🎯 기본 내보내기
+// ====================================================================================
+
+export default {
+  STELLAR_NETWORKS,
+  BW_TOKEN_CONFIG,
+  MINING_CONFIG,
+  BONUS_CONFIG,
+  SECURITY_CONFIG,
+  DATABASE_CONFIG,
+  LOGGING_CONFIG,
+  ENVIRONMENT_CONFIG,
+  CURRENT_ENV,
+  CURRENT_CONFIG,
+  STELLAR_CONFIG,
+  getNetworkConfig,
+  isMainnet,
+  getHorizonUrl,
+  getPassphrase,
+  getTokenConfig,
+  getMiningConfig,
+  getBonusConfig,
+  getSecurityConfig,
+  getDatabaseConfig,
+  getLoggingConfig,
+  validateConfig,
+  updateNetworkConfig,
+  updateTokenConfig,
+  updateMiningConfig,
+  updateBonusConfig
+};
+```
+
+## ** 주요 기능 및 특징**
+
+### **1. 완전한 스텔라 네트워크 설정**
+- 테스트넷/메인넷 설정
+- Horizon URL 설정
+- 네트워크 패스프레이즈 설정
+- 환경별 설정 관리
+
+### **2. BW 토큰 설정**
+- 210억 개 총 공급량
+- 7자리 소수점
+- 토큰 분배 계획
+- 메타데이터 설정
+
+### **3. 마이닝 시스템 설정**
+- 기본 보상 설정
+- 블록 생성 시간
+- 할빙 설정
+- 마이닝 풀 설정
+
+### **4. 보너스 시스템 설정**
+- 출석 보너스
+- 추천인 보너스
+- 락업 보너스
+- 가맹점 보너스 (125%)
+- 첫 지갑 보너스
+- 레벨업 보너스
+
+### **5. 보안 설정**
+- 암호화 설정
+- 해시 설정
+- OTP 설정
+- API 보안 설정
+- 세션 설정
+
+### **6. 데이터베이스 설정**
+- MongoDB 설정
+- Redis 캐싱 설정
+- 연결 옵션 설정
+
+### **7. 로깅 설정**
+- 로그 레벨 설정
+- 파일 로그 설정
+- 로그 로테이션 설정
+
+### **8. 환경별 설정**
+- 개발 환경
+- 프로덕션 환경
+- 테스트 환경
+
+### **9. 유틸리티 함수**
+- 설정 조회 함수
+- 설정 검증 함수
+- 설정 업데이트 함수
+
+### **10. 사용 예시**
+
+```typescript
+// 네트워크 설정 조회
+const network = getNetworkConfig('testnet');
+const isMain = isMainnet();
+
+// 토큰 설정 조회
+const tokenConfig = getTokenConfig();
+const totalSupply = tokenConfig.totalSupply;
+
+// 보너스 설정 조회
+const bonusConfig = getBonusConfig();
+const merchantBonus = bonusConfig.merchant.bonusRate;
+
+// 설정 검증
+const validation = validateConfig();
+if (!validation.isValid) {
+  console.error('Configuration errors:', validation.errors);
+}
+```
+
+이 설정 파일은 BitWish Network의 모든 스텔라 블록체인 연동 설정을 완전히 관리하는 핵심 파일입니다! 🎉

@@ -1,0 +1,199 @@
+네, 추가 작업이 필요한 부분들을 어떻게 해결할지 설명하겠습니다!
+
+##    **추가 작업 해결 방안**
+
+### **1. UI 렌더링 부분의 공통변수 참조 수정**
+
+#### **문제점:**
+```typescript
+// 라인 13343-13742: UI에서 여전히 공통변수 사용
+{isLockupRegistered && (
+  <div>락업 정보 표시</div>
+)}
+
+{secondLockupRatio > 0 && (
+  <div>추가 락업 정보 표시</div>
+)}
+```
+
+#### **해결 방안:**
+```typescript
+// ✅ 유저/관리자 분리된 변수로 교체
+{isUserLockupRegistered && (
+  <div>유저용 락업 정보 표시</div>
+)}
+
+{isAdminLockupRegistered && (
+  <div>관리자용 락업 정보 표시</div>
+)}
+
+{userSecondLockupRatio > 0 && (
+  <div>유저용 추가 락업 정보 표시</div>
+)}
+
+{adminSecondLockupRatio > 0 && (
+  <div>관리자용 추가 락업 정보 표시</div>
+)}
+```
+
+---
+
+### **2. 남은 함수들의 공통변수 호출 수정**
+
+#### **문제점:**
+```typescript
+// 라인 4808-4809, 7609-7610: 공통변수 setter 함수 호출
+setIsLockupRegistered(false);
+setRegisteredLockupData({...});
+
+// 라인 4859-4862: 공통변수 setter 함수 호출
+setSecondLockupRatio(0);
+setSecondLockupMonths(0);
+setIsSecondLockupRegistered(false);
+setRegisteredSecondLockupData({...});
+```
+
+#### **해결 방안:**
+```typescript
+// ✅ 유저/관리자 분리된 함수로 교체
+// 유저용 함수에서:
+setIsUserLockupRegistered(false);
+setRegisteredUserLockupData({...});
+setUserSecondLockupRatio(0);
+setUserSecondLockupMonths(0);
+setIsUserSecondLockupRegistered(false);
+setRegisteredUserSecondLockupData({...});
+
+// 관리자용 함수에서:
+setIsAdminLockupRegistered(false);
+setRegisteredAdminLockupData({...});
+setAdminSecondLockupRatio(0);
+setAdminSecondLockupMonths(0);
+setIsAdminSecondLockupRegistered(false);
+setRegisteredAdminSecondLockupData({...});
+```
+
+---
+
+### **3. 타입 오류 해결**
+
+#### **문제점:**
+```typescript
+// 라인 3322, 3375: null 타입 불일치
+registeredBasicLockupData: {
+  ratio: 0,
+  months: 0,
+  apy: 0,
+  startDate: null,  // ❌ null이 Date 타입과 불일치
+  endDate: null     // ❌ null이 Date 타입과 불일치
+}
+```
+
+#### **해결 방안:**
+```typescript
+// ✅ 타입 강제 변환 또는 undefined 사용
+registeredBasicLockupData: {
+  ratio: 0,
+  months: 0,
+  apy: 0,
+  startDate: null as any,  // 타입 강제 변환
+  endDate: null as any     // 타입 강제 변환
+}
+
+// 또는 더 안전한 방법:
+registeredBasicLockupData: {
+  ratio: 0,
+  months: 0,
+  apy: 0,
+  startDate: undefined,  // undefined 사용
+  endDate: undefined     // undefined 사용
+}
+```
+
+---
+
+### **4. 구체적 수정 작업 순서**
+
+#### **1단계: UI 렌더링 부분 수정**
+```typescript
+// 찾아서 수정할 패턴들:
+// isLockupRegistered → isUserLockupRegistered 또는 isAdminLockupRegistered
+// registeredLockupData → registeredUserLockupData 또는 registeredAdminLockupData
+// secondLockupRatio → userSecondLockupRatio 또는 adminSecondLockupRatio
+// secondLockupMonths → userSecondLockupMonths 또는 adminSecondLockupMonths
+// isSecondLockupRegistered → isUserSecondLockupRegistered 또는 isAdminSecondLockupRegistered
+// registeredSecondLockupData → registeredUserSecondLockupData 또는 registeredAdminSecondLockupData
+```
+
+#### **2단계: 함수 호출 부분 수정**
+```typescript
+// 찾아서 수정할 패턴들:
+// setIsLockupRegistered → setIsUserLockupRegistered 또는 setIsAdminLockupRegistered
+// setRegisteredLockupData → setRegisteredUserLockupData 또는 setRegisteredAdminLockupData
+// setSecondLockupRatio → setUserSecondLockupRatio 또는 setAdminSecondLockupRatio
+// setSecondLockupMonths → setUserSecondLockupMonths 또는 setAdminSecondLockupMonths
+// setIsSecondLockupRegistered → setIsUserSecondLockupRegistered 또는 setIsAdminSecondLockupRegistered
+// setRegisteredSecondLockupData → setRegisteredUserSecondLockupData 또는 setRegisteredAdminSecondLockupData
+```
+
+#### **3단계: 타입 오류 수정**
+```typescript
+// null 타입 불일치 해결:
+startDate: null as any,
+endDate: null as any
+
+// 또는
+startDate: undefined,
+endDate: undefined
+```
+
+---
+
+### **5. 자동화된 수정 방법**
+
+#### **A. 정규식 기반 일괄 교체:**
+```bash
+# UI 렌더링 부분
+isLockupRegistered → isUserLockupRegistered
+registeredLockupData → registeredUserLockupData
+secondLockupRatio → userSecondLockupRatio
+secondLockupMonths → userSecondLockupMonths
+isSecondLockupRegistered → isUserSecondLockupRegistered
+registeredSecondLockupData → registeredUserSecondLockupData
+
+# 함수 호출 부분
+setIsLockupRegistered → setIsUserLockupRegistered
+setRegisteredLockupData → setRegisteredUserLockupData
+setSecondLockupRatio → setUserSecondLockupRatio
+setSecondLockupMonths → setUserSecondLockupMonths
+setIsSecondLockupRegistered → setIsUserSecondLockupRegistered
+setRegisteredSecondLockupData → setRegisteredUserSecondLockupData
+```
+
+#### **B. 관리자용 변수도 동일하게 교체:**
+```bash
+# 관리자용 UI 렌더링
+isLockupRegistered → isAdminLockupRegistered
+registeredLockupData → registeredAdminLockupData
+secondLockupRatio → adminSecondLockupRatio
+secondLockupMonths → adminSecondLockupMonths
+isSecondLockupRegistered → isAdminSecondLockupRegistered
+registeredSecondLockupData → registeredAdminSecondLockupData
+```
+
+---
+
+### **6. 예상 결과**
+
+#### **수정 완료 후:**
+- ✅ 모든 공통변수 참조 제거
+- ✅ 유저/관리자 완전 분리된 UI 렌더링
+- ✅ 타입 오류 해결
+- ✅ 문법 오류 0개 달성
+
+#### **최종 상태:**
+- 유저용 시스템: `user*` 변수들만 사용
+- 관리자용 시스템: `admin*` 변수들만 사용
+- 완전히 독립적인 두 시스템 운영
+
+**이렇게 수정하면 유저/관리자 시스템이 완전히 분리되어 독립적으로 작동할 것입니다!** 🚀

@@ -1,0 +1,485 @@
+LanguageSelector.tsx 컴포넌트의 완전한 소스코드를 작성하겠습니다.
+
+# **📄 LanguageSelector.tsx 완전 구현**
+
+**위치**: `Node_HomePage/src/components/LanguageSelector.tsx`
+
+```typescript
+import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { 
+  Globe, 
+  ChevronDown, 
+  Check, 
+  Languages,
+  Flag
+} from 'lucide-react';
+
+// ====================================================================================
+// 🎯 언어 설정 인터페이스
+// ====================================================================================
+
+interface Language {
+  code: string;
+  name: string;
+  nativeName: string;
+  flag: string;
+  rtl?: boolean;
+}
+
+interface LanguageSelectorProps {
+  variant?: 'dropdown' | 'button' | 'compact';
+  showFlag?: boolean;
+  showNativeName?: boolean;
+  showCurrentLanguage?: boolean;
+  position?: 'top' | 'bottom' | 'left' | 'right';
+  size?: 'small' | 'medium' | 'large';
+  className?: string;
+  onLanguageChange?: (language: Language) => void;
+  disabled?: boolean;
+  showGlobeIcon?: boolean;
+  showChevron?: boolean;
+  customLanguages?: Language[];
+  excludeLanguages?: string[];
+}
+
+// ====================================================================================
+// 🎯 지원 언어 목록
+// ====================================================================================
+
+const SUPPORTED_LANGUAGES: Language[] = [
+  {
+    code: 'ko',
+    name: 'Korean',
+    nativeName: '한국어',
+    flag: '🇰  ',
+    rtl: false
+  },
+  {
+    code: 'en',
+    name: 'English',
+    nativeName: 'English',
+    flag: '🇺  ',
+    rtl: false
+  },
+  {
+    code: 'zh',
+    name: 'Chinese',
+    nativeName: '中文',
+    flag: '🇨🇳',
+    rtl: false
+  },
+  {
+    code: 'ja',
+    name: 'Japanese',
+    nativeName: '日本語',
+    flag: '🇯🇵',
+    rtl: false
+  }
+];
+
+// ====================================================================================
+// 🎯 LanguageSelector 컴포넌트
+// ====================================================================================
+
+export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
+  variant = 'dropdown',
+  showFlag = true,
+  showNativeName = true,
+  showCurrentLanguage = true,
+  position = 'bottom',
+  size = 'medium',
+  className = '',
+  onLanguageChange,
+  disabled = false,
+  showGlobeIcon = true,
+  showChevron = true,
+  customLanguages,
+  excludeLanguages = []
+}) => {
+  const { i18n, t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState<Language | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ====================================================================================
+  // 🎯 상태 관리 및 이벤트 핸들러
+  // ====================================================================================
+
+  // 현재 언어 설정
+  useEffect(() => {
+    const availableLanguages = customLanguages || SUPPORTED_LANGUAGES;
+    const filteredLanguages = availableLanguages.filter(
+      lang => !excludeLanguages.includes(lang.code)
+    );
+    
+    const current = filteredLanguages.find(
+      lang => lang.code === i18n.language
+    ) || filteredLanguages[0];
+    
+    setCurrentLanguage(current);
+  }, [i18n.language, customLanguages, excludeLanguages]);
+
+  // 드롭다운 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // 언어 변경 핸들러
+  const handleLanguageChange = async (language: Language) => {
+    try {
+      await i18n.changeLanguage(language.code);
+      setCurrentLanguage(language);
+      onLanguageChange?.(language);
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Failed to change language:', error);
+    }
+  };
+
+  // 드롭다운 토글
+  const toggleDropdown = () => {
+    if (!disabled) {
+      setIsOpen(!isOpen);
+    }
+  };
+
+  // ====================================================================================
+  // 🎯 스타일 클래스 생성
+  // ====================================================================================
+
+  const getSizeClasses = () => {
+    switch (size) {
+      case 'small':
+        return 'text-xs px-2 py-1';
+      case 'large':
+        return 'text-base px-4 py-3';
+      default:
+        return 'text-sm px-3 py-2';
+    }
+  };
+
+  const getPositionClasses = () => {
+    switch (position) {
+      case 'top':
+        return 'bottom-full mb-2';
+      case 'left':
+        return 'right-full mr-2 top-0';
+      case 'right':
+        return 'left-full ml-2 top-0';
+      default:
+        return 'top-full mt-2';
+    }
+  };
+
+  const getVariantClasses = () => {
+    switch (variant) {
+      case 'button':
+        return 'bg-blue-500 hover:bg-blue-600 text-white';
+      case 'compact':
+        return 'bg-gray-100 hover:bg-gray-200 text-gray-700';
+      default:
+        return 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300';
+    }
+  };
+
+  // ====================================================================================
+  // 🎯 언어 목록 필터링
+  // ====================================================================================
+
+  const getAvailableLanguages = () => {
+    const availableLanguages = customLanguages || SUPPORTED_LANGUAGES;
+    return availableLanguages.filter(
+      lang => !excludeLanguages.includes(lang.code)
+    );
+  };
+
+  // ====================================================================================
+  // 🎯 현재 언어 표시 텍스트
+  // ====================================================================================
+
+  const getCurrentLanguageText = () => {
+    if (!currentLanguage) return '';
+    
+    if (showNativeName) {
+      return currentLanguage.nativeName;
+    }
+    return currentLanguage.name;
+  };
+
+  // ====================================================================================
+  // 🎯 드롭다운 메뉴 렌더링
+  // ====================================================================================
+
+  const renderDropdownMenu = () => {
+    if (!isOpen) return null;
+
+    const availableLanguages = getAvailableLanguages();
+
+    return (
+      <div
+        className={`absolute z-50 w-full min-w-[200px] bg-white border border-gray-200 rounded-lg shadow-lg ${getPositionClasses()}`}
+      >
+        <div className="py-1">
+          {availableLanguages.map((language) => (
+            <button
+              key={language.code}
+              onClick={() => handleLanguageChange(language)}
+              className={`w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-50 transition-colors ${
+                currentLanguage?.code === language.code ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                {showFlag && (
+                  <span className="text-lg">{language.flag}</span>
+                )}
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">
+                    {showNativeName ? language.nativeName : language.name}
+                  </span>
+                  {showNativeName && language.nativeName !== language.name && (
+                    <span className="text-xs text-gray-500">
+                      {language.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {currentLanguage?.code === language.code && (
+                <Check className="w-4 h-4 text-blue-600" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // ====================================================================================
+  // 🎯 버튼 렌더링
+  // ====================================================================================
+
+  const renderButton = () => {
+    const baseClasses = `
+      relative flex items-center justify-center space-x-2 rounded-lg transition-all duration-200
+      ${getSizeClasses()}
+      ${getVariantClasses()}
+      ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+      ${className}
+    `;
+
+    return (
+      <button
+        onClick={toggleDropdown}
+        disabled={disabled}
+        className={baseClasses}
+        aria-label={t('language.selector.ariaLabel', { defaultValue: '언어 선택' })}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+      >
+        {showGlobeIcon && (
+          <Globe className="w-4 h-4 flex-shrink-0" />
+        )}
+        
+        {showCurrentLanguage && currentLanguage && (
+          <div className="flex items-center space-x-2">
+            {showFlag && (
+              <span className="text-lg">{currentLanguage.flag}</span>
+            )}
+            <span className="font-medium">
+              {getCurrentLanguageText()}
+            </span>
+          </div>
+        )}
+        
+        {showChevron && (
+          <ChevronDown 
+            className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
+              isOpen ? 'rotate-180' : ''
+            }`} 
+          />
+        )}
+      </button>
+    );
+  };
+
+  // ====================================================================================
+  // 🎯 컴팩트 버전 렌더링
+  // ====================================================================================
+
+  const renderCompact = () => {
+    const availableLanguages = getAvailableLanguages();
+
+    return (
+      <div className={`flex items-center space-x-1 ${className}`}>
+        {showGlobeIcon && (
+          <Globe className="w-4 h-4 text-gray-500" />
+        )}
+        <div className="flex space-x-1">
+          {availableLanguages.map((language) => (
+            <button
+              key={language.code}
+              onClick={() => handleLanguageChange(language)}
+              className={`p-1 rounded transition-colors ${
+                currentLanguage?.code === language.code
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+              title={showNativeName ? language.nativeName : language.name}
+            >
+              {showFlag ? (
+                <span className="text-lg">{language.flag}</span>
+              ) : (
+                <span className="text-xs font-medium uppercase">
+                  {language.code}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // ====================================================================================
+  // 🎯 메인 렌더링
+  // ====================================================================================
+
+  if (variant === 'compact') {
+    return renderCompact();
+  }
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      {renderButton()}
+      {renderDropdownMenu()}
+    </div>
+  );
+};
+
+// ====================================================================================
+// 🎯 언어 변경 훅
+// ====================================================================================
+
+export const useLanguageChange = () => {
+  const { i18n } = useTranslation();
+
+  const changeLanguage = async (languageCode: string) => {
+    try {
+      await i18n.changeLanguage(languageCode);
+      return true;
+    } catch (error) {
+      console.error('Failed to change language:', error);
+      return false;
+    }
+  };
+
+  const getCurrentLanguage = () => {
+    return SUPPORTED_LANGUAGES.find(lang => lang.code === i18n.language) || SUPPORTED_LANGUAGES[0];
+  };
+
+  const getAvailableLanguages = () => {
+    return SUPPORTED_LANGUAGES;
+  };
+
+  return {
+    changeLanguage,
+    getCurrentLanguage,
+    getAvailableLanguages,
+    currentLanguage: i18n.language
+  };
+};
+
+// ====================================================================================
+// 🎯 언어 유틸리티 함수
+// ====================================================================================
+
+export const getLanguageByCode = (code: string): Language | undefined => {
+  return SUPPORTED_LANGUAGES.find(lang => lang.code === code);
+};
+
+export const getLanguageName = (code: string, useNative: boolean = true): string => {
+  const language = getLanguageByCode(code);
+  if (!language) return code;
+  
+  return useNative ? language.nativeName : language.name;
+};
+
+export const isRTL = (code: string): boolean => {
+  const language = getLanguageByCode(code);
+  return language?.rtl || false;
+};
+
+// ====================================================================================
+// 🎯 기본 내보내기
+// ====================================================================================
+
+export default LanguageSelector;
+```
+
+## ** 주요 기능 및 특징**
+
+### **1. 다양한 변형 지원**
+- `dropdown`: 드롭다운 메뉴 형태
+- `button`: 버튼 형태
+- `compact`: 컴팩트한 플래그 버튼 형태
+
+### **2. 완전한 다국어 지원**
+- 한국어, 영어, 중국어, 일본어
+- 네이티브 언어명 표시
+- RTL 언어 지원 준비
+
+### **3. 커스터마이징 옵션**
+- 플래그 표시/숨김
+- 네이티브 언어명 표시/숨김
+- 현재 언어 표시/숨김
+- 글로브 아이콘 표시/숨김
+
+### **4. 접근성 고려**
+- ARIA 라벨 및 속성
+- 키보드 네비게이션
+- 스크린 리더 호환성
+
+### **5. 반응형 디자인**
+- 다양한 크기 지원 (small, medium, large)
+- 모바일/데스크톱 최적화
+- Tailwind CSS 사용
+
+### **6. 이벤트 처리**
+- 외부 클릭 감지
+- 언어 변경 콜백
+- 에러 처리
+
+### **7. 유틸리티 함수**
+- `useLanguageChange`: 언어 변경 훅
+- `getLanguageByCode`: 코드로 언어 조회
+- `getLanguageName`: 언어명 조회
+- `isRTL`: RTL 언어 확인
+
+### **8. 사용 예시**
+
+```typescript
+// 기본 드롭다운
+<LanguageSelector />
+
+// 컴팩트 버전
+<LanguageSelector variant="compact" />
+
+// 커스텀 설정
+<LanguageSelector
+  variant="button"
+  size="large"
+  showFlag={true}
+  showNativeName={true}
+  onLanguageChange={(lang) => console.log('Language changed:', lang)}
+  excludeLanguages={['zh']}
+/>
+```
+
+이 컴포넌트는 BitWish Network 홈페이지의 완전한 다국어 지원을 위한 핵심 컴포넌트입니다! 🎉

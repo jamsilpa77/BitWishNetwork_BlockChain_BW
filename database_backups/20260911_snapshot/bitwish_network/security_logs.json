@@ -1,0 +1,818 @@
+[
+  {
+    "_id": "68ea80edde7026b219183da1",
+    "timestamp": "2025-10-11T16:01:01.610Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760198461610
+    },
+    "id": "LOG-1760198461610-zsabza086"
+  },
+  {
+    "_id": "68ea80edde7026b219183da2",
+    "timestamp": "2025-10-11T16:08:13.930Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760198893930
+    },
+    "id": "LOG-1760198893930-aou3gii2x"
+  },
+  {
+    "_id": "68eb0e41e308d587b1530cde",
+    "timestamp": "2025-10-12T02:00:48.997Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760234448997
+    },
+    "id": "LOG-1760234448997-qlcj9vdjh"
+  },
+  {
+    "_id": "68eb0e41e308d587b1530cdf",
+    "timestamp": "2025-10-12T02:01:07.484Z",
+    "type": "password_changed",
+    "severity": "info",
+    "message": "2차 비밀번호 초기화: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "action": "password_reset"
+    },
+    "id": "LOG-1760234467484-j5x9k7rhd"
+  },
+  {
+    "_id": "68eb0e41e308d587b1530ce0",
+    "timestamp": "2025-10-12T02:06:03.772Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치 (1회 실패)"
+    },
+    "id": "LOG-1760234763772-bk2u9wkth"
+  },
+  {
+    "_id": "68eb0e41e308d587b1530ce1",
+    "timestamp": "2025-10-12T02:09:03.059Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치 (2회 실패)"
+    },
+    "id": "LOG-1760234943059-mfjrvemh2"
+  },
+  {
+    "_id": "68eb0e41e308d587b1530ce2",
+    "timestamp": "2025-10-12T02:11:13.664Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760235073663
+    },
+    "id": "LOG-1760235073664-9ycawnuam"
+  },
+  {
+    "_id": "68eb45114cd0f15225763341",
+    "timestamp": "2025-10-12T03:53:18.309Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760241198309
+    },
+    "id": "LOG-1760241198309-qti75lo9m"
+  },
+  {
+    "_id": "68eb45114cd0f15225763342",
+    "timestamp": "2025-10-12T03:57:58.840Z",
+    "type": "password_changed",
+    "severity": "info",
+    "message": "2차 비밀번호 초기화: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "action": "password_reset"
+    },
+    "id": "LOG-1760241478840-9p8um1js8"
+  },
+  {
+    "_id": "68eb45114cd0f15225763343",
+    "timestamp": "2025-10-12T03:59:19.840Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241559840-j3ll6jzwt"
+  },
+  {
+    "_id": "68eb45114cd0f15225763344",
+    "timestamp": "2025-10-12T04:04:01.481Z",
+    "type": "password_changed",
+    "severity": "info",
+    "message": "2차 비밀번호 초기화: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "action": "password_reset"
+    },
+    "id": "LOG-1760241841481-cw251q8v6"
+  },
+  {
+    "_id": "68eb45114cd0f15225763345",
+    "timestamp": "2025-10-12T04:04:23.993Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241863993-x4u38uexb"
+  },
+  {
+    "_id": "68eb45114cd0f15225763346",
+    "timestamp": "2025-10-12T04:04:25.805Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241865805-wgioiwml6"
+  },
+  {
+    "_id": "68eb45114cd0f15225763347",
+    "timestamp": "2025-10-12T04:04:26.053Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241866053-cpd80j6j3"
+  },
+  {
+    "_id": "68eb45114cd0f15225763348",
+    "timestamp": "2025-10-12T04:04:26.261Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241866261-m1gq96j4k"
+  },
+  {
+    "_id": "68eb45114cd0f15225763349",
+    "timestamp": "2025-10-12T04:04:26.662Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241866662-z4nm8dz1z"
+  },
+  {
+    "_id": "68eb45114cd0f1522576334a",
+    "timestamp": "2025-10-12T04:04:26.861Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241866861-kqo5menx0"
+  },
+  {
+    "_id": "68eb45114cd0f1522576334b",
+    "timestamp": "2025-10-12T04:04:27.069Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241867069-y88l497a0"
+  },
+  {
+    "_id": "68eb45114cd0f1522576334c",
+    "timestamp": "2025-10-12T04:04:27.250Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241867250-x7zaia8an"
+  },
+  {
+    "_id": "68eb45114cd0f1522576334d",
+    "timestamp": "2025-10-12T04:04:27.455Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241867455-4lcq5gtwn"
+  },
+  {
+    "_id": "68eb45114cd0f1522576334e",
+    "timestamp": "2025-10-12T04:04:27.665Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241867665-k7ou4y6u2"
+  },
+  {
+    "_id": "68eb45114cd0f1522576334f",
+    "timestamp": "2025-10-12T04:04:27.867Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241867867-7gb7iq3vd"
+  },
+  {
+    "_id": "68eb45114cd0f15225763350",
+    "timestamp": "2025-10-12T04:04:28.063Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241868063-yibfe3o7h"
+  },
+  {
+    "_id": "68eb45114cd0f15225763351",
+    "timestamp": "2025-10-12T04:04:28.279Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241868279-97qv0tn26"
+  },
+  {
+    "_id": "68eb45114cd0f15225763352",
+    "timestamp": "2025-10-12T04:04:28.488Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241868488-v3coo6twi"
+  },
+  {
+    "_id": "68eb45114cd0f15225763353",
+    "timestamp": "2025-10-12T04:04:28.687Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241868687-e6jt2vaz0"
+  },
+  {
+    "_id": "68eb45114cd0f15225763354",
+    "timestamp": "2025-10-12T04:04:28.898Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241868898-quw551yqq"
+  },
+  {
+    "_id": "68eb45114cd0f15225763355",
+    "timestamp": "2025-10-12T04:04:29.121Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241869121-zxlobobqe"
+  },
+  {
+    "_id": "68eb45114cd0f15225763356",
+    "timestamp": "2025-10-12T04:04:29.327Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241869327-i7uaeuv77"
+  },
+  {
+    "_id": "68eb45114cd0f15225763357",
+    "timestamp": "2025-10-12T04:04:29.543Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241869543-b7wq1l5vx"
+  },
+  {
+    "_id": "68eb45114cd0f15225763358",
+    "timestamp": "2025-10-12T04:04:29.752Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241869752-gf0e1k8pe"
+  },
+  {
+    "_id": "68eb45114cd0f15225763359",
+    "timestamp": "2025-10-12T04:04:29.978Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241869978-55mr62gt9"
+  },
+  {
+    "_id": "68eb45114cd0f1522576335a",
+    "timestamp": "2025-10-12T04:04:30.156Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241870156-8xfh4os80"
+  },
+  {
+    "_id": "68eb45114cd0f1522576335b",
+    "timestamp": "2025-10-12T04:04:30.358Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241870358-48279ym5d"
+  },
+  {
+    "_id": "68eb45114cd0f1522576335c",
+    "timestamp": "2025-10-12T04:04:30.575Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241870575-tr10qq470"
+  },
+  {
+    "_id": "68eb45114cd0f1522576335d",
+    "timestamp": "2025-10-12T04:04:30.774Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241870774-96oqa8qtb"
+  },
+  {
+    "_id": "68eb45114cd0f1522576335e",
+    "timestamp": "2025-10-12T04:04:33.496Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241873496-lkvv7cpew"
+  },
+  {
+    "_id": "68eb45114cd0f1522576335f",
+    "timestamp": "2025-10-12T04:04:33.703Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241873703-nt30ifur8"
+  },
+  {
+    "_id": "68eb45114cd0f15225763360",
+    "timestamp": "2025-10-12T04:04:33.902Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241873902-usrypppza"
+  },
+  {
+    "_id": "68eb45114cd0f15225763361",
+    "timestamp": "2025-10-12T04:04:34.114Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241874114-y4wk0wk6d"
+  },
+  {
+    "_id": "68eb45114cd0f15225763362",
+    "timestamp": "2025-10-12T04:04:34.307Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241874307-54h7o1co0"
+  },
+  {
+    "_id": "68eb45114cd0f15225763363",
+    "timestamp": "2025-10-12T04:04:34.487Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241874487-82oyi2eir"
+  },
+  {
+    "_id": "68eb45114cd0f15225763364",
+    "timestamp": "2025-10-12T04:04:34.672Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241874672-dp3qhbeyt"
+  },
+  {
+    "_id": "68eb45114cd0f15225763365",
+    "timestamp": "2025-10-12T04:04:34.860Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241874860-gps32q4ic"
+  },
+  {
+    "_id": "68eb45114cd0f15225763366",
+    "timestamp": "2025-10-12T04:04:35.054Z",
+    "type": "auth_failure",
+    "severity": "warning",
+    "message": "인증 실패: BW3400308A215518DBEBA170299499020A7D946DB9",
+    "metadata": {
+      "walletAddress": "BW3400308A215518DBEBA170299499020A7D946DB9",
+      "clientIP": "::1",
+      "reason": "비밀번호 불일치"
+    },
+    "id": "LOG-1760241875054-fqm3xh9sb"
+  },
+  {
+    "_id": "68eb45114cd0f15225763367",
+    "timestamp": "2025-10-12T06:05:05.898Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760249105898
+    },
+    "id": "LOG-1760249105898-aovogfpfi"
+  },
+  {
+    "_id": "68eb973dc463497aac2bc863",
+    "timestamp": "2025-10-12T06:05:12.735Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760249112735
+    },
+    "id": "LOG-1760249112735-ddsw6ow7o"
+  },
+  {
+    "_id": "68eb973dc463497aac2bc864",
+    "timestamp": "2025-10-12T11:55:41.581Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760270141581
+    },
+    "id": "LOG-1760270141581-vfiuppm89"
+  },
+  {
+    "_id": "68ed3a68c5913abb787fbc2a",
+    "timestamp": "2025-10-13T13:37:09.089Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760362629089
+    },
+    "id": "LOG-1760362629089-c9spiwcg9"
+  },
+  {
+    "_id": "68ed3a68c5913abb787fbc2b",
+    "timestamp": "2025-10-13T17:44:08.146Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760377448146
+    },
+    "id": "LOG-1760377448146-47srj3cg1"
+  },
+  {
+    "_id": "68edf1bfa3593307616828ce",
+    "timestamp": "2025-10-14T06:43:37.371Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760424217371
+    },
+    "id": "LOG-1760424217371-akyvmzsg8"
+  },
+  {
+    "_id": "68edf1bfa3593307616828cf",
+    "timestamp": "2025-10-14T06:46:23.157Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760424383157
+    },
+    "id": "LOG-1760424383157-m7puip40i"
+  },
+  {
+    "_id": "68ef9d4733368616302b9589",
+    "timestamp": "2025-10-15T13:06:17.614Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760533577614
+    },
+    "id": "LOG-1760533577614-k604rv17n"
+  },
+  {
+    "_id": "68ef9d4733368616302b958a",
+    "timestamp": "2025-10-15T13:10:31.364Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760533831364
+    },
+    "id": "LOG-1760533831364-5xznpgxqi"
+  },
+  {
+    "_id": "68efa8c4a8faa302c4074f5f",
+    "timestamp": "2025-10-15T13:10:41.976Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760533841975
+    },
+    "id": "LOG-1760533841976-oehfapcpt"
+  },
+  {
+    "_id": "68efa8c4a8faa302c4074f60",
+    "timestamp": "2025-10-15T13:59:32.641Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760536772641
+    },
+    "id": "LOG-1760536772641-e1kjrij6o"
+  },
+  {
+    "_id": "68f0b38454f038bebae37d43",
+    "timestamp": "2025-10-16T05:19:19.385Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760591959385
+    },
+    "id": "LOG-1760591959385-5t63ggurg"
+  },
+  {
+    "_id": "68f0b38454f038bebae37d44",
+    "timestamp": "2025-10-16T08:57:40.347Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760605060347
+    },
+    "id": "LOG-1760605060347-davpb59yk"
+  },
+  {
+    "_id": "68f0c8dc67ef1736841f98b7",
+    "timestamp": "2025-10-16T10:23:26.021Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760610206021
+    },
+    "id": "LOG-1760610206021-fk5qntx0d"
+  },
+  {
+    "_id": "68f0c8dc67ef1736841f98b8",
+    "timestamp": "2025-10-16T10:28:44.660Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760610524660
+    },
+    "id": "LOG-1760610524660-mlhhuxnse"
+  },
+  {
+    "_id": "68f0e8427d2d85a6aeac1b8e",
+    "timestamp": "2025-10-16T10:28:57.079Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760610537079
+    },
+    "id": "LOG-1760610537079-izf31ird6"
+  },
+  {
+    "_id": "68f0e8427d2d85a6aeac1b8f",
+    "timestamp": "2025-10-16T12:42:42.110Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760618562110
+    },
+    "id": "LOG-1760618562110-2gb1briin"
+  },
+  {
+    "_id": "68f1e302dbd6c857180e98b1",
+    "timestamp": "2025-10-17T01:40:58.826Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760665258826
+    },
+    "id": "LOG-1760665258826-0lsmsbbam"
+  },
+  {
+    "_id": "68f1e302dbd6c857180e98b2",
+    "timestamp": "2025-10-17T06:32:34.069Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760682754069
+    },
+    "id": "LOG-1760682754069-6c4j37jef"
+  },
+  {
+    "_id": "68f21a65ea598b99c069f36b",
+    "timestamp": "2025-10-17T06:48:53.947Z",
+    "type": "system_start",
+    "severity": "info",
+    "message": "BitWish Network 시스템 시작",
+    "metadata": {
+      "version": "2.0",
+      "timestamp": 1760683733947
+    },
+    "id": "LOG-1760683733947-k7ykzjmdq"
+  },
+  {
+    "_id": "68f21a65ea598b99c069f36c",
+    "timestamp": "2025-10-17T10:28:53.889Z",
+    "type": "system_stop",
+    "severity": "info",
+    "message": "BitWish Network 시스템 종료",
+    "metadata": {
+      "timestamp": 1760696933889
+    },
+    "id": "LOG-1760696933889-dlae7mihb"
+  }
+]

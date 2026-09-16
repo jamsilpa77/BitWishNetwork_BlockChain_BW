@@ -1,0 +1,135 @@
+공통변수 해결 방법 단계별로 작성하겠습니다:
+
+## **공통변수 해결 방법 단계별 계획**
+
+### **1단계: 개인별 추천 보너스 모달 분리**
+```typescript
+// 기존: showReferralModal (공통)
+// 신규: showPersonalReferralModal (개인별 전용)
+const [showPersonalReferralModal, setShowPersonalReferralModal] = useState<Record<string, boolean>>({});
+```
+◆◆◆◆
+멍멍
+
+맞습니다. 제가 잘못 설명했습니다.
+
+## **실제로는:**
+
+### **UI 이미지/기능:**
+- **완전히 똑같음** - 추천 코드 표시, 보너스 현황 등 모든 내용이 동일
+- **차이점**: 제목만 "개인별 추천인 보너스"로 바뀜
+
+### **진짜 분리된 것:**
+- **모달 상태 변수만 분리**: `showPersonalReferralModal` (개인용 전용)
+- **기존 공통 모달**: `showReferralModal` (관리자용/유저용)
+
+### **결과:**
+- **개인용**: 개인용 전용 모달 변수 사용 (하지만 내용은 똑같음)
+- **관리자용/유저용**: 기존 공통 모달 변수 사용 (내용도 똑같음)
+
+**즉, UI/기능은 완전히 똑같고 모달 상태 변수만 분리한 것입니다.**
+
+**멍멍**
+
+멍멍
+
+제가 추가한 것은:
+
+## **개인별 추천인 보너스 모달 UI 코드**
+
+### **추가한 내용:**
+1. **라인 13157-13224**: 개인별 추천인 보너스 모달 전체 UI
+2. **지갑 주소별 독립**: `Object.entries(showPersonalReferralModal).map(([walletAddress, isOpen])`
+3. **개인별 전용 UI**: 
+   - 제목: "개인별 추천인 보너스"
+   - 지갑 주소 표시: `{walletAddress.slice(0, 8)}...{walletAddress.slice(-8)}`
+   - 추천 코드: `REF{walletAddress.slice(-8).toUpperCase()}`
+   - 보너스 현황: 4개 항목 (총 추천인 수, 영구 보너스율, 추천 보상 BW, 추천 보관 BW)
+
+### **왜 추가했나:**
+- **기존 공통 모달**: 관리자용/유저용이 사용
+- **새로 추가한 모달**: 개인용만 사용
+- **결과**: 개인용은 개인용 전용 모달을 사용하게 됨
+
+**멍멍**
+◆◆◆◆◆◆
+
+
+
+
+
+### **2단계: 개인별 락업 보너스 모달 분리**
+```typescript
+// 기존: showLockupModal (공통)
+// 신규: showPersonalLockupModal (개인별 전용)
+const [showPersonalLockupModal, setShowPersonalLockupModal] = useState<Record<string, boolean>>({});
+```
+◆◆◆◆
+멍멍
+
+제가 추가한 내용들은 **기존 관리자용 락업 보너스 모달을 복사해서 개인별용으로 만든 것**입니다.
+
+## **제가 한 작업:**
+
+### **1. 기존 관리자용 모달 복사:**
+- **기존**: `showLockupModal` - 관리자용/유저용 공통 모달
+- **복사해서 만든 것**: `showPersonalLockupModal` - 개인별 전용 모달
+
+### **2. UI 내용:**
+- **완전히 똑같음** - 락업 비율 설정, 락업 기간 설정, 예상 보상 등
+- **차이점**: 제목만 "개인별 락업 보너스 설정"으로 바뀜
+
+### **3. 결론:**
+- **새로 만든 것**: 모달 상태 변수와 함수들만
+- **UI 내용**: 기존 관리자용 모달을 그대로 복사
+- **목적**: 개인별이 독립적인 모달을 사용하도록 분리
+
+**즉, 기존 관리자용 모달을 복사해서 개인별용으로 만든 것입니다.**
+
+**멍멍**
+◆◆◆◆◆◆
+
+
+
+
+
+### **3단계: 개인별 변수명 변경**
+```typescript
+// 기존: userMiningStates (공통 변수명)
+// 신규: personalMiningStates (개인별 전용)
+const [personalMiningStates, setPersonalMiningStates] = useState<Record<string, any>>({});
+```
+◆◆◆◆
+
+◆◆◆◆◆◆
+
+
+
+
+
+### **4단계: 개인별 모달 호출 함수 분리**
+```typescript
+// 개인별 추천 보너스 모달 열기
+const openPersonalReferralModal = (walletAddress: string) => {
+  setShowPersonalReferralModal(prev => ({ ...prev, [walletAddress]: true }));
+};
+
+// 개인별 락업 보너스 모달 열기  
+const openPersonalLockupModal = (walletAddress: string) => {
+  setShowPersonalLockupModal(prev => ({ ...prev, [walletAddress]: true }));
+};
+```
+◆◆◆◆
+
+◆◆◆◆◆◆
+
+
+
+
+
+### **5단계: 기존 공통 모달에서 개인별 분리**
+- `showReferralModal` → 관리자용/유저용만 사용
+- `showLockupModal` → 관리자용/유저용만 사용
+- 개인별은 새로운 독립 모달 사용
+
+**멍멍**

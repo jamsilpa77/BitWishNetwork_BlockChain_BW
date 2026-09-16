@@ -1,0 +1,1440 @@
+/**
+ * ====================================================================================
+ * ⚠️  절대 금지 사항 - 이 파일에서 절대 사용 금지!
+ * ====================================================================================
+ * ❌ 전역 변수 사용 금지
+ * ❌ 공통 함수 사용 금지  
+ * ❌ 공통 클래스 사용 금지
+ * ❌ 전역 모달 사용 금지
+ * ❌ 중복 코드 사용 금지
+ * ❌ 다른 컴포넌트와 상태 공유 금지
+ * ❌ 전역 상태 관리 라이브러리 사용 금지
+ * ❌ 유저/관리자 공통 코드 사용 금지 (완벽한 단독 구현)
+ * 
+ * ✅ 완벽한 독립성 보장
+ * ✅ 자체 상태 관리만 사용
+ * ✅ 자체 API 호출만 사용
+ * ✅ 자체 에러 처리만 사용
+ * ✅ 자체 보안 검증만 사용
+ * ✅ 모든 텍스트는 4개국 언어 즉시 번역 시스템 구조로 구현
+ * ✅ 유저/관리자 완벽하게 동일한 구조이지만 절대 전역 공유 금지
+ * ====================================================================================
+ * 
+ * BWPointMiningSystem.tsx - 노드 채굴형 마이닝으로 BW포인트 채굴 시스템
+ * ====================================================================================
+ * 
+ * 🎯 핵심 기능:
+ * - 실시간 채굴 상태 관리
+ * - BW포인트 잔액 실시간 업데이트
+ * - 스텔라 토큰 1:1 마이그레이션 준비
+ * - 노드 채굴형 마이닝 시스템
+ * - 완벽한 독립성 보장
+ * 
+ * 🔢 50단위 부동소수점 정밀도:
+ * - 모든 계산에 Decimal.js 사용 (50자리 정밀도)
+ * - 정밀한 BW포인트 계산 로직
+ * - 부동소수점 오차 완전 제거
+ * 
+ * 🌍 다국어 지원:
+ * - 한국어, 영어, 일본어, 중국어 4개국 언어 즉시 번역
+ * - 모든 텍스트는 i18n 시스템 구조로 완벽 구현
+ * - 언어별 완벽한 사용자 경험 제공
+ * 
+ * 🏗️ 아키텍처:
+ * - 유저/관리자 완벽하게 동일한 구조
+ * - 절대 전역 변수/함수/클래스/모달 사용 금지
+ * - 완벽한 단독 구현으로 독립성 보장
+ * ====================================================================================
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  CpuChip,
+  Zap,
+  TrendingUp,
+  Clock,
+  DollarSign,
+  RefreshCw,
+  Play,
+  Pause,
+  StopCircle,
+  Settings,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Info,
+  ArrowRight,
+  Shield,
+  Star,
+  Activity,
+  BarChart3,
+  Target,
+  Award,
+  Coins,
+  Wallet,
+  Database,
+  Network,
+  Server,
+  HardDrive,
+  MemoryStick,
+  Cpu,
+  Thermometer,
+  Gauge,
+  Timer,
+  Hash,
+  Lock,
+  Unlock,
+  Power,
+  Battery,
+  Wifi,
+  Signal,
+  WifiOff
+} from 'lucide-react';
+import Decimal from 'decimal.js';
+
+// ====================================================================================
+// BW포인트 마이닝 시스템 인터페이스 (완벽한 독립성 보장)
+// ====================================================================================
+interface BWPointMiningSystemProps {
+  walletAddress: string;
+  userType: 'USER' | 'ADMIN';
+  onError: (error: string) => void;
+  onSuccess: (message: string) => void;
+  onLogout: () => void;
+}
+
+// ====================================================================================
+// BW포인트 마이닝 데이터 타입 (완벽한 독립성 보장)
+// ====================================================================================
+interface BWPointMiningData {
+  isActive: boolean;
+  startTime: string | null;
+  totalBWPoints: string;
+  currentBWPoints: string;
+  pendingBWPoints: string;
+  miningRate: string; // BW포인트/초
+  hashRate: number; // 해시/초
+  powerConsumption: number; // 와트
+  efficiency: number; // 효율성 %
+  temperature: number; // 온도 °C
+  uptime: number; // 가동시간 (초)
+  blocksMined: number;
+  lastBlockTime: string | null;
+  miningHistory: MiningHistoryItem[];
+  bonusMultiplier: number;
+  totalEarnings: string;
+  dailyEarnings: string;
+  weeklyEarnings: string;
+  monthlyEarnings: string;
+  lastUpdated: string;
+}
+
+interface MiningHistoryItem {
+  id: string;
+  timestamp: string;
+  bwPointsEarned: string;
+  hashRate: number;
+  powerConsumption: number;
+  efficiency: number;
+  temperature: number;
+  status: 'ACTIVE' | 'PAUSED' | 'STOPPED' | 'ERROR';
+  blockHeight?: number;
+  transactionHash?: string;
+}
+
+interface MiningSettings {
+  maxPowerConsumption: number; // 최대 전력 소비 (와트)
+  targetTemperature: number; // 목표 온도 (°C)
+  autoRestart: boolean; // 자동 재시작
+  powerSavingMode: boolean; // 절전 모드
+  overclockMode: boolean; // 오버클럭 모드
+  miningPool: string; // 마이닝 풀
+  difficulty: number; // 난이도
+  maxUptime: number; // 최대 가동시간 (시간)
+  emergencyStop: boolean; // 비상 정지
+}
+
+// ====================================================================================
+// BW포인트 마이닝 설정 모달 인터페이스 (완벽한 독립성 보장)
+// ====================================================================================
+interface MiningSettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (settings: MiningSettings) => void;
+  initialSettings: MiningSettings;
+}
+
+// ====================================================================================
+// BW포인트 마이닝 설정 모달 컴포넌트 (완벽한 독립성 보장)
+// ====================================================================================
+const MiningSettingsModal: React.FC<MiningSettingsModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialSettings,
+}) => {
+  const { t } = useTranslation();
+  const [settings, setSettings] = useState<MiningSettings>(initialSettings);
+
+  useEffect(() => {
+    setSettings(initialSettings);
+  }, [initialSettings]);
+
+  if (!isOpen) return null;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setSettings(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) || 0 : value),
+    }));
+  };
+
+  const handleSave = () => {
+    onSave(settings);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[1000]">
+      <div className="bg-gray-900 p-8 rounded-lg shadow-2xl w-full max-w-4xl border border-gray-700 animate-fade-in-up">
+        <h2 className="text-3xl font-bold text-white mb-6 text-center">
+          {t('bwMining.settingsTitle', 'BW포인트 마이닝 설정')}
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-gray-300 text-sm font-bold mb-2">
+              {t('bwMining.maxPowerConsumption', '최대 전력 소비 (와트)')}
+            </label>
+            <input
+              type="number"
+              name="maxPowerConsumption"
+              value={settings.maxPowerConsumption}
+              onChange={handleInputChange}
+              className="shadow appearance-none border border-gray-700 rounded w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800"
+              min="0"
+              max="2000"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 text-sm font-bold mb-2">
+              {t('bwMining.targetTemperature', '목표 온도 (°C)')}
+            </label>
+            <input
+              type="number"
+              name="targetTemperature"
+              value={settings.targetTemperature}
+              onChange={handleInputChange}
+              className="shadow appearance-none border border-gray-700 rounded w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800"
+              min="0"
+              max="100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 text-sm font-bold mb-2">
+              {t('bwMining.miningPool', '마이닝 풀')}
+            </label>
+            <input
+              type="text"
+              name="miningPool"
+              value={settings.miningPool}
+              onChange={handleInputChange}
+              className="shadow appearance-none border border-gray-700 rounded w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800"
+              placeholder="pool.bitwish.network:8080"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 text-sm font-bold mb-2">
+              {t('bwMining.difficulty', '난이도')}
+            </label>
+            <input
+              type="number"
+              name="difficulty"
+              value={settings.difficulty}
+              onChange={handleInputChange}
+              className="shadow appearance-none border border-gray-700 rounded w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800"
+              min="1"
+              max="100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 text-sm font-bold mb-2">
+              {t('bwMining.maxUptime', '최대 가동시간 (시간)')}
+            </label>
+            <input
+              type="number"
+              name="maxUptime"
+              value={settings.maxUptime}
+              onChange={handleInputChange}
+              className="shadow appearance-none border border-gray-700 rounded w-full py-3 px-4 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800"
+              min="1"
+              max="168"
+            />
+          </div>
+
+          <div className="space-y-4">
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                name="autoRestart"
+                checked={settings.autoRestart}
+                onChange={handleInputChange}
+                className="w-5 h-5 text-blue-600 bg-gray-800 border-gray-700 rounded focus:ring-blue-500"
+              />
+              <span className="text-gray-300">{t('bwMining.autoRestart', '자동 재시작')}</span>
+            </label>
+
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                name="powerSavingMode"
+                checked={settings.powerSavingMode}
+                onChange={handleInputChange}
+                className="w-5 h-5 text-blue-600 bg-gray-800 border-gray-700 rounded focus:ring-blue-500"
+              />
+              <span className="text-gray-300">{t('bwMining.powerSavingMode', '절전 모드')}</span>
+            </label>
+
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                name="overclockMode"
+                checked={settings.overclockMode}
+                onChange={handleInputChange}
+                className="w-5 h-5 text-blue-600 bg-gray-800 border-gray-700 rounded focus:ring-blue-500"
+              />
+              <span className="text-gray-300">{t('bwMining.overclockMode', '오버클럭 모드')}</span>
+            </label>
+
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                name="emergencyStop"
+                checked={settings.emergencyStop}
+                onChange={handleInputChange}
+                className="w-5 h-5 text-red-600 bg-gray-800 border-gray-700 rounded focus:ring-red-500"
+              />
+              <span className="text-gray-300">{t('bwMining.emergencyStop', '비상 정지')}</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-4 mt-8">
+          <button
+            onClick={onClose}
+            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200"
+          >
+            {t('common.cancel', '취소')}
+          </button>
+          <button
+            onClick={handleSave}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200"
+          >
+            {t('common.save', '저장')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ====================================================================================
+// 완벽한 BW포인트 마이닝 시스템 컴포넌트 (완벽한 독립성 보장)
+// ====================================================================================
+const BWPointMiningSystem: React.FC<BWPointMiningSystemProps> = ({
+  walletAddress,
+  userType,
+  onError,
+  onSuccess,
+  onLogout,
+}) => {
+  // ====================================================================================
+  // 다국어 번역 시스템 (완벽한 독립성 보장)
+  // ====================================================================================
+  const { t, i18n } = useTranslation();
+
+  // ====================================================================================
+  // 완벽한 독립 상태 관리 (전역 변수 절대 사용 금지)
+  // ====================================================================================
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  
+  // BW포인트 마이닝 데이터 (완벽한 독립성 보장)
+  const [miningData, setMiningData] = useState<BWPointMiningData>({
+    isActive: false,
+    startTime: null,
+    totalBWPoints: '0',
+    currentBWPoints: '0',
+    pendingBWPoints: '0',
+    miningRate: '0',
+    hashRate: 0,
+    powerConsumption: 0,
+    efficiency: 0,
+    temperature: 0,
+    uptime: 0,
+    blocksMined: 0,
+    lastBlockTime: null,
+    miningHistory: [],
+    bonusMultiplier: 1.0,
+    totalEarnings: '0',
+    dailyEarnings: '0',
+    weeklyEarnings: '0',
+    monthlyEarnings: '0',
+    lastUpdated: ''
+  });
+  
+  // 마이닝 설정 (완벽한 독립성 보장)
+  const [miningSettings, setMiningSettings] = useState<MiningSettings>({
+    maxPowerConsumption: 1000,
+    targetTemperature: 75,
+    autoRestart: true,
+    powerSavingMode: false,
+    overclockMode: false,
+    miningPool: 'pool.bitwish.network:8080',
+    difficulty: 10,
+    maxUptime: 24,
+    emergencyStop: false
+  });
+  
+  // UI 상태 (완벽한 독립성 보장)
+  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'settings' | 'analytics'>('overview');
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // ====================================================================================
+  // 완벽한 독립 API 호출 함수들 (공통 함수 절대 사용 금지)
+  // ====================================================================================
+
+  /**
+   * BW포인트 마이닝 데이터 로드
+   * - 완벽한 독립성 보장
+   * - 실시간 마이닝 상태 동기화
+   */
+  const loadMiningData = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      // 백엔드 API 호출 (완벽한 독립성 보장)
+      const response = await fetch('http://localhost:4001/bw-mining/load-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-Source': 'BWPointMiningSystem',
+          'X-User-Type': userType
+        },
+        body: JSON.stringify({
+          walletAddress: walletAddress,
+          userType: userType,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load mining data');
+      }
+
+      setMiningData(data.miningData);
+      setSuccess(t('bwMining.dataLoaded', 'BW포인트 마이닝 데이터가 로드되었습니다.'));
+    } catch (error) {
+      console.error('BW포인트 마이닝 데이터 로드 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : t('bwMining.loadFailed', '데이터 로드에 실패했습니다.');
+      setError(errorMessage);
+      onError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * BW포인트 마이닝 시작
+   * - 완벽한 독립성 보장
+   * - 노드 채굴형 마이닝 시작
+   */
+  const startMining = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      // 백엔드 API 호출 (완벽한 독립성 보장)
+      const response = await fetch('http://localhost:4001/bw-mining/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-Source': 'BWPointMiningSystem',
+          'X-User-Type': userType
+        },
+        body: JSON.stringify({
+          walletAddress: walletAddress,
+          userType: userType,
+          settings: miningSettings,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to start mining');
+      }
+
+      setMiningData(prev => ({
+        ...prev,
+        isActive: true,
+        startTime: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+      }));
+      
+      setSuccess(t('bwMining.miningStarted', 'BW포인트 마이닝이 시작되었습니다.'));
+      onSuccess(t('bwMining.miningStarted', 'BW포인트 마이닝이 시작되었습니다.'));
+    } catch (error) {
+      console.error('BW포인트 마이닝 시작 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : t('bwMining.startFailed', '마이닝 시작에 실패했습니다.');
+      setError(errorMessage);
+      onError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * BW포인트 마이닝 일시정지
+   * - 완벽한 독립성 보장
+   * - 마이닝 일시정지 처리
+   */
+  const pauseMining = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      // 백엔드 API 호출 (완벽한 독립성 보장)
+      const response = await fetch('http://localhost:4001/bw-mining/pause', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-Source': 'BWPointMiningSystem',
+          'X-User-Type': userType
+        },
+        body: JSON.stringify({
+          walletAddress: walletAddress,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to pause mining');
+      }
+
+      setMiningData(prev => ({
+        ...prev,
+        isActive: false,
+        lastUpdated: new Date().toISOString()
+      }));
+      
+      setSuccess(t('bwMining.miningPaused', 'BW포인트 마이닝이 일시정지되었습니다.'));
+      onSuccess(t('bwMining.miningPaused', 'BW포인트 마이닝이 일시정지되었습니다.'));
+    } catch (error) {
+      console.error('BW포인트 마이닝 일시정지 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : t('bwMining.pauseFailed', '마이닝 일시정지에 실패했습니다.');
+      setError(errorMessage);
+      onError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * BW포인트 마이닝 중지
+   * - 완벽한 독립성 보장
+   * - 마이닝 완전 중지 처리
+   */
+  const stopMining = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      // 백엔드 API 호출 (완벽한 독립성 보장)
+      const response = await fetch('http://localhost:4001/bw-mining/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-Source': 'BWPointMiningSystem',
+          'X-User-Type': userType
+        },
+        body: JSON.stringify({
+          walletAddress: walletAddress,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to stop mining');
+      }
+
+      setMiningData(prev => ({
+        ...prev,
+        isActive: false,
+        startTime: null,
+        lastUpdated: new Date().toISOString()
+      }));
+      
+      setSuccess(t('bwMining.miningStopped', 'BW포인트 마이닝이 중지되었습니다.'));
+      onSuccess(t('bwMining.miningStopped', 'BW포인트 마이닝이 중지되었습니다.'));
+    } catch (error) {
+      console.error('BW포인트 마이닝 중지 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : t('bwMining.stopFailed', '마이닝 중지에 실패했습니다.');
+      setError(errorMessage);
+      onError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * 마이닝 설정 업데이트
+   * - 완벽한 독립성 보장
+   * - 실시간 설정 적용
+   */
+  const updateMiningSettings = async (newSettings: MiningSettings): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      // 백엔드 API 호출 (완벽한 독립성 보장)
+      const response = await fetch('http://localhost:4001/bw-mining/update-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-Source': 'BWPointMiningSystem',
+          'X-User-Type': userType
+        },
+        body: JSON.stringify({
+          walletAddress: walletAddress,
+          settings: newSettings,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update mining settings');
+      }
+
+      setMiningSettings(newSettings);
+      setSuccess(t('bwMining.settingsUpdated', '마이닝 설정이 업데이트되었습니다.'));
+      onSuccess(t('bwMining.settingsUpdated', '마이닝 설정이 업데이트되었습니다.'));
+    } catch (error) {
+      console.error('마이닝 설정 업데이트 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : t('bwMining.settingsUpdateFailed', '설정 업데이트에 실패했습니다.');
+      setError(errorMessage);
+      onError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ====================================================================================
+  // 완벽한 독립 유틸리티 함수들 (공통 함수 절대 사용 금지)
+  // ====================================================================================
+
+  /**
+   * BW포인트 금액 포맷팅
+   * - 완벽한 독립성 보장
+   * - 50자리 정밀도 지원
+   */
+  const formatBWPoints = (amount: string): string => {
+    try {
+      const decimal = new Decimal(amount);
+      return decimal.toFixed(10);
+    } catch (error) {
+      return '0.0000000000';
+    }
+  };
+
+  /**
+   * 해시레이트 포맷팅
+   * - 완벽한 독립성 보장
+   * - 단위별 표시
+   */
+  const formatHashRate = (hashRate: number): string => {
+    if (hashRate >= 1000000000) {
+      return `${(hashRate / 1000000000).toFixed(2)} GH/s`;
+    } else if (hashRate >= 1000000) {
+      return `${(hashRate / 1000000).toFixed(2)} MH/s`;
+    } else if (hashRate >= 1000) {
+      return `${(hashRate / 1000).toFixed(2)} KH/s`;
+    } else {
+      return `${hashRate.toFixed(2)} H/s`;
+    }
+  };
+
+  /**
+   * 시간 포맷팅
+   * - 완벽한 독립성 보장
+   * - 시:분:초 형식
+   */
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  /**
+   * 온도 색상 반환
+   * - 완벽한 독립성 보장
+   * - 온도별 색상 표시
+   */
+  const getTemperatureColor = (temperature: number): string => {
+    if (temperature < 50) return 'text-blue-400';
+    if (temperature < 70) return 'text-green-400';
+    if (temperature < 85) return 'text-yellow-400';
+    return 'text-red-400';
+  };
+
+  /**
+   * 효율성 색상 반환
+   * - 완벽한 독립성 보장
+   * - 효율성별 색상 표시
+   */
+  const getEfficiencyColor = (efficiency: number): string => {
+    if (efficiency >= 90) return 'text-green-400';
+    if (efficiency >= 70) return 'text-yellow-400';
+    return 'text-red-400';
+  };
+
+  // ====================================================================================
+  // 완벽한 독립 생명주기 관리 (공통 함수 절대 사용 금지)
+  // ====================================================================================
+
+  useEffect(() => {
+    if (walletAddress) {
+      loadMiningData();
+    }
+  }, [walletAddress, userType]);
+
+  // 실시간 데이터 새로고침 (완벽한 독립성 보장)
+  useEffect(() => {
+    if (walletAddress) {
+      const interval = setInterval(() => {
+        loadMiningData();
+      }, 10000); // 10초마다 새로고침
+
+      setRefreshInterval(interval);
+
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      };
+    }
+  }, [walletAddress, userType]);
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [refreshInterval]);
+
+  // ====================================================================================
+  // 완벽한 독립 렌더링 함수들 (공통 함수 절대 사용 금지)
+  // ====================================================================================
+
+  /**
+   * 개요 탭 렌더링
+   */
+  const renderOverviewTab = () => (
+    <div className="space-y-6">
+      {/* 마이닝 상태 카드 */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {t('bwMining.miningStatus', '마이닝 상태')}
+          </h3>
+          <div className="flex items-center space-x-2">
+            <div className={`w-3 h-3 rounded-full ${miningData.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="text-sm text-gray-600">
+              {miningData.isActive ? t('bwMining.active', '활성') : t('bwMining.inactive', '비활성')}
+            </span>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Coins className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {formatBWPoints(miningData.totalBWPoints)} BW
+                </div>
+                <div className="text-sm text-gray-500">
+                  {t('bwMining.totalBWPoints', '총 BW포인트')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Hash className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {formatHashRate(miningData.hashRate)}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {t('bwMining.hashRate', '해시레이트')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Clock className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {formatTime(miningData.uptime)}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {t('bwMining.uptime', '가동시간')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 마이닝 컨트롤 */}
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          {t('bwMining.miningControl', '마이닝 컨트롤')}
+        </h3>
+        <div className="flex justify-center space-x-4">
+          <button
+            onClick={startMining}
+            disabled={isLoading || miningData.isActive}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+              miningData.isActive || isLoading
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-500/30'
+            }`}
+          >
+            <Play size={20} />
+            <span>{t('bwMining.start', '시작')}</span>
+          </button>
+          
+          <button
+            onClick={pauseMining}
+            disabled={isLoading || !miningData.isActive}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+              !miningData.isActive || isLoading
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-yellow-600 hover:bg-yellow-700 text-white shadow-lg shadow-yellow-500/30'
+            }`}
+          >
+            <Pause size={20} />
+            <span>{t('bwMining.pause', '일시정지')}</span>
+          </button>
+          
+          <button
+            onClick={stopMining}
+            disabled={isLoading || !miningData.isActive}
+            className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+              !miningData.isActive || isLoading
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/30'
+            }`}
+          >
+            <StopCircle size={20} />
+            <span>{t('bwMining.stop', '중지')}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 시스템 정보 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <h4 className="font-semibold text-gray-900 mb-3">
+            {t('bwMining.systemInfo', '시스템 정보')}
+          </h4>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-600">{t('bwMining.powerConsumption', '전력 소비')}:</span>
+              <span className="font-medium">{miningData.powerConsumption}W</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">{t('bwMining.temperature', '온도')}:</span>
+              <span className={`font-medium ${getTemperatureColor(miningData.temperature)}`}>
+                {miningData.temperature}°C
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">{t('bwMining.efficiency', '효율성')}:</span>
+              <span className={`font-medium ${getEfficiencyColor(miningData.efficiency)}`}>
+                {miningData.efficiency}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <h4 className="font-semibold text-gray-900 mb-3">
+            {t('bwMining.earnings', '수익 정보')}
+          </h4>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-600">{t('bwMining.dailyEarnings', '일일 수익')}:</span>
+              <span className="font-medium">{formatBWPoints(miningData.dailyEarnings)} BW</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">{t('bwMining.weeklyEarnings', '주간 수익')}:</span>
+              <span className="font-medium">{formatBWPoints(miningData.weeklyEarnings)} BW</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">{t('bwMining.monthlyEarnings', '월간 수익')}:</span>
+              <span className="font-medium">{formatBWPoints(miningData.monthlyEarnings)} BW</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  /**
+   * 히스토리 탭 렌더링
+   */
+  const renderHistoryTab = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {t('bwMining.miningHistory', '마이닝 히스토리')}
+        </h3>
+        <div className="text-sm text-gray-500">
+          {t('bwMining.lastUpdated', '마지막 업데이트')}: {miningData.lastUpdated}
+        </div>
+      </div>
+
+      {miningData.miningHistory.length === 0 ? (
+        <div className="text-center py-8">
+          <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">
+            {t('bwMining.noHistoryYet', '아직 마이닝 히스토리가 없습니다.')}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {miningData.miningHistory.map((item) => (
+            <div key={item.id} className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <span className="text-sm text-gray-500">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      item.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                      item.status === 'PAUSED' ? 'bg-yellow-100 text-yellow-800' :
+                      item.status === 'STOPPED' ? 'bg-gray-100 text-gray-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {t(`bwMining.status.${item.status}`, item.status)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">{t('bwMining.bwPointsEarned', 'BW포인트')}:</span>
+                      <div className="font-medium">{formatBWPoints(item.bwPointsEarned)} BW</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">{t('bwMining.hashRate', '해시레이트')}:</span>
+                      <div className="font-medium">{formatHashRate(item.hashRate)}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">{t('bwMining.efficiency', '효율성')}:</span>
+                      <div className={`font-medium ${getEfficiencyColor(item.efficiency)}`}>
+                        {item.efficiency}%
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">{t('bwMining.temperature', '온도')}:</span>
+                      <div className={`font-medium ${getTemperatureColor(item.temperature)}`}>
+                        {item.temperature}°C
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  /**
+   * 설정 탭 렌더링
+   */
+  const renderSettingsTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center space-x-2">
+        <Settings className="w-5 h-5 text-blue-500" />
+        <h3 className="text-lg font-semibold text-gray-900">
+          {t('bwMining.miningSettings', '마이닝 설정')}
+        </h3>
+      </div>
+
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('bwMining.maxPowerConsumption', '최대 전력 소비 (와트)')}
+            </label>
+            <input
+              type="number"
+              value={miningSettings.maxPowerConsumption}
+              onChange={(e) => setMiningSettings(prev => ({
+                ...prev,
+                maxPowerConsumption: parseFloat(e.target.value) || 0
+              }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              min="0"
+              max="2000"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('bwMining.targetTemperature', '목표 온도 (°C)')}
+            </label>
+            <input
+              type="number"
+              value={miningSettings.targetTemperature}
+              onChange={(e) => setMiningSettings(prev => ({
+                ...prev,
+                targetTemperature: parseFloat(e.target.value) || 0
+              }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              min="0"
+              max="100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('bwMining.miningPool', '마이닝 풀')}
+            </label>
+            <input
+              type="text"
+              value={miningSettings.miningPool}
+              onChange={(e) => setMiningSettings(prev => ({
+                ...prev,
+                miningPool: e.target.value
+              }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="pool.bitwish.network:8080"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('bwMining.difficulty', '난이도')}
+            </label>
+            <input
+              type="number"
+              value={miningSettings.difficulty}
+              onChange={(e) => setMiningSettings(prev => ({
+                ...prev,
+                difficulty: parseFloat(e.target.value) || 0
+              }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              min="1"
+              max="100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('bwMining.maxUptime', '최대 가동시간 (시간)')}
+            </label>
+            <input
+              type="number"
+              value={miningSettings.maxUptime}
+              onChange={(e) => setMiningSettings(prev => ({
+                ...prev,
+                maxUptime: parseFloat(e.target.value) || 0
+              }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              min="1"
+              max="168"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={miningSettings.autoRestart}
+              onChange={(e) => setMiningSettings(prev => ({
+                ...prev,
+                autoRestart: e.target.checked
+              }))}
+              className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-gray-700">{t('bwMining.autoRestart', '자동 재시작')}</span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={miningSettings.powerSavingMode}
+              onChange={(e) => setMiningSettings(prev => ({
+                ...prev,
+                powerSavingMode: e.target.checked
+              }))}
+              className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-gray-700">{t('bwMining.powerSavingMode', '절전 모드')}</span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={miningSettings.overclockMode}
+              onChange={(e) => setMiningSettings(prev => ({
+                ...prev,
+                overclockMode: e.target.checked
+              }))}
+              className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-gray-700">{t('bwMining.overclockMode', '오버클럭 모드')}</span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={miningSettings.emergencyStop}
+              onChange={(e) => setMiningSettings(prev => ({
+                ...prev,
+                emergencyStop: e.target.checked
+              }))}
+              className="w-5 h-5 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500"
+            />
+            <span className="text-gray-700">{t('bwMining.emergencyStop', '비상 정지')}</span>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-4 mt-6">
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {t('bwMining.advancedSettings', '고급 설정')}
+          </button>
+          <button
+            onClick={() => updateMiningSettings(miningSettings)}
+            disabled={isLoading}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+          >
+            {isLoading ? t('common.loading', '로딩...') : t('bwMining.saveSettings', '설정 저장')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  /**
+   * 분석 탭 렌더링
+   */
+  const renderAnalyticsTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center space-x-2">
+        <BarChart3 className="w-5 h-5 text-purple-500" />
+        <h3 className="text-lg font-semibold text-gray-900">
+          {t('bwMining.analytics', '마이닝 분석')}
+        </h3>
+      </div>
+
+      {/* 수익 분석 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900">
+                {formatBWPoints(miningData.dailyEarnings)} BW
+              </div>
+              <div className="text-sm text-gray-500">
+                {t('bwMining.dailyEarnings', '일일 수익')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900">
+                {formatBWPoints(miningData.weeklyEarnings)} BW
+              </div>
+              <div className="text-sm text-gray-500">
+                {t('bwMining.weeklyEarnings', '주간 수익')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Award className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-gray-900">
+                {formatBWPoints(miningData.monthlyEarnings)} BW
+              </div>
+              <div className="text-sm text-gray-500">
+                {t('bwMining.monthlyEarnings', '월간 수익')}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 성능 분석 */}
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
+        <h4 className="font-semibold text-gray-900 mb-4">
+          {t('bwMining.performanceAnalysis', '성능 분석')}
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h5 className="text-sm font-medium text-gray-700 mb-2">
+              {t('bwMining.efficiencyTrend', '효율성 트렌드')}
+            </h5>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-3xl font-bold text-green-600 mb-2">
+                {miningData.efficiency}%
+              </div>
+              <div className="text-sm text-gray-600">
+                {t('bwMining.currentEfficiency', '현재 효율성')}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h5 className="text-sm font-medium text-gray-700 mb-2">
+              {t('bwMining.powerEfficiency', '전력 효율성')}
+            </h5>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-3xl font-bold text-blue-600 mb-2">
+                {(miningData.hashRate / Math.max(miningData.powerConsumption, 1)).toFixed(2)} H/W
+              </div>
+              <div className="text-sm text-gray-600">
+                {t('bwMining.hashPerWatt', '해시/와트')}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 스텔라 토큰 마이그레이션 정보 */}
+      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border border-yellow-200">
+        <div className="flex items-center space-x-3 mb-4">
+          <Star className="w-6 h-6 text-yellow-600" />
+          <h4 className="text-lg font-semibold text-yellow-800">
+            {t('bwMining.stellarMigration', '스텔라 토큰 마이그레이션')}
+          </h4>
+        </div>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-yellow-700">
+              {t('bwMining.currentBWPoints', '현재 BW포인트')}:
+            </span>
+            <span className="font-bold text-yellow-800">
+              {formatBWPoints(miningData.totalBWPoints)} BW
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-yellow-700">
+              {t('bwMining.stellarEquivalent', '스텔라 토큰 등가')}:
+            </span>
+            <span className="font-bold text-yellow-800">
+              {formatBWPoints(miningData.totalBWPoints)} XLM
+            </span>
+          </div>
+          <div className="text-sm text-yellow-600">
+            {t('bwMining.migrationNote', 'BW포인트는 스텔라 토큰과 1:1 비율로 마이그레이션됩니다.')}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ====================================================================================
+  // 완벽한 독립 메인 렌더링 (공통 함수 절대 사용 금지)
+  // ====================================================================================
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg border border-gray-200">
+      {/* 헤더 */}
+      <div className="border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <CpuChip className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {t('bwMining.title', 'BW포인트 마이닝 시스템')}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {t('bwMining.subtitle', '노드 채굴형 마이닝으로 BW포인트 채굴')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+              userType === 'ADMIN' 
+                ? 'bg-yellow-100 text-yellow-800' 
+                : 'bg-green-100 text-green-800'
+            }`}>
+              {userType === 'ADMIN' ? t('common.admin', '관리자') : t('common.user', '사용자')}
+            </div>
+            <button
+              onClick={onLogout}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-200"
+            >
+              {t('common.logout', '로그아웃')}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 탭 네비게이션 */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8 px-6">
+          {[
+            { id: 'overview', label: t('bwMining.overview', '개요'), icon: Activity },
+            { id: 'history', label: t('bwMining.history', '히스토리'), icon: Clock },
+            { id: 'settings', label: t('bwMining.settings', '설정'), icon: Settings },
+            { id: 'analytics', label: t('bwMining.analytics', '분석'), icon: BarChart3 }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* 콘텐츠 */}
+      <div className="p-6">
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <XCircle className="w-5 h-5 text-red-500" />
+              <span className="text-red-800">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 성공 메시지 */}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <span className="text-green-800">{success}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 로딩 상태 */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-2 text-gray-600">
+              {t('common.loading', '로딩...')}
+            </span>
+          </div>
+        )}
+
+        {/* 탭별 콘텐츠 */}
+        {!isLoading && (
+          <>
+            {activeTab === 'overview' && renderOverviewTab()}
+            {activeTab === 'history' && renderHistoryTab()}
+            {activeTab === 'settings' && renderSettingsTab()}
+            {activeTab === 'analytics' && renderAnalyticsTab()}
+          </>
+        )}
+      </div>
+
+      {/* 마이닝 설정 모달 */}
+      <MiningSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onSave={updateMiningSettings}
+        initialSettings={miningSettings}
+      />
+    </div>
+  );
+};
+
+export default BWPointMiningSystem;

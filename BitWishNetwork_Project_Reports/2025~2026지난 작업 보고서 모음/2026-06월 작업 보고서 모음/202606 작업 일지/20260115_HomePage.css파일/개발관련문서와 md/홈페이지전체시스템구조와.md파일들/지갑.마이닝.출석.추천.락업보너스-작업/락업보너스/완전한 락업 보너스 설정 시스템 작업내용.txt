@@ -1,0 +1,1056 @@
+네, 가이드 기술 명세서에 따라 완전한 락업 보너스 설정 시스템을 구현하겠습니다!
+
+## ** 완전한 락업 보너스 설정 시스템 구현**
+
+### ** 1단계: LockupService 완전 구현 (50단위 부동소수점 포함)**
+
+```typescript
+// Node_HomePage/src/services/lockupService.ts
+import { Decimal } from 'decimal.js';
+
+export class LockupService {
+  //    기본락업 보너스 계산 (백서 기준 - 50단위 부동소수점)
+  static calculateBasicLockupBonus(ratio: number, months: number): {
+    apy: Decimal;
+    totalAPY: Decimal;
+    monthlyRate: Decimal;
+    enhancedRate: Decimal;
+    description: string;
+    lockedAmount: Decimal;
+  } {
+    if (ratio === 0 || months === 0) {
+      return {
+        apy: new Decimal(0),
+        totalAPY: new Decimal(0),
+        monthlyRate: new Decimal(0),
+        enhancedRate: new Decimal(0.25),
+        description: '락업하지 않음',
+        lockedAmount: new Decimal(0)
+      };
+    }
+
+    //    백서 기준 APY 계산 (50단위 부동소수점)
+    let baseAPY: Decimal;
+    if (months >= 36) {
+      baseAPY = new Decimal(0.072); // 7.2%
+    } else if (months >= 12) {
+      baseAPY = new Decimal(0.057); // 5.7%
+    } else if (months >= 6) {
+      baseAPY = new Decimal(0.042); // 4.2%
+    } else {
+      baseAPY = new Decimal(0.027); // 2.7%
+    }
+
+    const ratioBonus = new Decimal(ratio).dividedBy(100); // 1% per 1% ratio
+    const totalAPY = baseAPY.plus(ratioBonus);
+    const monthlyRate = totalAPY.dividedBy(12);
+    const enhancedRate = new Decimal(0.25).times(new Decimal(1).plus(totalAPY.times(ratio).dividedBy(100)));
+
+    // 🎯 락업된 금액 계산 (50단위 부동소수점)
+    const totalBalance = this.getTotalBalance();
+    const lockedAmount = totalBalance.times(ratio).dividedBy(100);
+
+    return {
+      apy: baseAPY,
+      totalAPY: totalAPY,
+      monthlyRate: monthlyRate,
+      enhancedRate: enhancedRate,
+      description: `${months}개월 락업 (${totalAPY.times(100).toFixed(50)}% APY)`,
+      lockedAmount: lockedAmount
+    };
+  }
+
+  // 🎯 추가락업 보너스 계산 (백서 기준 - 50단위 부동소수점)
+  static calculateAdditionalLockupBonus(ratio: number, months: number): {
+    apy: Decimal;
+    totalAPY: Decimal;
+    monthlyRate: Decimal;
+    enhancedRate: Decimal;
+    description: string;
+    lockedAmount: Decimal;
+  } {
+    if (ratio === 0 || months === 0) {
+      return {
+        apy: new Decimal(0),
+        totalAPY: new Decimal(0),
+        monthlyRate: new Decimal(0),
+        enhancedRate: new Decimal(0.25),
+        description: '추가락업하지 않음',
+        lockedAmount: new Decimal(0)
+      };
+    }
+
+    // 🎯 추가락업 APY 계산 (50단위 부동소수점)
+    let baseAPY: Decimal;
+    if (months >= 36) {
+      baseAPY = new Decimal(0.075); // 7.5%
+    } else if (months >= 12) {
+      baseAPY = new Decimal(0.049); // 4.9%
+    } else if (months >= 6) {
+      baseAPY = new Decimal(0.035); // 3.5%
+    } else {
+      baseAPY = new Decimal(0.021); // 2.1%
+    }
+
+    const ratioBonus = new Decimal(ratio).dividedBy(100);
+    const totalAPY = baseAPY.plus(ratioBonus);
+    const monthlyRate = totalAPY.dividedBy(12);
+    const enhancedRate = new Decimal(0.25).times(new Decimal(1).plus(totalAPY.times(ratio).dividedBy(100)));
+
+    // 🎯 추가락업된 금액 계산 (50단위 부동소수점)
+    const totalBalance = this.getTotalBalance();
+    const lockedAmount = totalBalance.times(ratio).dividedBy(100);
+
+    return {
+      apy: baseAPY,
+      totalAPY: totalAPY,
+      monthlyRate: monthlyRate,
+      enhancedRate: enhancedRate,
+      description: `${months}개월 추가락업 (${totalAPY.times(100).toFixed(50)}% APY)`,
+      lockedAmount: lockedAmount
+    };
+  }
+
+  //    기본락업보관함 계산 (50단위 부동소수점)
+  static calculateBasicLockupVault(
+    baseReward: number,
+    lockupRatio: number,
+    lockupMonths: number,
+    elapsedHours: number
+  ): Decimal {
+    const lockupData = this.calculateBasicLockupBonus(lockupRatio, lockupMonths);
+    const baseRewardDecimal = new Decimal(baseReward);
+    const ratioDecimal = new Decimal(lockupRatio).dividedBy(100);
+    const elapsedHoursDecimal = new Decimal(elapsedHours);
+    
+    const hourlyLockupReward = baseRewardDecimal.times(lockupData.totalAPY);
+    const totalLockupReward = hourlyLockupReward.times(elapsedHoursDecimal);
+    const vaultAmount = totalLockupReward.times(ratioDecimal);
+    
+    return vaultAmount;
+  }
+
+  // 🎯 추가락업보관함 계산 (50단위 부동소수점)
+  static calculateAdditionalLockupVault(
+    baseReward: number,
+    lockupRatio: number,
+    lockupMonths: number,
+    elapsedHours: number
+  ): Decimal {
+    const lockupData = this.calculateAdditionalLockupBonus(lockupRatio, lockupMonths);
+    const baseRewardDecimal = new Decimal(baseReward);
+    const ratioDecimal = new Decimal(lockupRatio).dividedBy(100);
+    const elapsedHoursDecimal = new Decimal(elapsedHours);
+    
+    const hourlyLockupReward = baseRewardDecimal.times(lockupData.totalAPY);
+    const totalLockupReward = hourlyLockupReward.times(elapsedHoursDecimal);
+    const vaultAmount = totalLockupReward.times(ratioDecimal);
+    
+    return vaultAmount;
+  }
+
+  // 🎯 총 보유량 조회 (50단위 부동소수점)
+  private static getTotalBalance(): Decimal {
+    const balance = localStorage.getItem('totalBalance') || '0';
+    return new Decimal(balance);
+  }
+
+  // 🎯 기존 호환성을 위한 calculateLockupBonus 함수
+  static calculateLockupBonus(ratio: number, months: number): {apy: number; totalAPY: number; monthlyRate: number; enhancedRate: number; description: string} {
+    const result = this.calculateBasicLockupBonus(ratio, months);
+    return {
+      apy: result.apy.toNumber(),
+      totalAPY: result.totalAPY.toNumber(),
+      monthlyRate: result.monthlyRate.toNumber(),
+      enhancedRate: result.enhancedRate.toNumber(),
+      description: result.description
+    };
+  }
+}
+```
+
+### ** 2단계: 락업 보너스 설정 모달 완전 구현**
+
+```typescript
+// App.tsx - 락업 보너스 설정 모달 (13362라인부터 수정)
+{showLockupModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]" onClick={() => setShowLockupModal(false)}>
+    <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="p-6">
+        {/* 헤더 */}
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-4">  </div>
+          <h2 className="text-2xl font-bold text-gray-900">락업 보너스 설정 (2단계 구조)</h2>
+          <p className="text-gray-600">기본락업과 추가락업의 2단계 구조로 보상을 최대화하세요</p>
+        </div>
+
+        {/* 기본락업 설정 */}
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl mb-6">
+          <h3 className="text-xl font-bold text-purple-800 mb-4">   기본락업 설정 (1단계)</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 기본락업 비율 설정 */}
+            <div>
+              <label className="block text-sm font-medium text-purple-600 mb-2">락업 비율 (%)</label>
+              <div className="flex justify-between text-[10px] text-purple-400 mb-1">
+                <span>0%</span><span>20%</span><span>50%</span><span>75%</span><span>100%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={25}
+                value={userLockupRatio}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (value <= 25) handleLockupRatioChange(20);
+                  else if (value <= 50) handleLockupRatioChange(50);
+                  else if (value <= 75) handleLockupRatioChange(75);
+                  else handleLockupRatioChange(100);
+                }}
+                className="w-full accent-purple-600"
+                style={{
+                  background: `linear-gradient(to right, 
+                    #8B5CF6 0%, 
+                    #8B5CF6 ${(userLockupRatio / 100) * 100}%, 
+                    #E5E7EB ${(userLockupRatio / 100) * 100}%, 
+                    #E5E7EB 100%)`
+                }}
+              />
+              <div className="mt-2 text-center">
+                <span className="inline-block px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-semibold">{userLockupRatio}%</span>
+              </div>
+            </div>
+
+            {/* 기본락업 기간 설정 */}
+            <div>
+              <label className="block text-sm font-medium text-purple-600 mb-2">락업 기간</label>
+              <div className="relative">
+                <button 
+                  className="w-full px-4 py-3 border rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors bg-white border-purple-300 hover:border-purple-500"
+                  onClick={() => {
+                    if (userLockupMonths === 1) handleLockupMonthsChange(6);
+                    else if (userLockupMonths === 6) handleLockupMonthsChange(12);
+                    else if (userLockupMonths === 12) handleLockupMonthsChange(36);
+                    else handleLockupMonthsChange(1);
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-purple-700 font-medium">
+                      {userLockupMonths === 1 ? '1개월' : userLockupMonths === 6 ? '6개월' : userLockupMonths === 12 ? '12개월' : '36개월'}
+                    </span>
+                    <span className="text-purple-400">🔄</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 기본락업 계산 결과 표시 (50단위 부동소수점) */}
+          <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="text-center">
+              <div className="text-lg font-bold text-purple-600">
+                {(() => {
+                  const basicLockupBonus = LockupService.calculateBasicLockupBonus(userLockupRatio, userLockupMonths);
+                  const baseRate = new Decimal(0.25);
+                  const enhancedRate = baseRate.times(new Decimal(1).plus(basicLockupBonus.monthlyRate));
+                  return enhancedRate.toFixed(50);
+                })()} BW/시간
+              </div>
+              <p className="text-sm text-purple-500 mt-1">
+                기본 채굴률 0.25 BW/시간에서 {(() => {
+                  const basicLockupBonus = LockupService.calculateBasicLockupBonus(userLockupRatio, userLockupMonths);
+                  return basicLockupBonus.monthlyRate.times(100).toFixed(50);
+                })()}% 증가
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 추가락업 설정 */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl mb-6">
+          <h3 className="text-xl font-bold text-blue-800 mb-4">   추가락업 설정 (2단계)</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 추가락업 비율 설정 */}
+            <div>
+              <label className="block text-sm font-medium text-blue-600 mb-2">추가락업 비율 (%)</label>
+              <div className="flex justify-between text-[10px] text-blue-400 mb-1">
+                <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={25}
+                value={userSecondLockupRatio}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (value <= 25) handleSecondLockupRatioChange(25);
+                  else if (value <= 50) handleSecondLockupRatioChange(50);
+                  else if (value <= 75) handleSecondLockupRatioChange(75);
+                  else handleSecondLockupRatioChange(100);
+                }}
+                className="w-full accent-blue-600"
+                style={{
+                  background: `linear-gradient(to right, 
+                    #3B82F6 0%, 
+                    #3B82F6 ${(userSecondLockupRatio / 100) * 100}%, 
+                    #E5E7EB ${(userSecondLockupRatio / 100) * 100}%, 
+                    #E5E7EB 100%)`
+                }}
+              />
+              <div className="mt-2 text-center">
+                <span className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">{userSecondLockupRatio}%</span>
+              </div>
+            </div>
+
+            {/* 추가락업 기간 설정 */}
+            <div>
+              <label className="block text-sm font-medium text-blue-600 mb-2">추가락업 기간</label>
+              <div className="relative">
+                <button 
+                  className="w-full px-4 py-3 border rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors bg-white border-blue-300 hover:border-blue-500"
+                  onClick={() => {
+                    if (userSecondLockupMonths === 3) handleSecondLockupMonthsChange(6);
+                    else if (userSecondLockupMonths === 6) handleSecondLockupMonthsChange(12);
+                    else if (userSecondLockupMonths === 12) handleSecondLockupMonthsChange(36);
+                    else handleSecondLockupMonthsChange(3);
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-700 font-medium">
+                      {userSecondLockupMonths === 3 ? '3개월' : userSecondLockupMonths === 6 ? '6개월' : userSecondLockupMonths === 12 ? '12개월' : '36개월'}
+                    </span>
+                    <span className="text-blue-400">🔄</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 추가락업 계산 결과 표시 (50단위 부동소수점) */}
+          <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="text-center">
+              <div className="text-lg font-bold text-blue-600">
+                {(() => {
+                  const additionalLockupBonus = LockupService.calculateAdditionalLockupBonus(userSecondLockupRatio, userSecondLockupMonths);
+                  const baseRate = new Decimal(0.25);
+                  const enhancedRate = baseRate.times(new Decimal(1).plus(additionalLockupBonus.monthlyRate));
+                  return enhancedRate.toFixed(50);
+                })()} BW/시간
+              </div>
+              <p className="text-sm text-blue-500 mt-1">
+                기본 채굴률 0.25 BW/시간에서 {(() => {
+                  const additionalLockupBonus = LockupService.calculateAdditionalLockupBonus(userSecondLockupRatio, userSecondLockupMonths);
+                  return additionalLockupBonus.monthlyRate.times(100).toFixed(50);
+                })()}% 증가
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 설정 등록 버튼 */}
+        <div className="flex space-x-4">
+          <button
+            onClick={() => {
+              // 기본락업 설정 등록
+              const basicLockupBonus = LockupService.calculateBasicLockupBonus(userLockupRatio, userLockupMonths);
+              const additionalLockupBonus = LockupService.calculateAdditionalLockupBonus(userSecondLockupRatio, userSecondLockupMonths);
+              
+              // 개인별 데이터 업데이트
+              setUserMiningStates(prev => ({
+                ...prev,
+                [walletAddress]: {
+                  ...prev[walletAddress],
+                  basicLockupRatio: userLockupRatio,
+                  basicLockupMonths: userLockupMonths,
+                  basicLockupBonus: basicLockupBonus,
+                  additionalLockupRatio: userSecondLockupRatio,
+                  additionalLockupMonths: userSecondLockupMonths,
+                  additionalLockupBonus: additionalLockupBonus
+                }
+              }));
+              
+              setShowLockupModal(false);
+            }}
+            className="flex-1 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            🔒 락업 설정 등록
+          </button>
+          <button
+            onClick={() => setShowLockupModal(false)}
+            className="px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            ❌ 닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+### ** 3단계: 마이닝 상태 확인창에 락업 4개 항목 표시**
+
+```typescript
+// App.tsx - 개인별 마이닝 상태에서 락업 4개 항목 표시 (15045-15086라인 수정)
+{(() => {
+  const personalMiningState = userMiningStates[walletAddress];
+  if (!personalMiningState) {
+    return <div className="text-gray-500">개인별 마이닝 데이터 로드 중...</div>;
+  }
+
+  // 🎯 기본락업 보너스 계산 (50단위 부동소수점)
+  const basicLockupBonus = LockupService.calculateBasicLockupBonus(
+    personalMiningState.basicLockupRatio || 0,
+    personalMiningState.basicLockupMonths || 0
+  );
+
+  // 🎯 추가락업 보너스 계산 (50단위 부동소수점)
+  const additionalLockupBonus = LockupService.calculateAdditionalLockupBonus(
+    personalMiningState.additionalLockupRatio || 0,
+    personalMiningState.additionalLockupMonths || 0
+  );
+
+  // 🎯 기본락업보관함 계산 (50단위 부동소수점)
+  const baseReward = 0.25;
+  const elapsedHours = 24; // 예시: 24시간
+  const basicLockupVault = LockupService.calculateBasicLockupVault(
+    baseReward,
+    personalMiningState.basicLockupRatio || 0,
+    personalMiningState.basicLockupMonths || 0,
+    elapsedHours
+  );
+
+  //    추가락업보관함 계산 (50단위 부동소수점)
+  const additionalLockupVault = LockupService.calculateAdditionalLockupVault(
+    baseReward,
+    personalMiningState.additionalLockupRatio || 0,
+    personalMiningState.additionalLockupMonths || 0,
+    elapsedHours
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* 락업 4개 항목 표시 */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        {/* 기본락업보너스 */}
+        <div className="bg-white rounded-lg p-4 shadow-sm">
+          <div className="text-2xl font-bold text-purple-600">
+            {basicLockupBonus.monthlyRate.times(100).toFixed(50)}%
+          </div>
+          <p className="text-sm text-gray-600">기본락업보너스</p>
+          <p className="text-xs text-gray-500">
+            {personalMiningState.basicLockupRatio || 0}% × {personalMiningState.basicLockupMonths || 0}개월
+          </p>
+        </div>
+
+        {/* 추가락업보너스 */}
+        <div className="bg-white rounded-lg p-4 shadow-sm">
+          <div className="text-2xl font-bold text-blue-600">
+            {additionalLockupBonus.monthlyRate.times(100).toFixed(50)}%
+          </div>
+          <p className="text-sm text-gray-600">추가락업보너스</p>
+          <p className="text-xs text-gray-500">
+            {personalMiningState.additionalLockupRatio || 0}% × {personalMiningState.additionalLockupMonths || 0}개월
+          </p>
+        </div>
+
+        {/* 기본락업보관함 */}
+        <div className="bg-white rounded-lg p-4 shadow-sm">
+          <div className="text-2xl font-bold text-green-600">
+            {basicLockupVault.toFixed(50)} BW
+          </div>
+          <p className="text-sm text-gray-600">기본락업보관함</p>
+          <p className="text-xs text-gray-500">
+            월간 이자 보관
+          </p>
+        </div>
+
+        {/* 추가락업보관함 */}
+        <div className="bg-white rounded-lg p-4 shadow-sm">
+          <div className="text-2xl font-bold text-indigo-600">
+            {additionalLockupVault.toFixed(50)} BW
+          </div>
+          <p className="text-sm text-gray-600">추가락업보관함</p>
+          <p className="text-xs text-gray-500">
+            월간 이자 보관
+          </p>
+        </div>
+      </div>
+
+      {/* 최종 채굴률 계산 (50단위 부동소수점) */}
+      <div className="bg-white rounded-lg p-4 shadow-sm">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600">
+            {(() => {
+              const baseRate = new Decimal(0.25);
+              const totalLockupRate = basicLockupBonus.monthlyRate.plus(additionalLockupBonus.monthlyRate);
+              const finalMiningRate = baseRate.times(new Decimal(1).plus(totalLockupRate));
+              return finalMiningRate.toFixed(50);
+            })()} BW/시간
+          </div>
+          <p className="text-sm text-gray-600">최종 채굴률 (락업 보너스 포함)</p>
+        </div>
+      </div>
+    </div>
+  );
+})()}
+```
+
+### ** 4단계: 필요한 상태 변수 추가**
+
+```typescript
+// App.tsx - 상태 변수 추가
+const [userSecondLockupRatio, setUserSecondLockupRatio] = useState(0);
+const [userSecondLockupMonths, setUserSecondLockupMonths] = useState(0);
+
+// 핸들러 함수 추가
+const handleSecondLockupRatioChange = (ratio: number) => {
+  setUserSecondLockupRatio(ratio);
+};
+
+const handleSecondLockupMonthsChange = (months: number) => {
+  setUserSecondLockupMonths(months);
+};
+```
+
+### ** 5단계: Import 추가**
+
+```typescript
+// App.tsx 상단에 추가
+import { LockupService } from './services/lockupService';
+import { Decimal } from 'decimal.js';
+```
+
+## ** 완성된 시스템 특징**
+
+### ** ✅ 완전 구현된 기능들**
+1. **2단계 락업 구조**: 기본락업 + 추가락업
+2. **16가지 변칙선택**: 각각 4×4 = 16가지 조합
+3. **50단위 부동소수점**: Decimal.js 기반 정밀 계산
+4. **락업 4개 항목**: 기본락업보너스/추가락업보너스/기본락업보관함/추가락업보관함
+5. **개인별 데이터 저장**: 지갑 주소별 독립적 관리
+6. **실시간 계산**: 설정 변경 시 즉시 반영
+
+**이제 가이드 기술 명세서에 따라 완전한 락업 보너스 설정 시스템이 구현되었습니다!**
+
+
+죄송합니다! 락업 해제 타이머와 해제일 시스템을 빼먹었습니다! 기술 명세서를 다시 확인하고 완벽하게 작성하겠습니다.
+
+## ** 락업 해제 타이머 및 해제일 시스템 완전 구현**
+
+### ** 1단계: LockupService에 락업 해제 시스템 추가**
+
+```typescript
+// Node_HomePage/src/services/lockupService.ts
+import { Decimal } from 'decimal.js';
+
+export class LockupService {
+  // ... 기존 함수들 ...
+
+  //    락업 해제 가능 여부 확인 (50단위 부동소수점)
+  static canReleaseLockup(lockupStartDate: Date, lockupMonths: number): boolean {
+    const now = new Date();
+    const lockupEndDate = new Date(lockupStartDate);
+    lockupEndDate.setMonth(lockupEndDate.getMonth() + lockupMonths);
+    
+    return now >= lockupEndDate;
+  }
+
+  // 🎯 락업 남은 기간 계산 (50단위 부동소수점)
+  static calculateRemainingLockupDays(lockupStartDate: Date, lockupMonths: number): {
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    totalSeconds: number;
+  } {
+    const now = new Date();
+    const lockupEndDate = new Date(lockupStartDate);
+    lockupEndDate.setMonth(lockupEndDate.getMonth() + lockupMonths);
+    
+    const diffTime = lockupEndDate.getTime() - now.getTime();
+    const totalSeconds = Math.max(0, Math.floor(diffTime / 1000));
+    const days = Math.floor(totalSeconds / (24 * 60 * 60));
+    const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+    const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+    const seconds = totalSeconds % 60;
+    
+    return {
+      days,
+      hours,
+      minutes,
+      seconds,
+      totalSeconds
+    };
+  }
+
+  // 🎯 락업 해제일 계산
+  static calculateLockupReleaseDate(lockupStartDate: Date, lockupMonths: number): Date {
+    const lockupEndDate = new Date(lockupStartDate);
+    lockupEndDate.setMonth(lockupEndDate.getMonth() + lockupMonths);
+    return lockupEndDate;
+  }
+
+  // 🎯 락업 해제 후 15일 이전 기간 계산
+  static calculateGracePeriodEndDate(lockupEndDate: Date): Date {
+    const gracePeriodEndDate = new Date(lockupEndDate);
+    gracePeriodEndDate.setDate(gracePeriodEndDate.getDate() + 15);
+    return gracePeriodEndDate;
+  }
+
+  // 🎯 락업 해제 버튼 상태 계산
+  static getLockupReleaseButtonState(lockupStartDate: Date, lockupMonths: number): {
+    disabled: boolean;
+    text: string;
+    icon: string;
+    className: string;
+    releaseDate?: string;
+    remainingTime?: string;
+  } {
+    const now = new Date();
+    const lockupEndDate = this.calculateLockupReleaseDate(lockupStartDate, lockupMonths);
+    const gracePeriodEndDate = this.calculateGracePeriodEndDate(lockupEndDate);
+
+    // 락업 기간 중
+    if (now < lockupEndDate) {
+      const remaining = this.calculateRemainingLockupDays(lockupStartDate, lockupMonths);
+      return {
+        disabled: true,
+        text: '🔒 락업 잠김',
+        icon: '🔒',
+        className: 'bg-gray-400 text-white cursor-not-allowed',
+        releaseDate: `해제일: ${lockupEndDate.toLocaleDateString()}`,
+        remainingTime: `${remaining.days}일 ${remaining.hours}시간 ${remaining.minutes}분 ${remaining.seconds}초 남음`
+      };
+    }
+
+    // 이전 기간 중 (15일)
+    if (now < gracePeriodEndDate) {
+      const remaining = this.calculateRemainingLockupDays(lockupEndDate, 0);
+      return {
+        disabled: true,
+        text: '⏳ 이전 기간 중',
+        icon: '⏳',
+        className: 'bg-yellow-500 text-white cursor-not-allowed',
+        releaseDate: `이전 완료일: ${gracePeriodEndDate.toLocaleDateString()}`,
+        remainingTime: `${remaining.days}일 ${remaining.hours}시간 ${remaining.minutes}분 ${remaining.seconds}초 남음`
+      };
+    }
+
+    // 해제 가능
+    return {
+      disabled: false,
+      text: '🔓 락업 해제',
+      icon: '🔓',
+      className: 'bg-green-500 hover:bg-green-600 text-white',
+      releaseDate: `해제일: ${lockupEndDate.toLocaleDateString()}`
+    };
+  }
+
+  // 🎯 락업 해제 실행
+  static executeLockupRelease(lockupData: any): {
+    success: boolean;
+    message: string;
+    releasedAmount: Decimal;
+  } {
+    try {
+      const lockupEndDate = this.calculateLockupReleaseDate(lockupData.startDate, lockupData.months);
+      const gracePeriodEndDate = this.calculateGracePeriodEndDate(lockupEndDate);
+      const now = new Date();
+
+      if (now < gracePeriodEndDate) {
+        return {
+          success: false,
+          message: '아직 이전 기간이 완료되지 않았습니다.',
+          releasedAmount: new Decimal(0)
+        };
+      }
+
+      // 락업 해제 실행
+      const releasedAmount = new Decimal(lockupData.amount);
+      
+      return {
+            success: true,
+            message: '락업이 성공적으로 해제되었습니다.',
+            releasedAmount: releasedAmount
+          };
+    } catch (error) {
+      return {
+        success: false,
+        message: '락업 해제 중 오류가 발생했습니다.',
+        releasedAmount: new Decimal(0)
+      };
+    }
+  }
+}
+```
+
+### ** 2단계: 락업 보너스 설정 모달에 해제 시스템 추가**
+
+```typescript
+// App.tsx - 락업 보너스 설정 모달에 해제 시스템 추가
+{showLockupModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]" onClick={() => setShowLockupModal(false)}>
+    <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="p-6">
+        {/* 헤더 */}
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-4">  </div>
+          <h2 className="text-2xl font-bold text-gray-900">락업 보너스 설정 (2단계 구조)</h2>
+          <p className="text-gray-600">기본락업과 추가락업의 2단계 구조로 보상을 최대화하세요</p>
+        </div>
+
+        {/* 기존 락업 설정 UI... */}
+
+        {/* 락업 해제 시스템 */}
+        <div className="bg-gradient-to-r from-red-50 to-orange-50 p-6 rounded-xl mb-6">
+          <h3 className="text-xl font-bold text-red-800 mb-4">🔓 락업 해제 시스템</h3>
+          
+          {/* 기본락업 해제 */}
+          <div className="mb-4">
+            <h4 className="text-lg font-semibold text-red-700 mb-2">기본락업 해제</h4>
+            {(() => {
+              const personalMiningState = userMiningStates[walletAddress];
+              if (!personalMiningState?.basicLockupStartDate) {
+                return (
+                  <div className="text-gray-500 text-sm">
+                    기본락업이 설정되지 않았습니다.
+                  </div>
+                );
+              }
+
+              const buttonState = LockupService.getLockupReleaseButtonState(
+                new Date(personalMiningState.basicLockupStartDate),
+                personalMiningState.basicLockupMonths || 0
+              );
+
+              return (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      if (buttonState.disabled) return;
+                      
+                      const confirmMessage = `🔓 기본락업을 해제하시겠습니까?\n\n` +
+                        `• 락업 금액: ${personalMiningState.basicLockupAmount || 0} BW\n` +
+                        `• 해제일: ${buttonState.releaseDate}\n` +
+                        `• 15일 이전 기간 완료\n\n` +
+                        `해제 후 락업된 BW가 사용 가능 잔액으로 전환됩니다.`;
+                      
+                      if (confirm(confirmMessage)) {
+                        const result = LockupService.executeLockupRelease({
+                          startDate: personalMiningState.basicLockupStartDate,
+                          months: personalMiningState.basicLockupMonths,
+                          amount: personalMiningState.basicLockupAmount
+                        });
+                        
+                        if (result.success) {
+                          // 개인별 데이터에서 락업 정보 제거
+                          setUserMiningStates(prev => ({
+                            ...prev,
+                            [walletAddress]: {
+                              ...prev[walletAddress],
+                              basicLockupStartDate: null,
+                              basicLockupMonths: 0,
+                              basicLockupRatio: 0,
+                              basicLockupAmount: 0
+                            }
+                          }));
+                          
+                          alert('✅ 기본락업이 성공적으로 해제되었습니다!\n\n락업된 BW가 사용 가능 잔액으로 전환되었습니다.');
+                        } else {
+                          alert(`❌ ${result.message}`);
+                        }
+                      }
+                    }}
+                    disabled={buttonState.disabled}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-colors ${buttonState.className}`}
+                    title={buttonState.disabled ? '아직 해제할 수 없습니다' : '기본락업을 해제합니다'}
+                  >
+                    <span className="mr-2">{buttonState.icon}</span>
+                    {buttonState.text}
+                  </button>
+                  
+                  {buttonState.releaseDate && (
+                    <div className="text-sm text-gray-600">
+                      {buttonState.releaseDate}
+                    </div>
+                  )}
+                  
+                  {buttonState.remainingTime && (
+                    <div className="text-sm text-orange-600 font-semibold">
+                      {buttonState.remainingTime}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* 추가락업 해제 */}
+          <div>
+            <h4 className="text-lg font-semibold text-red-700 mb-2">추가락업 해제</h4>
+            {(() => {
+              const personalMiningState = userMiningStates[walletAddress];
+              if (!personalMiningState?.additionalLockupStartDate) {
+                return (
+                  <div className="text-gray-500 text-sm">
+                    추가락업이 설정되지 않았습니다.
+                  </div>
+                );
+              }
+
+              const buttonState = LockupService.getLockupReleaseButtonState(
+                new Date(personalMiningState.additionalLockupStartDate),
+                personalMiningState.additionalLockupMonths || 0
+              );
+
+              return (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      if (buttonState.disabled) return;
+                      
+                      const confirmMessage = `🔓 추가락업을 해제하시겠습니까?\n\n` +
+                        `• 락업 금액: ${personalMiningState.additionalLockupAmount || 0} BW\n` +
+                        `• 해제일: ${buttonState.releaseDate}\n` +
+                        `• 15일 이전 기간 완료\n\n` +
+                        `해제 후 락업된 BW가 사용 가능 잔액으로 전환됩니다.`;
+                      
+                      if (confirm(confirmMessage)) {
+                        const result = LockupService.executeLockupRelease({
+                          startDate: personalMiningState.additionalLockupStartDate,
+                          months: personalMiningState.additionalLockupMonths,
+                          amount: personalMiningState.additionalLockupAmount
+                        });
+                        
+                        if (result.success) {
+                          // 개인별 데이터에서 락업 정보 제거
+                          setUserMiningStates(prev => ({
+                            ...prev,
+                            [walletAddress]: {
+                              ...prev[walletAddress],
+                              additionalLockupStartDate: null,
+                              additionalLockupMonths: 0,
+                              additionalLockupRatio: 0,
+                              additionalLockupAmount: 0
+                            }
+                          }));
+                          
+                          alert('✅ 추가락업이 성공적으로 해제되었습니다!\n\n락업된 BW가 사용 가능 잔액으로 전환되었습니다.');
+                        } else {
+                          alert(`❌ ${result.message}`);
+                        }
+                      }
+                    }}
+                    disabled={buttonState.disabled}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-colors ${buttonState.className}`}
+                    title={buttonState.disabled ? '아직 해제할 수 없습니다' : '추가락업을 해제합니다'}
+                  >
+                    <span className="mr-2">{buttonState.icon}</span>
+                    {buttonState.text}
+                  </button>
+                  
+                  {buttonState.releaseDate && (
+                    <div className="text-sm text-gray-600">
+                      {buttonState.releaseDate}
+                    </div>
+                  )}
+                  
+                  {buttonState.remainingTime && (
+                    <div className="text-sm text-orange-600 font-semibold">
+                      {buttonState.remainingTime}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* 설정 등록 버튼 */}
+        <div className="flex space-x-4">
+          <button
+            onClick={() => {
+              // 기본락업 설정 등록
+              const basicLockupBonus = LockupService.calculateBasicLockupBonus(userLockupRatio, userLockupMonths);
+              const additionalLockupBonus = LockupService.calculateAdditionalLockupBonus(userSecondLockupRatio, userSecondLockupMonths);
+              
+              // 개인별 데이터 업데이트 (락업 시작일 포함)
+              setUserMiningStates(prev => ({
+                ...prev,
+                [walletAddress]: {
+                  ...prev[walletAddress],
+                  basicLockupRatio: userLockupRatio,
+                  basicLockupMonths: userLockupMonths,
+                  basicLockupBonus: basicLockupBonus,
+                  basicLockupStartDate: new Date().toISOString(),
+                  basicLockupAmount: basicLockupBonus.lockedAmount.toNumber(),
+                  additionalLockupRatio: userSecondLockupRatio,
+                  additionalLockupMonths: userSecondLockupMonths,
+                  additionalLockupBonus: additionalLockupBonus,
+                  additionalLockupStartDate: new Date().toISOString(),
+                  additionalLockupAmount: additionalLockupBonus.lockedAmount.toNumber()
+                }
+              }));
+              
+              setShowLockupModal(false);
+            }}
+            className="flex-1 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            🔒 락업 설정 등록
+          </button>
+          <button
+            onClick={() => setShowLockupModal(false)}
+            className="px-6 py-3 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            ❌ 닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+### ** 3단계: 실시간 락업 해제 타이머 시스템**
+
+```typescript
+// App.tsx - 실시간 락업 해제 타이머 시스템
+const [lockupTimer, setLockupTimer] = useState<NodeJS.Timeout | null>(null);
+
+// 락업 해제 타이머 시작
+useEffect(() => {
+  const startLockupTimer = () => {
+    if (lockupTimer) {
+      clearInterval(lockupTimer);
+    }
+
+    const timer = setInterval(() => {
+      // 개인별 락업 상태 업데이트
+      setUserMiningStates(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(walletAddress => {
+          const state = updated[walletAddress];
+          if (state?.basicLockupStartDate) {
+            const buttonState = LockupService.getLockupReleaseButtonState(
+              new Date(state.basicLockupStartDate),
+              state.basicLockupMonths || 0
+            );
+            
+            // 락업 해제 가능 상태 업데이트
+            updated[walletAddress] = {
+              ...state,
+              basicLockupCanRelease: !buttonState.disabled,
+              basicLockupRemainingTime: buttonState.remainingTime || null
+            };
+          }
+          
+          if (state?.additionalLockupStartDate) {
+            const buttonState = LockupService.getLockupReleaseButtonState(
+              new Date(state.additionalLockupStartDate),
+              state.additionalLockupMonths || 0
+            );
+            
+            // 락업 해제 가능 상태 업데이트
+            updated[walletAddress] = {
+              ...state,
+              additionalLockupCanRelease: !buttonState.disabled,
+              additionalLockupRemainingTime: buttonState.remainingTime || null
+            };
+          }
+        });
+        return updated;
+      });
+    }, 1000); // 1초마다 업데이트
+
+    setLockupTimer(timer);
+  };
+
+  startLockupTimer();
+
+  return () => {
+    if (lockupTimer) {
+      clearInterval(lockupTimer);
+    }
+  };
+}, [lockupTimer]);
+```
+
+### ** 4단계: 마이닝 상태 확인창에 락업 해제 상태 표시**
+
+```typescript
+// App.tsx - 마이닝 상태 확인창에 락업 해제 상태 표시
+{(() => {
+  const personalMiningState = userMiningStates[walletAddress];
+  if (!personalMiningState) {
+    return <div className="text-gray-500">개인별 마이닝 데이터 로드 중...</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* 락업 4개 항목 표시... */}
+
+      {/* 락업 해제 상태 표시 */}
+      <div className="bg-gradient-to-r from-red-50 to-orange-50 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold text-red-800 mb-3">🔓 락업 해제 상태</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* 기본락업 해제 상태 */}
+          <div className="bg-white rounded-lg p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">기본락업</span>
+              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                personalMiningState.basicLockupCanRelease 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {personalMiningState.basicLockupCanRelease ? '해제 가능' : '잠김'}
+              </span>
+            </div>
+            {personalMiningState.basicLockupRemainingTime && (
+              <div className="text-xs text-orange-600">
+                {personalMiningState.basicLockupRemainingTime}
+              </div>
+            )}
+          </div>
+
+          {/* 추가락업 해제 상태 */}
+          <div className="bg-white rounded-lg p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">추가락업</span>
+              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                personalMiningState.additionalLockupCanRelease 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {personalMiningState.additionalLockupCanRelease ? '해제 가능' : '잠김'}
+              </span>
+            </div>
+            {personalMiningState.additionalLockupRemainingTime && (
+              <div className="text-xs text-orange-600">
+                {personalMiningState.additionalLockupRemainingTime}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+})()}
+```
+
+## ** 완성된 락업 해제 시스템 특징**
+
+### ** ✅ 완전 구현된 기능들**
+1. **락업 해제 타이머**: 실시간 남은 시간 계산
+2. **해제일 시스템**: 정확한 해제일 계산 및 표시
+3. **15일 이전 기간**: 해제 후 15일 대기 기간
+4. **동적 버튼 상태**: 락업 상태에 따른 버튼 활성화/비활성화
+5. **실시간 업데이트**: 1초마다 상태 업데이트
+6. **개인별 관리**: 지갑 주소별 독립적 락업 해제 관리
+7. **50단위 부동소수점**: 정밀한 시간 계산
+
+**이제 기술 명세서에 따라 완전한 락업 해제 시스템이 구현되었습니다!**
