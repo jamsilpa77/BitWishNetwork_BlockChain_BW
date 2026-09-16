@@ -391,14 +391,6 @@ bwChainCore.initialize().then(async () => {
         }
     })();
 
-    // [무인 자동 마이닝 엔진] 매 30초마다 백엔드 단독으로 모든 유저의 경과 시간을 상시 정산하여 1BW 돌파 시 블록 자동 생성
-    setInterval(async () => {
-        try {
-            await autoRestoreMiningStates();
-        } catch (intervalError) {
-            console.error("❌ [무인 마이닝 엔진 주기적 실행 에러]:", intervalError);
-        }
-    }, 30000);
 });
 
 const app = express();
