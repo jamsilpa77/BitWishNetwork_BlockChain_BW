@@ -99,23 +99,10 @@ export class MiningController {
                 await state.save({ session: dbSession });
                 successState = state;
 
-                // [백엔드 블록 생성 및 수수료 정밀 분배 실행 - 최초 채굴 시작 시에만 1회 즉시 지급]
-                const networkDb = mongoose.connection.useDb('bitwish_network');
-                const userBlockCount = await networkDb.collection('blocks').countDocuments({
-                    'data.header.validator': new RegExp('^' + walletAddress + '$', 'i')
-                });
-
-                if (userBlockCount === 0) {
-                    const blockResult = await BlockMiningService.onMiningBlock(walletAddress, dbSession);
-                    totalBlockCount = blockResult.totalBlockCount;
-                    distributedFee = blockResult.distributedFee;
-                    state.lastBlockRewardThreshold = '0'; // 시작 즉시 지급 기준선 0으로 지정
-                } else {
-                    // 이미 채굴을 기동하여 지급 완료된 경우, 추가 생성하지 않고 정상 대시보드 카운트 유지
-                    const currentBlockCount = await BlockMiningService.getTotalBlockCount();
-                    totalBlockCount = currentBlockCount;
-                    distributedFee = { ecosystemFund: '0', foundationFund: '0' };
-                }
+                // [1공정 수복] 최초 채굴 시작 시 억제 블록 강제 생성 코드 제거 및 대시보드 블록 수 동기화
+                const currentBlockCount = await BlockMiningService.getTotalBlockCount();
+                totalBlockCount = currentBlockCount;
+                distributedFee = { ecosystemFund: '0', foundationFund: '0' };
             };
 
             // Mongoose 세션 트랜잭션 수행 시도 (ReplicaSet 환경 대응)
@@ -277,25 +264,7 @@ export class MiningController {
                                 }
                             }
 
-                            // [3공정 수복] referralBonusStorage 정수 1 BW 경계 돌파 시 물리 블록 즉시 소환
-                            const bonusLastThreshold = new Decimal((bonusRecord as any).lastBonusBlockThreshold || '0');
-                            const bonusNextThreshold = bonusLastThreshold.plus(1);
-                            if (newBonusStorage.gte(bonusNextThreshold)) {
-                                const bonusBlocksToCreate = newBonusStorage.minus(bonusLastThreshold).floor().toNumber();
-                                if (bonusBlocksToCreate > 0) {
-                                    console.log(`⛏️ [3공정 추천 보너스 블록 카운팅] ${walletAddress}: ${newBonusStorage.toFixed(4)} BW 도달 → +${bonusBlocksToCreate} 블록 생성`);
-                                    for (let bi = 0; bi < bonusBlocksToCreate; bi++) {
-                                        try {
-                                            await BlockMiningService.onMiningBlock(walletAddress);
-                                            console.log(`✅ [3공정] 추천 보너스 블록 ${bi + 1}/${bonusBlocksToCreate} 생성 완료`);
-                                        } catch (bonusBlockErr) {
-                                            console.error(`❌ [3공정] 추천 보너스 블록 생성 실패:`, bonusBlockErr);
-                                        }
-                                    }
-                                    (bonusRecord as any).lastBonusBlockThreshold = bonusLastThreshold.plus(bonusBlocksToCreate).toString();
-                                    console.log(`📊 [3공정] 추천 보너스 블록 기준점 갱신: ${(bonusRecord as any).lastBonusBlockThreshold} BW`);
-                                }
-                            }
+                            // [1공정 수복] 추천 보너스 수량 경계 돌파 시 개별 지갑 단위 블록 헛생성 루프 파편 100% 제거
 
                             await bonusRecord.save();
                         }
@@ -306,31 +275,11 @@ export class MiningController {
                     state.accumulatedReward = newAccumulatedReward.toString();
                     state.lastSyncTime = now;
 
-                    // [블록 +1 카운팅] 1BW 경계 초과 시 자동 블록 생성
-                    const lastThreshold = new Decimal(state.lastBlockRewardThreshold || '0');
-                    const nextThreshold = lastThreshold.plus(1); // 다음 블록 생성 기준: 이전 기준 + 1BW
-
-                    if (newAccumulatedReward.gte(nextThreshold)) {
-                        // 한 번에 여러 BW를 넘었을 수 있으므로 몇 개의 블록을 생성해야 하는지 계산
-                        const blocksToCreate = newAccumulatedReward.minus(lastThreshold).floor().toNumber();
-
-                        if (blocksToCreate > 0) {
-                            console.log(`⛏️ [블록 +1 카운팅] ${walletAddress}: ${newAccumulatedReward.toFixed(4)} BW 도달 → +${blocksToCreate} 블록 생성`);
-
-                            for (let i = 0; i < blocksToCreate; i++) {
-                                try {
-                                    await BlockMiningService.onMiningBlock(walletAddress);
-                                    console.log(`✅ [블록 +1 카운팅] 블록 ${i + 1}/${blocksToCreate} 생성 완료`);
-                                } catch (blockError) {
-                                    console.error(`❌ [블록 +1 카운팅] 블록 생성 실패:`, blockError);
-                                }
-                            }
-
-                            // 기준점을 현재 정수 경계로 갱신 (예: 2.3 BW → 기준점 2)
-                            state.lastBlockRewardThreshold = lastThreshold.plus(blocksToCreate).toString();
-                            console.log(`📊 [블록 +1 카운팅] 새 기준점: ${state.lastBlockRewardThreshold} BW`);
-                        }
-                    }
+                    // [2공정 수복] 30초 마이닝 동기화 시 글로벌 단일 정문 엔진 비동기 호출
+                    // 개별 지갑 기준 생성을 거치지 않고, 전체 실시간 발행량이 1 BW 경계를 돌파했을 때만 딱 1개 블록 생성
+                    BlockMiningService.syncGlobalBlocks().catch(err => {
+                        console.error('❌ [2공정] 글로벌 블록 동기화 에러:', err);
+                    });
 
                     await state.save();
                 }

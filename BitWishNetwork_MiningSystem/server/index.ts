@@ -63,47 +63,26 @@ async function autoRestoreMiningStates() {
 
                 console.log(`[수복 엔진] ${walletAddress}: 복원 전=${dbAmount.toFixed(4)} BW → 복원 후=${realTimeAmount.toFixed(4)} BW`);
 
-                // [블록 수복 카운팅] 1BW 경계 초과 체크 및 자동 블록 생성 (단 1개로 엄격 제한)
-                const lastThreshold = new Decimal(state.lastBlockRewardThreshold || '0');
-                const nextThreshold = lastThreshold.plus(1);
-
-                let updatedThreshold = state.lastBlockRewardThreshold || '0';
-
-                if (realTimeAmount.gte(nextThreshold)) {
-                    // 1회 틱당 최대 1개의 블록만 생성되도록 상한선 1개 강제 제약
-                    const rawGap = realTimeAmount.minus(lastThreshold).floor().toNumber();
-                    const blocksToCreate = Math.min(1, rawGap);
-
-                    if (blocksToCreate > 0) {
-                        console.log(`⛏️ [수복 엔진] ${walletAddress}: 1 BW 경계 돌파 → 정밀 블록 1개 생성`);
-
-                        try {
-                            await BlockMiningService.onMiningBlock(walletAddress);
-                            console.log(`✅ [수복 엔진] 정밀 블록 1개 생성 완료`);
-                        } catch (blockError) {
-                            console.error(`❌ [수복 엔진] 블록 생성 실패:`, blockError);
-                        }
-                    }
-
-                    // 지갑 기준점 정밀 동기화 (Global Cap Guard 삭제로 1:1 완벽 반영)
-                    updatedThreshold = realTimeAmount.floor().toString();
-                    console.log(`📊 [수복 엔진] 새 기준점 정밀 동기화: ${updatedThreshold} BW`);
-                }
-
-                // [1공정 수복 완료] Mongoose .save() 반영 누락 결함 완전 차단 → updateOne 직접 강제 저장
+                // [1공정 수복] 서버 재시작 복구 시 개별 지갑 단위 블록 헛생성 루프 파편 100% 제거
                 await MiningState.updateOne(
                     { _id: state._id },
                     {
                         $set: {
                             accumulatedReward: realTimeAmount.toString(),
-                            lastSyncTime: now,
-                            lastBlockRewardThreshold: updatedThreshold
+                            lastSyncTime: now
                         }
                     }
                 );
             }
         }
         console.log("✅ [수복 엔진] 모든 유저 데이터 복원 및 실시간 마이닝 수복 검증 완료!");
+
+        // [2공정 수복] 복구 완료 후 전체 실시간 총발행량 정수에 맞춰 물리 블록 수 1:1 단일 정문 정밀 수복
+        BlockMiningService.syncGlobalBlocks().then(res => {
+            console.log(`✅ [수복 엔진] 메인넷 단일 정문 블록 동기화 완료: 생성=${res.createdBlocks}개, 총블록=${res.totalBlocks}개`);
+        }).catch(err => {
+            console.error('❌ [수복 엔진] 메인넷 단일 정문 동기화 에러:', err);
+        });
     } catch (err) {
         console.error("❌ [수복 엔진 에러] 데이터 수복 중 예외 발생:", err);
     }
