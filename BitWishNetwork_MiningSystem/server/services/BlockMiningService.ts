@@ -111,6 +111,19 @@ export class BlockMiningService {
             if (!bwChainCore) {
                 throw new Error("BitWishBlockchain Core Engine is not initialized yet globally!");
             }
+
+            // ══════════════════════════════════════════════════════════════════════════
+            // [3차 수복 핵심] DB 최고 블록 높이 실시간 동적 감지 ➔ 코어 엔진 높이 자동 동기화
+            // 하드코딩 0% : DB의 최상단 블록 번호를 100% 실시간 동적 읽기
+            // ══════════════════════════════════════════════════════════════════════════
+            const _lastBlock = await _networkDb.collection('blocks').findOne({}, { sort: { blockHeight: -1 } });
+            const _maxDbHeight = _lastBlock ? (_lastBlock.blockHeight || _lastBlock.data?.header?.blockHeight || 0) : 0;
+
+            if (_maxDbHeight > (bwChainCore.currentBlockHeight || 0)) {
+                bwChainCore.currentBlockHeight = _maxDbHeight;
+                console.log(`🔗 [코어 높이 동적 매핑] DB 최고 블록(#${_maxDbHeight}) ➔ 코어 엔진 동기화 완료`);
+            }
+
             const newBlock = await bwChainCore.createBlock(walletAddress);
             const currentHeight = newBlock.header.blockHeight || 1;
 
