@@ -15,6 +15,8 @@ import MiningState from '../models/MiningState';
 import MonthlySettlement from '../models/MonthlySettlement';
 import BonusRecord from '../models/BonusRecord';
 
+import { BlockMiningService } from '../services/BlockMiningService';
+
 Decimal.set({ precision: 50 });
 
 export class SettlementWorker {
@@ -22,6 +24,22 @@ export class SettlementWorker {
         console.log('⚙️ [SettlementWorker] Mongoose 무인 정산 및 타임락 오토메이션 엔진 기동 완료');
         this.initializeMidnightPatrol();
         this.initializeMonthlySnapshot();
+        this.initializeGlobalBlockHeartbeat();
+    }
+
+    /**
+     * [오토 하트비트 타이머] 24시간 무인 실시간 총발행량-물리블록 1:1 칼동기화 엔진
+     * 10초 주기 정밀 감시: 오직 [Math.floor(totalSupply) > currentBlockCount] 일 때만 부족분 1:1 생성
+     */
+    private initializeGlobalBlockHeartbeat(): void {
+        console.log('💓 [SettlementWorker] 백엔드 오토 하트비트 타이머(1:1 칼동기화 엔진) 기동 완료');
+        setInterval(async () => {
+            try {
+                await BlockMiningService.syncGlobalBlocks();
+            } catch (error) {
+                console.error('[Heartbeat Engine Error] 블록 무인 동기화 감시 예외 발생:', error);
+            }
+        }, 10000); // 10초 주기 정밀 체크
     }
 
     /**
