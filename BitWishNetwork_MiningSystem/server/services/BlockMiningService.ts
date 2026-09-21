@@ -22,6 +22,90 @@ export class BlockMiningService {
      */
     public static async onMiningBlock(walletAddress: string, session?: any): Promise<BlockMiningResult> {
         try {
+            // ══════════════════════════════════════════════════════════════════════════
+            // [절대 상한선 가드 — Global Cap Guard]
+            // 목적: 어떤 경로로 onMiningBlock()이 호출되든,
+            //       현재 총 물리 블록 수 >= 실시간 참값 총 BW 발행량 정수이면
+            //       블록 생성을 100% 원천 차단한다. (이중 안전장치)
+            // 집계 공식: stats.ts / auditAndSyncGlobalBlocks()와 100% 동일한 공식 적용
+            // ══════════════════════════════════════════════════════════════════════════
+            const _networkDb = mongoose.connection.useDb('bitwish_network');
+            const _miningDb = mongoose.connection.useDb('bitwish_mining');
+
+            // [가드 1] 현재 DB 물리 블록 수 조회
+            const _currentBlockCount = await _networkDb.collection('blocks').countDocuments({});
+
+            // [가드 2] 실시간 참값 총 발행량 산출 (stats.ts / auditAndSyncGlobalBlocks와 동일 공식)
+            // 2-1. MiningState 채굴 누적 합계
+            const _msAgg = await _miningDb.collection('miningstates').aggregate([
+                { $group: { _id: null, total: { $sum: { $toDouble: '$accumulatedReward' } } } }
+            ]).toArray();
+            let _totalMined = new Decimal(_msAgg[0]?.total || 0);
+
+            // 2-2. 실시간 채굴 중인 유저 liveBoost 보정 (미동기화 채굴량 합산)
+            const _activeStates = await _miningDb.collection('miningstates').find({ isMining: true }).toArray();
+            const _nowMs = Date.now();
+            let _liveBoost = new Decimal(0);
+            for (const _miner of _activeStates) {
+                const _lastSync = _miner.lastSyncTime ? new Date(_miner.lastSyncTime).getTime() : _nowMs;
+                const _elapsed = Math.max(0, (_nowMs - _lastSync) / 1000);
+                if (_elapsed > 0) {
+                    _liveBoost = _liveBoost.plus(
+                        new Decimal(_miner.currentTotalRate || '0.25').div(3600).mul(_elapsed)
+                    );
+                }
+            }
+            _totalMined = _totalMined.plus(_liveBoost);
+
+            // 2-3. 월간 정산 누적 합계
+            const _settAgg = await _miningDb.collection('monthlysettlements').aggregate([
+                { $group: { _id: null, total: { $sum: { $toDouble: '$totalAmount' } } } }
+            ]).toArray();
+            const _totalSettled = new Decimal(_settAgg[0]?.total || 0);
+
+            // 2-4. 보너스 3대 보관함 전수 합산
+            const _bonusAgg = await _miningDb.collection('bonusrecords').aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        r: { $sum: { $toDouble: { $ifNull: ['$referralRewardStorage', '0'] } } },
+                        b: { $sum: { $toDouble: { $ifNull: ['$referralBonusStorage', '0'] } } },
+                        o: { $sum: { $toDouble: { $ifNull: ['$bonusStorage', '0'] } } }
+                    }
+                }
+            ]).toArray();
+            const _totalBonus = new Decimal(_bonusAgg[0]?.r || 0)
+                .plus(new Decimal(_bonusAgg[0]?.b || 0))
+                .plus(new Decimal(_bonusAgg[0]?.o || 0));
+
+            // 2-5. 최종 참값 발행량 정수 산출
+            const _totalSupply = _totalMined.plus(_totalSettled).plus(_totalBonus);
+            const _maxAllowedBlocks = _totalSupply.floor().toNumber();
+
+            // [가드 판정] 현재 블록 수 >= 발행량 정수 → 블록 생성 원천 차단
+            if (_currentBlockCount >= _maxAllowedBlocks) {
+                console.log(
+                    `🛡️ [Global Cap Guard] 차단 — ` +
+                    `현재 블록(${_currentBlockCount}개) >= 발행량 정수(${_maxAllowedBlocks}개). ` +
+                    `다음 1BW 돌파 때까지 블록 생성 대기.`
+                );
+                return {
+                    success: false,
+                    blockHeight: _currentBlockCount,
+                    totalBlockCount: _currentBlockCount,
+                    distributedFee: { ecosystemFund: '0', foundationFund: '0' }
+                };
+            }
+
+            console.log(
+                `✅ [Global Cap Guard] 통과 — ` +
+                `블록(${_currentBlockCount}개) < 발행량 정수(${_maxAllowedBlocks}개). ` +
+                `블록 생성 진행.`
+            );
+            // ══════════════════════════════════════════════════════════════════════════
+            // [가드 종료 — 이하 기존 블록 생성 로직 100% 원형 유지]
+            // ══════════════════════════════════════════════════════════════════════════
+
             // 1단계: 블록체인 메인넷 코어를 호출하여 새 PoW 블록을 bitwish_network.blocks 컬렉션에 생성 및 저장
             const bwChainCore = (global as any).bwChainCore || require('../index').bwChainCore;
             if (!bwChainCore) {
