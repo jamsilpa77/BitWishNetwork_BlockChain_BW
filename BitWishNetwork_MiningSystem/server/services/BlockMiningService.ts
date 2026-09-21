@@ -114,6 +114,22 @@ export class BlockMiningService {
             const newBlock = await bwChainCore.createBlock(walletAddress);
             const currentHeight = newBlock.header.blockHeight || 1;
 
+            // ══════════════════════════════════════════════════════════════════════════
+            // [2차 수복 보강] Mongoose 커넥션을 통해 MongoDB bitwish_network.blocks 컬렉션에
+            //                채굴된 물리 블록을 직통으로 100% 영구 적재 및 갱신 보장
+            // ══════════════════════════════════════════════════════════════════════════
+            const _blocksColl = _networkDb.collection('blocks');
+            await _blocksColl.replaceOne(
+                { blockHeight: currentHeight },
+                {
+                    blockHeight: currentHeight,
+                    data: typeof newBlock.toJSON === 'function' ? newBlock.toJSON() : newBlock,
+                    timestamp: Date.now()
+                },
+                { upsert: true }
+            );
+            console.log(`📦 [DB 영구 적재 완율] 물리 블록 #${currentHeight} Mongoose 직통 적재 성공!`);
+
             // [채굴 증명 및 발행 트랜잭션 비동기 보존]
             (async () => {
                 try {
