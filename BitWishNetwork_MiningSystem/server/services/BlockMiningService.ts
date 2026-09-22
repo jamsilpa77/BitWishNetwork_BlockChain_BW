@@ -121,15 +121,21 @@ export class BlockMiningService {
             const _nextExactHeight = _currentBlockCount + 1;
             bwChainCore.currentBlockHeight = _nextExactHeight - 1;
 
+            // ══════════════════════════════════════════════════════════════════════════
+            // [6차 초정밀 수복] DB 구형 유령 데이터 자동 청소 엔진
+            // 신규 블록 적재 전 동일 높이 이상의 구형 유령 데이터를 사전에 자동 청소하여 덮어쓰기 방지
+            // ══════════════════════════════════════════════════════════════════════════
+            const _blocksColl = _networkDb.collection('blocks');
+            await _blocksColl.deleteMany({ blockHeight: { $gte: _nextExactHeight } });
+
             const newBlock = await bwChainCore.createBlock(walletAddress);
             newBlock.header.blockHeight = _nextExactHeight;
             const currentHeight = _nextExactHeight;
 
             // ══════════════════════════════════════════════════════════════════════════
             // [DB 직통 신규 적재 (INSERT)]
-            // 기존 7,783번대 유산 문서를 덮어쓰지 않고, exact #7,501번 신규 문서를 DB에 직통 추가
+            // 기존 유산 문서를 덮어쓰지 않고, exact 신규 문서를 DB에 직통 추가
             // ══════════════════════════════════════════════════════════════════════════
-            const _blocksColl = _networkDb.collection('blocks');
             await _blocksColl.replaceOne(
                 { blockHeight: currentHeight },
                 {
