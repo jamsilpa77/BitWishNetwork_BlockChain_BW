@@ -113,23 +113,21 @@ export class BlockMiningService {
             }
 
             // ══════════════════════════════════════════════════════════════════════════
-            // [3차 수복 핵심] DB 최고 블록 높이 실시간 동적 감지 ➔ 코어 엔진 높이 자동 동기화
-            // 하드코딩 0% : DB의 최상단 블록 번호를 100% 실시간 동적 읽기
+            // [4차 초정밀 수복] 실재 PoW 물리 블록 문서 개수 연동 직통 높이 지정 엔진
+            // 과거 파편화된 유산 인덱스(#7,782+) 오독 원천 차단:
+            // 신규 생성 블록 높이는 100% "현재 DB 실재 물리 문서 개수(_currentBlockCount) + 1" 로 직통 지정
+            // 예: 현재 DB 문서 7,500개 ➔ 다음 생성 블록은 무조건 exact #7,501번!
             // ══════════════════════════════════════════════════════════════════════════
-            const _lastBlock = await _networkDb.collection('blocks').findOne({}, { sort: { blockHeight: -1 } });
-            const _maxDbHeight = _lastBlock ? (_lastBlock.blockHeight || _lastBlock.data?.header?.blockHeight || 0) : 0;
-
-            if (_maxDbHeight > (bwChainCore.currentBlockHeight || 0)) {
-                bwChainCore.currentBlockHeight = _maxDbHeight;
-                console.log(`🔗 [코어 높이 동적 매핑] DB 최고 블록(#${_maxDbHeight}) ➔ 코어 엔진 동기화 완료`);
-            }
+            const _nextExactHeight = _currentBlockCount + 1;
+            bwChainCore.currentBlockHeight = _nextExactHeight - 1;
 
             const newBlock = await bwChainCore.createBlock(walletAddress);
-            const currentHeight = newBlock.header.blockHeight || 1;
+            newBlock.header.blockHeight = _nextExactHeight;
+            const currentHeight = _nextExactHeight;
 
             // ══════════════════════════════════════════════════════════════════════════
-            // [2차 수복 보강] Mongoose 커넥션을 통해 MongoDB bitwish_network.blocks 컬렉션에
-            //                채굴된 물리 블록을 직통으로 100% 영구 적재 및 갱신 보장
+            // [DB 직통 신규 적재 (INSERT)]
+            // 기존 7,783번대 유산 문서를 덮어쓰지 않고, exact #7,501번 신규 문서를 DB에 직통 추가
             // ══════════════════════════════════════════════════════════════════════════
             const _blocksColl = _networkDb.collection('blocks');
             await _blocksColl.replaceOne(
@@ -141,7 +139,7 @@ export class BlockMiningService {
                 },
                 { upsert: true }
             );
-            console.log(`📦 [DB 영구 적재 완율] 물리 블록 #${currentHeight} Mongoose 직통 적재 성공!`);
+            console.log(`📦 [DB 영구 적재] 물리 블록 #${currentHeight} Mongoose 직통 신규 적재 성공!`);
 
             // [채굴 증명 및 발행 트랜잭션 비동기 보존]
             (async () => {
