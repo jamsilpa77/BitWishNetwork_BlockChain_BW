@@ -20,6 +20,8 @@ import { BlockMiningService } from '../services/BlockMiningService';
 Decimal.set({ precision: 50 });
 
 export class SettlementWorker {
+    private isBlockSyncRunning: boolean = false;
+
     constructor() {
         console.log('⚙️ [SettlementWorker] Mongoose 무인 정산 및 타임락 오토메이션 엔진 기동 완료');
         this.initializeMidnightPatrol();
@@ -34,10 +36,16 @@ export class SettlementWorker {
     private initializeGlobalBlockHeartbeat(): void {
         console.log('💓 [SettlementWorker] 백엔드 오토 하트비트 타이머(1:1 칼동기화 엔진) 기동 완료');
         setInterval(async () => {
+            if (this.isBlockSyncRunning) {
+                return;
+            }
+            this.isBlockSyncRunning = true;
             try {
                 await BlockMiningService.syncGlobalBlocks();
             } catch (error) {
                 console.error('[Heartbeat Engine Error] 블록 무인 동기화 감시 예외 발생:', error);
+            } finally {
+                this.isBlockSyncRunning = false;
             }
         }, 10000); // 10초 주기 정밀 체크
     }

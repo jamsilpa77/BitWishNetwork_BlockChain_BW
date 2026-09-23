@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { splitFee64 } from '../utils/decimalUtil';
 import Decimal from 'decimal.js';
+import { BitWishBlock } from '../../../BitWishNetwork_BlockChain/src/core/BitWishBlock';
 
 export interface BlockMiningResult {
     success: boolean;
@@ -14,6 +15,9 @@ export interface BlockMiningResult {
 
 export class BlockMiningService {
 
+    // [순차 마이닝 큐 락] 동시 마이닝 요청 시 블록 생성 파이프라인 순차성 보장
+    private static miningQueueLock: Promise<void> = Promise.resolve();
+
     /**
      * [마이닝 블록 생성 및 수수료 즉시 분배 실행 코어]
      * 마이닝 버튼이 트리거되면 호출되어 블록을 적재하고 장부를 업데이트합니다.
@@ -21,6 +25,22 @@ export class BlockMiningService {
      * @param session 단일 DB 트랜잭션 보장을 위한 몽구스 세션 (선택 사항)
      */
     public static async onMiningBlock(walletAddress: string, session?: any): Promise<BlockMiningResult> {
+        const previousLock = BlockMiningService.miningQueueLock;
+        let resolveLock: () => void;
+        BlockMiningService.miningQueueLock = new Promise<void>((res) => { resolveLock = res; });
+
+        try {
+            await previousLock;
+            return await BlockMiningService.executeMiningBlock(walletAddress, session);
+        } finally {
+            resolveLock!();
+        }
+    }
+
+    /**
+     * [마이닝 실행 본체 - 2대 원칙 완벽 준수 코어 파이프라인]
+     */
+    private static async executeMiningBlock(walletAddress: string, session?: any): Promise<BlockMiningResult> {
         try {
             // ══════════════════════════════════════════════════════════════════════════
             // [절대 상한선 가드 — Global Cap Guard]
@@ -106,46 +126,42 @@ export class BlockMiningService {
             // [가드 종료 — 이하 기존 블록 생성 로직 100% 원형 유지]
             // ══════════════════════════════════════════════════════════════════════════
 
-            // 1단계: 블록체인 메인넷 코어를 호출하여 새 PoW 블록을 bitwish_network.blocks 컬렉션에 생성 및 저장
+            // 1단계: 블록체인 메인넷 코어를 호출하여 새 PoW 블록을 생성 및 체인 연결
             const bwChainCore = (global as any).bwChainCore || require('../index').bwChainCore;
             if (!bwChainCore) {
                 throw new Error("BitWishBlockchain Core Engine is not initialized yet globally!");
             }
 
             // ══════════════════════════════════════════════════════════════════════════
-            // [4차 초정밀 수복] 실재 PoW 물리 블록 문서 개수 연동 직통 높이 지정 엔진
-            // 과거 파편화된 유산 인덱스(#7,782+) 오독 원천 차단:
-            // 신규 생성 블록 높이는 100% "현재 DB 실재 물리 문서 개수(_currentBlockCount) + 1" 로 직통 지정
-            // 예: 현재 DB 문서 7,500개 ➔ 다음 생성 블록은 무조건 exact #7,501번!
+            // [원칙 1 준수] DB 최고 블록 로드 시 정식 BitWishBlock.fromJSON() 역직렬화 사용
             // ══════════════════════════════════════════════════════════════════════════
-            const _nextExactHeight = _currentBlockCount + 1;
-            bwChainCore.currentBlockHeight = _nextExactHeight - 1;
+            const _lastBlockDoc = await _networkDb.collection('blocks').findOne({}, { sort: { blockHeight: -1 } });
+            if (_lastBlockDoc) {
+                const _lastBlockData = _lastBlockDoc.data || _lastBlockDoc;
+                const _maxDbHeight = _lastBlockDoc.blockHeight || _lastBlockData.header?.blockHeight || 0;
+
+                if (_maxDbHeight > (bwChainCore.currentBlockHeight || 0)) {
+                    bwChainCore.currentBlockHeight = _maxDbHeight;
+                    console.log(`🔗 [코어 높이 동적 매핑] DB 최고 블록(#${_maxDbHeight}) ➔ 코어 엔진 동기화 완료`);
+                }
+
+                if (!bwChainCore.blocks.has(_maxDbHeight)) {
+                    try {
+                        const _restoredBlock = BitWishBlock.fromJSON(_lastBlockData);
+                        bwChainCore.blocks.set(_maxDbHeight, _restoredBlock);
+                        console.log(`📦 [정식 역직렬화] DB 최고 블록(#${_maxDbHeight}) BitWishBlock 인스턴스 메모리 적재 성공!`);
+                    } catch (_err) {
+                        console.error(`⚠️ [역직렬화 복원 경고] DB 최고 블록(#${_maxDbHeight}) 복원 중 예외:`, _err);
+                    }
+                }
+            }
 
             // ══════════════════════════════════════════════════════════════════════════
-            // [6차 초정밀 수복] DB 구형 유령 데이터 자동 청소 엔진
-            // 신규 블록 적재 전 동일 높이 이상의 구형 유령 데이터를 사전에 자동 청소하여 덮어쓰기 방지
+            // [원칙 2 준수] 정식 createBlock() / addBlock() 코어 파이프라인 100% 호출
+            // RAW DB 조작(replaceOne)을 전면 제거하고 엔진 내장 수명주기로 저장 처리
             // ══════════════════════════════════════════════════════════════════════════
-            const _blocksColl = _networkDb.collection('blocks');
-            await _blocksColl.deleteMany({ blockHeight: { $gte: _nextExactHeight } });
-
-            const newBlock = await bwChainCore.createBlock(walletAddress);
-            newBlock.header.blockHeight = _nextExactHeight;
-            const currentHeight = _nextExactHeight;
-
-            // ══════════════════════════════════════════════════════════════════════════
-            // [DB 직통 신규 적재 (INSERT)]
-            // 기존 유산 문서를 덮어쓰지 않고, exact 신규 문서를 DB에 직통 추가
-            // ══════════════════════════════════════════════════════════════════════════
-            await _blocksColl.replaceOne(
-                { blockHeight: currentHeight },
-                {
-                    blockHeight: currentHeight,
-                    data: typeof newBlock.toJSON === 'function' ? newBlock.toJSON() : newBlock,
-                    timestamp: Date.now()
-                },
-                { upsert: true }
-            );
-            console.log(`📦 [DB 영구 적재] 물리 블록 #${currentHeight} Mongoose 직통 신규 적재 성공!`);
+            const newBlock: BitWishBlock = await bwChainCore.createBlock(walletAddress);
+            const currentHeight = newBlock.header.blockHeight || 1;
 
             // [채굴 증명 및 발행 트랜잭션 비동기 보존]
             (async () => {
