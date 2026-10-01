@@ -573,19 +573,14 @@ const MiningPage: React.FC = () => {
           {/* 가맹점 보너스 */}
           <div className="bonus-card partner">
             <div className="bonus-icon">🏪</div>
-            <h3>{getTranslation('bonus.partner.title') || '가맹점 등록 보너스'}</h3>
-            <p className="bonus-desc">{getTranslation('bonus.partner.desc') || '가맹점 승인 시 채굴률 +30% 가산 및 일시 보너스'}</p>
+            <h3>{getTranslation('bonus.partner.title')}</h3>
+            <p className="bonus-desc">{getTranslation('bonus.partner.desc')}</p>
             <div className="bonus-status">
               {partnerBonus?.status === 'APPROVED' ? (
-                <span className="status-active">✨ 가맹점 승인 완료 (+30%)</span>
+                <span className="status-active">✨ {getTranslation('bonus.partner.active')} (125%)</span>
               ) : (
-                <button
-                  type="button"
-                  className="bonus-action-button"
-                  onClick={handlePartnerBonus}
-                  style={{ cursor: 'pointer', zIndex: 10 }}
-                >
-                  🏪 가맹점 등록 신청하기 →
+                <button className="bonus-action-button" onClick={handlePartnerBonus}>
+                  {getTranslation('bonus.partner.action')}
                 </button>
               )}
             </div>

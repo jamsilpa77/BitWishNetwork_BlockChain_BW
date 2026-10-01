@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import { splitFee64 } from '../utils/decimalUtil';
 import Decimal from 'decimal.js';
-import { BitWishBlock } from '../../../BitWishNetwork_BlockChain/src/core/BitWishBlock';
 
 export interface BlockMiningResult {
     success: boolean;
@@ -15,9 +14,6 @@ export interface BlockMiningResult {
 
 export class BlockMiningService {
 
-    // [순차 마이닝 큐 락] 동시 마이닝 요청 시 블록 생성 파이프라인 순차성 보장
-    private static miningQueueLock: Promise<void> = Promise.resolve();
-
     /**
      * [마이닝 블록 생성 및 수수료 즉시 분배 실행 코어]
      * 마이닝 버튼이 트리거되면 호출되어 블록을 적재하고 장부를 업데이트합니다.
@@ -25,22 +21,6 @@ export class BlockMiningService {
      * @param session 단일 DB 트랜잭션 보장을 위한 몽구스 세션 (선택 사항)
      */
     public static async onMiningBlock(walletAddress: string, session?: any): Promise<BlockMiningResult> {
-        const previousLock = BlockMiningService.miningQueueLock;
-        let resolveLock: () => void;
-        BlockMiningService.miningQueueLock = new Promise<void>((res) => { resolveLock = res; });
-
-        try {
-            await previousLock;
-            return await BlockMiningService.executeMiningBlock(walletAddress, session);
-        } finally {
-            resolveLock!();
-        }
-    }
-
-    /**
-     * [마이닝 실행 본체 - 2대 원칙 완벽 준수 코어 파이프라인]
-     */
-    private static async executeMiningBlock(walletAddress: string, session?: any): Promise<BlockMiningResult> {
         try {
             // ══════════════════════════════════════════════════════════════════════════
             // [절대 상한선 가드 — Global Cap Guard]
@@ -50,7 +30,7 @@ export class BlockMiningService {
             // 집계 공식: stats.ts / auditAndSyncGlobalBlocks()와 100% 동일한 공식 적용
             // ══════════════════════════════════════════════════════════════════════════
             const _networkDb = mongoose.connection.useDb('bitwish_network');
-            const _miningDb = mongoose.connection.useDb('bitwish_mining');
+            const _miningDb = mongoose.connection.useDb('bitwish_mining');// [원자적 동기화 락] 동시성 가입 폭주 시 중복 syncGlobalBlocks() 난사 원천 차단 Mutex Lock
 
             // [가드 1] 현재 DB 물리 블록 수 조회
             const _currentBlockCount = await _networkDb.collection('blocks').countDocuments({});
@@ -126,42 +106,42 @@ export class BlockMiningService {
             // [가드 종료 — 이하 기존 블록 생성 로직 100% 원형 유지]
             // ══════════════════════════════════════════════════════════════════════════
 
-            // 1단계: 블록체인 메인넷 코어를 호출하여 새 PoW 블록을 생성 및 체인 연결
+            // 1단계: 블록체인 메인넷 코어를 호출하여 새 PoW 블록을 bitwish_network.blocks 컬렉션에 생성 및 저장
             const bwChainCore = (global as any).bwChainCore || require('../index').bwChainCore;
             if (!bwChainCore) {
                 throw new Error("BitWishBlockchain Core Engine is not initialized yet globally!");
             }
 
             // ══════════════════════════════════════════════════════════════════════════
-            // [원칙 1 준수] DB 최고 블록 로드 시 정식 BitWishBlock.fromJSON() 역직렬화 사용
+            // [3차 수복 핵심] DB 최고 블록 높이 실시간 동적 감지 ➔ 코어 엔진 높이 자동 동기화
+            // 하드코딩 0% : DB의 최상단 블록 번호를 100% 실시간 동적 읽기
             // ══════════════════════════════════════════════════════════════════════════
-            const _lastBlockDoc = await _networkDb.collection('blocks').findOne({}, { sort: { blockHeight: -1 } });
-            if (_lastBlockDoc) {
-                const _lastBlockData = _lastBlockDoc.data || _lastBlockDoc;
-                const _maxDbHeight = _lastBlockDoc.blockHeight || _lastBlockData.header?.blockHeight || 0;
+            const _lastBlock = await _networkDb.collection('blocks').findOne({}, { sort: { blockHeight: -1 } });
+            const _maxDbHeight = _lastBlock ? (_lastBlock.blockHeight || _lastBlock.data?.header?.blockHeight || 0) : 0;
 
-                if (_maxDbHeight > (bwChainCore.currentBlockHeight || 0)) {
-                    bwChainCore.currentBlockHeight = _maxDbHeight;
-                    console.log(`🔗 [코어 높이 동적 매핑] DB 최고 블록(#${_maxDbHeight}) ➔ 코어 엔진 동기화 완료`);
-                }
-
-                if (!bwChainCore.blocks.has(_maxDbHeight)) {
-                    try {
-                        const _restoredBlock = BitWishBlock.fromJSON(_lastBlockData);
-                        bwChainCore.blocks.set(_maxDbHeight, _restoredBlock);
-                        console.log(`📦 [정식 역직렬화] DB 최고 블록(#${_maxDbHeight}) BitWishBlock 인스턴스 메모리 적재 성공!`);
-                    } catch (_err) {
-                        console.error(`⚠️ [역직렬화 복원 경고] DB 최고 블록(#${_maxDbHeight}) 복원 중 예외:`, _err);
-                    }
-                }
+            if (_maxDbHeight > (bwChainCore.currentBlockHeight || 0)) {
+                bwChainCore.currentBlockHeight = _maxDbHeight;
+                console.log(`🔗 [코어 높이 동적 매핑] DB 최고 블록(#${_maxDbHeight}) ➔ 코어 엔진 동기화 완료`);
             }
 
-            // ══════════════════════════════════════════════════════════════════════════
-            // [원칙 2 준수] 정식 createBlock() / addBlock() 코어 파이프라인 100% 호출
-            // RAW DB 조작(replaceOne)을 전면 제거하고 엔진 내장 수명주기로 저장 처리
-            // ══════════════════════════════════════════════════════════════════════════
-            const newBlock: BitWishBlock = await bwChainCore.createBlock(walletAddress);
+            const newBlock = await bwChainCore.createBlock(walletAddress);
             const currentHeight = newBlock.header.blockHeight || 1;
+
+            // ══════════════════════════════════════════════════════════════════════════
+            // [2차 수복 보강] Mongoose 커넥션을 통해 MongoDB bitwish_network.blocks 컬렉션에
+            //                채굴된 물리 블록을 직통으로 100% 영구 적재 및 갱신 보장
+            // ══════════════════════════════════════════════════════════════════════════
+            const _blocksColl = _networkDb.collection('blocks');
+            await _blocksColl.replaceOne(
+                { blockHeight: currentHeight },
+                {
+                    blockHeight: currentHeight,
+                    data: typeof newBlock.toJSON === 'function' ? newBlock.toJSON() : newBlock,
+                    timestamp: Date.now()
+                },
+                { upsert: true }
+            );
+            console.log(`📦 [DB 영구 적재 완율] 물리 블록 #${currentHeight} Mongoose 직통 적재 성공!`);
 
             // [채굴 증명 및 발행 트랜잭션 비동기 보존]
             (async () => {
