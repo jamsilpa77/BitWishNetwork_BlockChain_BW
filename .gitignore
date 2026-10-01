@@ -68,4 +68,4 @@ audit_report_final.txt
 audit_final.txt
 output.txt
 server_log.txt
-.aider*
+.aider.tags.cache.v4
