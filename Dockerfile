@@ -1,13 +1,16 @@
 FROM node:18-alpine
 WORKDIR /app
 
-# 레포지토리 전체 복사
+# 1. 레포지토리 전체 파일을 컨테이너 루트(/app)로 복사합니다.
 COPY . .
 
-# 패키지 설치
-RUN npm install --prefix BitWishNetwork_MiningSystem --legacy-peer-deps
+# 2. 마이닝 시스템 폴더 내부로 이동합니다.
+WORKDIR /app/BitWishNetwork_MiningSystem
+
+# 3. 해당 폴더 안에서 의존성을 설치합니다.
+RUN npm install --legacy-peer-deps
 
 EXPOSE 5000
 
-# 하위 폴더로 이동(WORKDIR)하지 않고 루트(/app)에서 직접 ts-node 실행
-CMD ["npx", "ts-node", "--project", "BitWishNetwork_MiningSystem/server/tsconfig.json", "BitWishNetwork_MiningSystem/server/index.ts"]
+# 4. 서버를 실행합니다.
+CMD ["npm", "run", "server"]
