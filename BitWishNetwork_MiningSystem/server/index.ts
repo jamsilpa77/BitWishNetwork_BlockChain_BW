@@ -96,7 +96,8 @@ async function autoHealBlockTransactions() {
         const networkDb = mongoose.connection.useDb('bitwish_network');
 
         // 물리 블록 컬렉션에서 실제 채굴 블록 복원 (가상 100000번대/200000번대 허수 블록 생성 파기)
-        const blocks = await networkDb.collection('blocks').find({}).sort({ blockHeight: 1 }).toArray();
+        const cursor = networkDb.collection('blocks').find({});
+        const blocks = await cursor.sort({ blockHeight: 1 }).toArray();
         let restoredMinedCount = 0;
 
         for (const blockContainer of blocks) {
