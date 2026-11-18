@@ -624,7 +624,7 @@ export class BitWishBlockchain extends EventEmitter {
     try {
       // MongoDB 연결 확인
       const { MongoClient } = require('mongodb');
-      const client = new MongoClient('mongodb://localhost:27017');
+      const client = new MongoClient(process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017');
 
       await client.connect();
       const db = client.db('bitwish_network');
@@ -667,7 +667,7 @@ export class BitWishBlockchain extends EventEmitter {
   private async saveToDatabase(): Promise<void> {
     try {
       const { MongoClient } = require('mongodb');
-      const client = new MongoClient('mongodb://localhost:27017');
+      const client = new MongoClient(process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017');
 
       await client.connect();
       const db = client.db('bitwish_network');
@@ -798,7 +798,7 @@ export class BitWishBlockchain extends EventEmitter {
   private async saveNetworkStats(): Promise<void> {
     try {
       const { MongoClient } = require('mongodb');
-      const client = new MongoClient('mongodb://localhost:27017');
+      const client = new MongoClient(process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017');
       await client.connect();
       const db = client.db('bitwish_network');
       const statsCollection = db.collection('network_stats');
@@ -827,7 +827,7 @@ export class BitWishBlockchain extends EventEmitter {
   private async loadNetworkStats(): Promise<{ ecosystemFund: Decimal, foundationFund: Decimal, totalAccumulatedFees: Decimal, adminMasterAddress: string | null, adminHardwareKeyID: string | null } | null> {
     try {
       const { MongoClient } = require('mongodb');
-      const client = new MongoClient('mongodb://localhost:27017');
+      const client = new MongoClient(process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017');
       await client.connect();
       const db = client.db('bitwish_network');
       const statsCollection = db.collection('network_stats');
