@@ -2,7 +2,9 @@
  * BitWishNetwork Mining System
  * Backend Server Entry Point
  */
-
+// 코드 맨 처음에 강제로 환경 변수 매핑 고정하기
+process.env.MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://mongo:XhyMbCpuyuyCrKjpIblTbbbwLjhFuoOs@mongodb.railway.internal:27017';
+process.env.MONGODB_URI = process.env.MONGO_URI;
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
