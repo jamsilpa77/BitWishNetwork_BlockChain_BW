@@ -12,7 +12,7 @@ import axios, { AxiosInstance } from 'axios';
 
 // 환경 변수에서 API URL 로드 (프로덕션: 상대경로 '/api', 개발: 'http://localhost:5001/api')
 // 프로덕션 빌드 시 Nginx 리버스 프록시를 통해 동일 도메인에서 API를 서빙하므로 상대경로 사용
-let API_BASE_URL = '/api';
+let API_BASE_URL = 'https://bitwishnetworkblockchainbw-production.up.railway.app';
 try {
     // @ts-ignore
     if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_URL) {
