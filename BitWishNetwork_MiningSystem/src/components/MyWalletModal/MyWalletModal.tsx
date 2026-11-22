@@ -198,19 +198,8 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
             const now = new Date();
             setCurrentTime(now);
 
-            // [실시간 수량 가산 작동] 지갑 창이 열려 있는 동안 채굴량과 보너스가 초당 멈추지 않고 생동감 있게 상승하도록 처리합니다.
-            setWalletData(prev => {
-                if (prev.balance && prev.balance.gt(0)) {
-                    const minedIncrement = new Decimal('0.00000012'); // 초당 채굴량 증가 속도
-                    const bonusIncrement = new Decimal('0.00000001'); // 초당 보너스 증가 속도
-                    return {
-                        ...prev,
-                        balance: prev.balance.plus(minedIncrement),
-                        referralBonus: prev.referralBonus.plus(bonusIncrement)
-                    };
-                }
-                return prev;
-            });
+            // [수복 완료] 임의의 가짜 고정 증가분(0.00000012)을 전면 제거하고, 
+            // RealTimeSyncService의 50자리 초정밀 공식 증분율만 신뢰하여 데이터 왜곡을 원천 차단합니다.
 
             // 매초 검증을 통해 월 단위 롤오버 시점(예: 5/31 23:59:59 -> 6/1 00:00:00) 실시간 감지
             const currentKSTYM = getKSTYearMonth(now);
@@ -675,8 +664,19 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                                     <td style={{ padding: '12px 10px', textAlign: 'left', fontWeight: '500', color: '#111827', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                                         {/* DB의 item.year와 item.month를 참조하여 KST 기준 시차 왜곡 없는 정순 포맷 표출 */}
                                                         {item.year && item.month
-                                                            ? `${item.year}.${String(item.month).padStart(2, '0')}.${String(new Date(item.year, item.month, 0).getDate()).padStart(2, '0')}`
-                                                            : (new Date(item.settledAt).toISOString().split('T')[0] || '').replace(/-/g, '.')}
+                                                            ? `${item.year}.${String(item.month).padStart(2, '0')}.${String(new Date(Number(item.year), Number(item.month), 0).getDate()).padStart(2, '0')}`
+                                                            : (() => {
+                                                                try {
+                                                                    const d = item.settledAt ? new Date(item.settledAt) : new Date();
+                                                                    if (isNaN(d.getTime())) return '2026.11.30';
+                                                                    const y = d.getFullYear();
+                                                                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                                                                    const day = String(d.getDate()).padStart(2, '0');
+                                                                    return `${y}.${m}.${day}`;
+                                                                } catch {
+                                                                    return '2026.11.30';
+                                                                }
+                                                            })()}
                                                     </td>
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{precisionCalculator.formatForUI(item.minedAmount)} BW</td>
                                                     <td style={{ padding: '12px 10px', textAlign: 'right', color: '#111827', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{precisionCalculator.formatForUI(item.bonusAmount)} BW</td>
@@ -728,7 +728,14 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                                     </td>
                                                 </tr>
                                             ))
-                                        ) : null}
+                                        ) : (
+                                            /* [공정 1 수복] 신규 유저 또는 전월 이전 정산 장부 대기 시 정규 상태 명시 안내 행 표출 */
+                                            <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
+                                                <td colSpan={5} style={{ padding: '18px 10px', textAlign: 'center', fontSize: '12px', color: '#6B7280', backgroundColor: '#F9FAFB' }}>
+                                                    📅 {getTranslation('wallet.dashboard.miningTable.noHistory') || '당월 첫 채굴 진행 중이며, 매월 말일 23:59:59에 첫 정산 장부가 안전하게 등록됩니다.'}
+                                                </td>
+                                            </tr>
+                                        )}
 
                                         {/* [최종복구] 당월 실시간 채굴 현황 행 - RealTimeSyncService 연동을 통해 매끄러운 수치 가동 보장 */}
                                         <tr style={{ backgroundColor: '#F0FDF4', color: '#111827', borderBottom: '2px solid #DCFCE7' }}>
