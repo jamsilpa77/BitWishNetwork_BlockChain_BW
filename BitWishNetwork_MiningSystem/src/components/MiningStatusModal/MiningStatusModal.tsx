@@ -56,6 +56,8 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
     const [miningTime, setMiningTime] = useState<number>(0);
     // [최종 수복] 엔진 재가동 없이 최신 데이터를 주입하기 위한 레퍼런스 통로
     const totalSettledAmountRef = useRef<Decimal>(new Decimal(0));
+    // [공정 1-3] 절대 시간 기준 타이머를 위한 마이닝 시작 시각 레퍼런스 (밀리초 단위)
+    const miningStartTimeRef = useRef<number>(0);
     const [accumulatedReward, setAccumulatedReward] = useState<Decimal>(new Decimal(0));
     const [totalSettledAmount, setTotalSettledAmount] = useState<Decimal>(new Decimal(0));
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState<boolean>(false);
@@ -193,8 +195,10 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
                         setIsMining(userData.miningState.isMining);
                         if (userData.miningState.isMining && userData.miningState.miningStartTime) {
                             const startTime = new Date(userData.miningState.miningStartTime).getTime();
-                            const diffSeconds = Math.floor((Date.now() - startTime) / 1000);
-                            setMiningTime(diffSeconds > 0 ? diffSeconds : 0);
+                            // [공정 1-3] 절대 시간 레퍼런스에 시작 시각 박제
+                            miningStartTimeRef.current = startTime;
+                            const diffSeconds = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+                            setMiningTime(diffSeconds);
                         }
 
                         // [4차 최종 수복] 서버 전체 누계와 현재 티커 위치의 간극을 '기준점'으로 박제
@@ -267,18 +271,20 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
         };
     }, [isOpen, walletAddress, realTimeSyncService, referralBonusService]);
 
-    // 진행 시간(Mining Time) 관리 전용 타이머
+    // [공정 1-3 수복] 절대 시간 기준 타이머 (prev + 1 누적 지연 완전 박멸)
+    // Date.now() - miningStartTimeRef 로 매 tick마다 실제 경과 초를 직접 산출
     useEffect(() => {
         let timerId: NodeJS.Timeout;
-        if (isMining) {
+        if (isMining && miningStartTimeRef.current > 0) {
             timerId = setInterval(() => {
-                setMiningTime(prev => prev + 1);
+                const exactElapsedSeconds = Math.max(0, Math.floor((Date.now() - miningStartTimeRef.current) / 1000));
+                setMiningTime(exactElapsedSeconds);
             }, 1000);
         }
         return () => {
             if (timerId) clearInterval(timerId);
         };
-    }, [isMining, miningTime, walletAddress]);
+    }, [isMining]);
 
     // [신규] 마이닝 상태 변화 시 서비스 티커 제어
     useEffect(() => {
@@ -313,6 +319,8 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
         try {
             const result = await apiService.startMining(walletAddress);
             if (result && result.success) {
+                // [공정 1-3] 마이닝 시작 시각을 절대 시간 레퍼런스에 박제
+                miningStartTimeRef.current = Date.now();
                 setIsMining(true);
                 setMiningTime(0);
 

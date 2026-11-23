@@ -5,9 +5,6 @@ import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
 import MonthlySettlement from '../models/MonthlySettlement';
 import Decimal from 'decimal.js';
-import { bwChainCore } from '../index'; // 결합된 엔진 호출
-import fs from 'fs';
-import path from 'path';
 
 const router = express.Router();
 
@@ -176,33 +173,6 @@ router.get('/blocks', async (req, res) => {
         console.error('Explorer Blocks API Error:', error);
         res.status(500).json({ success: false, message: '블록 데이터를 불러오는 데 실패했습니다.' });
     }
-});
-
-router.post('/transfer', async (req, res) => {
-    const { fromAddress, toAddress, amount } = req.body;
-
-    // 1. [구버전 마스터 권한] Vultr(백엔드)의 referrals.json을 읽어 현재 지갑 잔액 확보
-    const jsonPath = path.resolve(__dirname, '../../database/referrals.json');
-    const systemWallets = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-
-    const currentBalance = systemWallets[fromAddress]?.balance || '0';
-
-    // 2. [신버전 엔진 위임] 숫자 깎기 전에 Phase 4 코어에게 3~4초 검증 및 장부 채굴 마이닝을 지시
-    const engineResult = await bwChainCore.verifyAndMineTransaction(fromAddress, toAddress, amount, currentBalance);
-
-    if (!engineResult.success) {
-        // 블록체인 엔진이 거부하면 송금 원천 차단 (위변조 100% 방어)
-        return res.status(400).json({ error: engineResult.message });
-    }
-
-    // 3. [구버전 안전 보존 저장] 코어 엔진이 '성공'을 뱉어내면 그제야 기존처럼 안전하게 JSON 숫자만 갱신
-    systemWallets[fromAddress].balance = (parseFloat(currentBalance) - parseFloat(amount)).toString();
-    systemWallets[toAddress].balance = (parseFloat(systemWallets[toAddress].balance || '0') + parseFloat(amount)).toString();
-
-    // 엔진의 쓰레기 해시는 분리하고 순수 구버전 방식 JSON만 저장! (추천 보너스 등 생태계 파괴 0%)
-    fs.writeFileSync(jsonPath, JSON.stringify(systemWallets, null, 2), 'utf8');
-
-    return res.json({ success: true, message: "3~4초 무결점 블록체인 마이닝 승인 및 P2P 전송 완료!" });
 });
 
 export default router;

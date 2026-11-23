@@ -355,6 +355,9 @@ export class LanguageManager {
             statusUnlocked: '잠금 해제',
             statusWaitingKyc: 'KYC 대기',
             statusCompleted: '채굴마감',
+            statusWaiting: '채굴 준비중',
+            noHistory: '당월 첫 채굴 진행 중이며, 매월 말일 23:59:59에 첫 정산 장부가 안전하게 등록됩니다.',
+            guide: '📌 채굴 완료 보상은 투명성을 위해 즉시 장부에 안전하게 영구 기록되며, 매월 말일에 안전 마감 처리됩니다.'
           }
         },
         p2p: {
@@ -1020,7 +1023,9 @@ export class LanguageManager {
             statusUnlocked: 'Unlocked',
             statusWaitingKyc: 'WAITING KYC',
             statusCompleted: 'Mining Ended',
-            guide: '💡 On the 1st of every month at 00:00:00, the previous month\'s mining amount is added to the finalized list.'
+            statusWaiting: 'Waiting',
+            noHistory: 'First mining is in progress this month. The first settlement will be safely registered at 23:59:59 on the last day of each month.',
+            guide: '📌 Mining rewards are permanently and safely recorded in the ledger immediately for transparency, and are safely closed at the end of each month.'
           }
         },
         p2p: {
@@ -1600,7 +1605,9 @@ export class LanguageManager {
             statusUnlocked: 'ロック解除',
             statusWaitingKyc: 'KYC待機',
             statusCompleted: 'マイニング終了',
-            guide: '💡 毎月1日00:00:00に、前月のマイニング量が確定リストに追加されます。'
+            statusWaiting: 'マイニング準備中',
+            noHistory: '今月初のマイニングが進行中です。毎月末日23:59:59に初の精算帳簿が安全に登録されます。',
+            guide: '📌 マイニング報酬は透明性のため、即座に帳簿に安全に永久記録され、毎月末日に安全に締め処理されます。'
           }
         },
         p2p: {
@@ -2203,7 +2210,9 @@ export class LanguageManager {
             statusUnlocked: '解锁',
             statusWaitingKyc: 'KYC等待',
             statusCompleted: '挖矿结束',
-            guide: '💡 每月1日00:00:00，上个月的挖矿量将添加到最终列表中。'
+            statusWaiting: '挖矿准备中',
+            noHistory: '本月首次挖矿正在进行中。每月最后一天23:59:59将安全注册首次结算账簿。',
+            guide: '📌 挖矿奖励为了透明性，会立即安全永久记录在账簿中，并在每月最后一天安全结算处理。'
           }
         },
         p2p: {

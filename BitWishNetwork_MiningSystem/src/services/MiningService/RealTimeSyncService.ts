@@ -82,22 +82,28 @@ export class RealTimeSyncService {
     const perSecondRate = this.currentBaseRate.div(3600);
 
     // [Phase 1 Fixed] 지갑의 '추천보너스보관함(2%)'을 위한 별도 초당 증분율 추출
-    // 주의: totalRate는 최종합이므로, baseRate 기준을 0.25로 역산출하거나, 
-    // 서버가 주는 baseRate * referralBonusRate 공식 그대로 씁니다.
     const baseMiningRate = new Decimal(MINING_CONSTANTS.HOURLY_BASE_RATE || 0.25);
     const bonusPerSecondRate = baseMiningRate.mul(referralBonusRate).div(3600);
 
+    // [공정 1-3 수복] 절대 시간 기준 앵커 박제 — 누적 덧셈(current + perSecond) 완전 폐기
+    // 티커 시작 시점의 기존 누적값과 시작 시각을 고정하고,
+    // 매 tick마다 (경과 초 × 초당 채굴률)을 앵커에 더하여 시계와 1:1 칼동기화
+    const anchorIssued = new Decimal(this.realTimeStatus.currentIssued);
+    const anchorBonus = new Decimal(this.realTimeStatus.referralBonusStorage || 0);
+    const tickerStartTime = Date.now();
+
     this.miningTicker = setInterval(() => {
       if (this.realTimeStatus.currentIssued >= 0) {
-        // 1. 메인 채굴량 정밀 연산 및 업데이트
-        const current = new Decimal(this.realTimeStatus.currentIssued);
-        const next = current.plus(perSecondRate);
+        // [공정 1-3] 절대 경과 초 산출 (브라우저 setInterval 지연 완전 무시)
+        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - tickerStartTime) / 1000));
 
-        // 2. [Phase 1 Fixed] 2% 추천 보너스 실시간 카운팅 정밀 연산 및 업데이트
-        const currentBonus = new Decimal(this.realTimeStatus.referralBonusStorage || 0);
-        const nextBonus = currentBonus.plus(bonusPerSecondRate);
+        // 1. 메인 채굴량 = 앵커값 + (경과초 × 초당 채굴률) — 50자리 정밀 연산
+        const nextIssued = anchorIssued.plus(perSecondRate.mul(elapsedSeconds));
 
-        this.realTimeStatus.currentIssued = next.toNumber();
+        // 2. 추천 보너스 = 앵커값 + (경과초 × 보너스 초당률) — 50자리 정밀 연산
+        const nextBonus = anchorBonus.plus(bonusPerSecondRate.mul(elapsedSeconds));
+
+        this.realTimeStatus.currentIssued = nextIssued.toNumber();
         this.realTimeStatus.referralBonusStorage = nextBonus.toNumber();
         this.realTimeStatus.lastUpdate = new Date();
 
@@ -106,7 +112,7 @@ export class RealTimeSyncService {
       }
     }, 1000);
 
-    console.log('[RealTimeSync] 지갑/홈페이지 실시간 1초 카운팅 엔진(2% 보너스 포함) 가동 시작');
+    console.log('[RealTimeSync] [공정 1-3] 절대시간 기반 1초 카운팅 엔진(2% 보너스 포함) 가동 시작');
   }
 
   /**

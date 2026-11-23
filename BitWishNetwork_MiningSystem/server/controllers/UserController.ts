@@ -13,6 +13,7 @@ import User from '../models/User';
 import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
 import Decimal from 'decimal.js';
+import { BlockMiningService } from '../services/BlockMiningService';
 
 export class UserController {
 
@@ -288,6 +289,16 @@ export class UserController {
             await newUserMiningState.save();
             console.log(`[REFERRAL] New user 2% policy engine restored: ${newWalletAddress}`);
             console.log(`[REFERRAL] Process completed successfully`);
+
+            // [공정 1-1 수복] 추천인 가입 완료 즉시 2BW 발행 감지 -> 비동기 비차단 큐로 온체인 블록 주조 즉시 트리거!
+            setImmediate(async () => {
+                try {
+                    console.log(`⚡ [추천인 가입 온체인 직통] 부 1BW + 자 1BW 감지 -> 물리 블록 즉각 동기화 개시`);
+                    await BlockMiningService.auditAndSyncGlobalBlocks();
+                } catch (syncErr) {
+                    console.error('❌ [추천인 가입 온체인 블록 동기화 오류]:', syncErr);
+                }
+            });
         } catch (error) {
             console.error('[REFERRAL] Error:', error);
         }

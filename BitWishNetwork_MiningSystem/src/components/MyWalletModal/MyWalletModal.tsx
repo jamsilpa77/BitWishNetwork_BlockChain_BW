@@ -56,6 +56,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
         referralList?: any[];
         miningHistory?: any[];
         miningStartedAt: string;
+        isMining?: boolean;
     }>({
         balance: new Decimal(0),
         availableBalance: new Decimal(0),
@@ -67,7 +68,8 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
         myReferralCode: '',
         referralList: [],
         miningHistory: [],
-        miningStartedAt: ''
+        miningStartedAt: '',
+        isMining: false
     });
     const [viewMode, setViewMode] = useState<'dashboard' | 'otpSetup'>('dashboard');
     const [messageModal, setMessageModal] = useState<{
@@ -263,6 +265,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                     })),
                     // 백엔드가 완벽하게 정제/수복하여 보내준 전월의 기록 리스트 바인딩
                     miningHistory: (historyData as any).success ? (historyData as any).history : [],
+                    isMining: m?.isMining || false,
                     miningStartedAt: startedAtStr
                 } as any);
             }
@@ -732,7 +735,7 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                             /* [공정 1 수복] 신규 유저 또는 전월 이전 정산 장부 대기 시 정규 상태 명시 안내 행 표출 */
                                             <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
                                                 <td colSpan={5} style={{ padding: '18px 10px', textAlign: 'center', fontSize: '12px', color: '#6B7280', backgroundColor: '#F9FAFB' }}>
-                                                    📅 {getTranslation('wallet.dashboard.miningTable.noHistory') || '당월 첫 채굴 진행 중이며, 매월 말일 23:59:59에 첫 정산 장부가 안전하게 등록됩니다.'}
+                                                    📅 {(() => { const t = getTranslation('wallet.dashboard.miningTable.noHistory'); return (t && t !== 'wallet.dashboard.miningTable.noHistory') ? t : '당월 첫 채굴 진행 중이며, 매월 말일 23:59:59에 첫 정산 장부가 안전하게 등록됩니다.'; })()}
                                                 </td>
                                             </tr>
                                         )}
@@ -795,13 +798,22 @@ const MyWalletModal: React.FC<MyWalletModalProps> = ({
                                                 <span style={{ whiteSpace: 'nowrap' }}>{precisionCalculator.formatForUI(walletData.balance.plus(walletData.referralBonus))} BW</span>
                                             </td>
                                             <td style={{ padding: '12px 10px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
-                                                <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', animation: 'pulse 2s infinite', whiteSpace: 'nowrap', display: 'inline-block' }}>{getTranslation('wallet.dashboard.miningTable.statusMining')}</span>
+                                                {/* [공정 1-2 수복] isMining 상태값에 따른 완벽한 동적 상태 배지 표출 */}
+                                                {walletData.isMining ? (
+                                                    <span style={{ fontSize: '11px', backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', animation: 'pulse 2s infinite', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                                                        ⛏️ {(() => { const t = getTranslation('wallet.dashboard.miningTable.statusMining'); return (t && t !== 'wallet.dashboard.miningTable.statusMining') ? t : '채굴중'; })()}
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ fontSize: '11px', backgroundColor: '#FEF3C7', color: '#92400E', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                                                        ⏳ {(() => { const t = getTranslation('wallet.dashboard.miningTable.statusWaiting'); return (t && t !== 'wallet.dashboard.miningTable.statusWaiting') ? t : '채굴 준비중'; })()}
+                                                    </span>
+                                                )}
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
-                            <p style={{ marginTop: '10px', fontSize: '11px', color: '#666' }}>{getTranslation('wallet.dashboard.miningTable.guide') || '📌 채굴 완료 보상은 투명성을 위해 즉시 장부에 안전하게 영구 기록되며, 매월 말일에 안전 마감 처리됩니다.'}</p>
+                            <p style={{ marginTop: '10px', fontSize: '11px', color: '#666' }}>{(() => { const t = getTranslation('wallet.dashboard.miningTable.guide'); return (t && t !== 'wallet.dashboard.miningTable.guide') ? t : '📌 채굴 완료 보상은 투명성을 위해 즉시 장부에 안전하게 영구 기록되며, 매월 말일에 안전 마감 처리됩니다.'; })()}</p>
                         </div>
                     )}
                     {/* ═══════════════════════════════════════════════════════════════ */}

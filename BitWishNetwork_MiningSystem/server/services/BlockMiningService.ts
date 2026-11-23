@@ -78,15 +78,15 @@ export class BlockMiningService {
                 .plus(new Decimal(_bonusAgg[0]?.b || 0))
                 .plus(new Decimal(_bonusAgg[0]?.o || 0));
 
-            // 2-5. 최종 참값 발행량 정수 산출
+            // 2-5. 최종 참값 발행량 정수 산출 (제네시스 블록 1개 오프셋 필수 합산)
             const _totalSupply = _totalMined.plus(_totalSettled).plus(_totalBonus);
-            const _maxAllowedBlocks = _totalSupply.floor().toNumber();
+            const _maxAllowedBlocks = 1 + _totalSupply.floor().toNumber();
 
-            // [가드 판정] 현재 블록 수 >= 발행량 정수 → 블록 생성 원천 차단
+            // [가드 판정] 현재 블록 수 >= 목표 블록 수(1 + 발행량정수) → 블록 생성 원천 차단
             if (_currentBlockCount >= _maxAllowedBlocks) {
                 console.log(
                     `🛡️ [Global Cap Guard] 차단 — ` +
-                    `현재 블록(${_currentBlockCount}개) >= 발행량 정수(${_maxAllowedBlocks}개). ` +
+                    `현재 블록(${_currentBlockCount}개) >= 목표 블록 수(${_maxAllowedBlocks}개: 제네시스 1개 + 발행량 ${_totalSupply.floor().toNumber()}개). ` +
                     `다음 1BW 돌파 때까지 블록 생성 대기.`
                 );
                 return {
@@ -99,7 +99,7 @@ export class BlockMiningService {
 
             console.log(
                 `✅ [Global Cap Guard] 통과 — ` +
-                `블록(${_currentBlockCount}개) < 발행량 정수(${_maxAllowedBlocks}개). ` +
+                `현재 블록(${_currentBlockCount}개) < 목표 블록 수(${_maxAllowedBlocks}개: 제네시스 1개 + 발행량 ${_totalSupply.floor().toNumber()}개). ` +
                 `블록 생성 진행.`
             );
             // ══════════════════════════════════════════════════════════════════════════
@@ -307,13 +307,12 @@ export class BlockMiningService {
 
             // 총 실시간 발행 수량 (stats.ts와 동일 공식: MiningState + liveBoost + MonthlySettlement + BonusRecord)
             const totalSupplyDecimal = totalMined.plus(totalSettled).plus(totalBonus);
-            const targetBlockCount = totalSupplyDecimal.floor().toNumber();
-
-            console.log(`📊 [1공정 수복] 현재 메인넷 물리 블록 수: ${currentBlockCount}개 | 목표 발행량 정수 블록 수: ${targetBlockCount}개`);
+            // [공정 1-1 수복] 제네시스 블록 1개를 기본값으로 무조건 합산: 1 + 발행량정수
+            const targetBlockCount = 1 + totalSupplyDecimal.floor().toNumber();
 
             if (targetBlockCount > currentBlockCount) {
                 const blocksToCreate = targetBlockCount - currentBlockCount;
-                console.log(`🚀 [1공정 수복] 총 ${blocksToCreate}개의 누락 블록 소급 순차 PoW 마이닝 생성을 시작합니다...`);
+                console.log(`🚀 [공정 1-1 수복] 목표 블록 수: ${targetBlockCount}개 (제네시스 1개 + 발행량 ${totalSupplyDecimal.floor().toNumber()}개) | 현재 블록: ${currentBlockCount}개 -> ${blocksToCreate}개 신규 PoW 블록 즉시 주조 개시!`);
 
                 // 대표 시스템 Validator 지갑 명의로 정규 블록 순차 마이닝
                 const systemValidator = 'BitWish-Miner-Pool';
@@ -324,15 +323,15 @@ export class BlockMiningService {
                     createdCount++;
                     if (createdCount % 100 === 0 || createdCount === blocksToCreate) {
                         const progress = ((createdCount / blocksToCreate) * 100).toFixed(1);
-                        console.log(` └ ⛏️ [1공정 진행율 ${progress}%] ${createdCount}/${blocksToCreate}개 물리 블록 생성 및 체인 연결 완료`);
+                        console.log(` └ ⛏️ [공정 1-1 진행율 ${progress}%] ${createdCount}/${blocksToCreate}개 물리 블록 생성 및 체인 연결 완료`);
                     }
                 }
 
                 const finalBlockCount = await this.getTotalBlockCount();
-                console.log(`✅ [1공정 수복 완료] 총 ${createdCount}개 정규 PoW 블록 생성 완료! (최종 메인넷 블록 수: ${finalBlockCount}개)`);
+                console.log(`✅ [공정 1-1 수복 완료] 총 ${createdCount}개 정규 PoW 블록 생성 완료! (최종 메인넷 블록 수: ${finalBlockCount}개)`);
                 return { createdBlocks: createdCount, totalBlocks: finalBlockCount };
             } else {
-                console.log(`✅ [1공정 수복 검증] 메인넷 물리 블록이 발행량과 이미 100% 일치합니다. (블록 수: ${currentBlockCount}개)`);
+                // [스마트 침묵 가드] 블록이 발행량과 일치할 때는 10초마다 도배되던 콘솔 로그를 차단하여 백엔드 터미널을 청결하게 유지
                 return { createdBlocks: 0, totalBlocks: currentBlockCount };
             }
         } catch (error) {
