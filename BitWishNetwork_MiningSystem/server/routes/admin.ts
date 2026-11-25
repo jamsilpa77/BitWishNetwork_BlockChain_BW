@@ -6,6 +6,8 @@ import BonusRecord from '../models/BonusRecord';
 import User from '../models/User'; // [추가] 가입 정보 조회를 위한 User 모델 추가
 import SystemConfig from '../models/SystemConfig';
 import MonthlySettlement from '../models/MonthlySettlement'; // [추가] 마이그레이션 상태 승격을 위한 모델 추가
+import { HalvingPolicyEngine } from '../services/HalvingPolicyEngine';
+import { saveHalvingConfig } from '../models/SystemConfig';
 
 const router = express.Router();
 
@@ -679,6 +681,80 @@ router.get('/migration/config', async (req, res) => {
     } catch (error) {
         console.error('Failed to get migration config:', error);
         return res.json({ success: true, isActive: false });
+    }
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * [공정 4 - 작업 2] 반감기 정책 관리자 거버넌스 API
+ * ════════════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * GET /api/admin/halving/config
+ * 현재 반감기 정책 설정, 카운트다운, 현재 채굴률, 24개월 시뮬레이션 스케줄 조회
+ */
+router.get('/halving/config', async (req, res) => {
+    try {
+        const status = await HalvingPolicyEngine.getHalvingStatus();
+        return res.json({
+            success: true,
+            data: status
+        });
+    } catch (error) {
+        console.error('Failed to get halving config:', error);
+        return res.status(500).json({ success: false, message: '반감기 정책 조회 실패' });
+    }
+});
+
+/**
+ * POST /api/admin/halving/config
+ * 관리자가 화면에서 변경한 반감기 정책(시작일, 감소율, ON/OFF 스위치, 기본 채굴률) 영구 저장
+ */
+router.post('/halving/config', async (req, res) => {
+    try {
+        const { isEnabled, startDate, monthlyReductionRate, baseRate, description } = req.body;
+
+        const updateData: any = {};
+        if (typeof isEnabled === 'boolean') updateData.isEnabled = isEnabled;
+        if (startDate) updateData.startDate = startDate;
+        if (typeof monthlyReductionRate === 'number') updateData.monthlyReductionRate = monthlyReductionRate;
+        if (typeof baseRate === 'number') updateData.baseRate = baseRate;
+        if (description) updateData.description = description;
+
+        const savedConfig = await saveHalvingConfig(updateData, 'salmani1@naver.com');
+        HalvingPolicyEngine.invalidateCache(); // 캐시 즉시 갱신
+
+        const updatedStatus = await HalvingPolicyEngine.getHalvingStatus();
+        // [공정 4-3 세부 작업 2] KST 한국 표준시 시·분·초 기준 최고급 터미널 정밀 브리핑 박스 출력
+        HalvingPolicyEngine.printGovernanceBriefing(updatedStatus);
+
+        return res.json({
+            success: true,
+            message: '반감기 정책이 MongoDB에 안전하게 영구 저장되었습니다.',
+            data: updatedStatus
+        });
+    } catch (error) {
+        console.error('Failed to save halving config:', error);
+        return res.status(500).json({ success: false, message: '반감기 정책 저장 실패' });
+    }
+});
+
+/**
+ * POST /api/admin/halving/sync-global
+ * 관리자 거버넌스: 전체 채굴 중인 마이너들에게 새 반감기 기본 채굴률 즉시 일괄 동기화
+ */
+router.post('/halving/sync-global', async (req, res) => {
+    try {
+        const result = await HalvingPolicyEngine.syncGlobalMiners();
+        return res.json({
+            success: true,
+            message: `채굴 중인 전체 마이너 ${result.updatedCount}명에게 최신 기본 채굴률(${result.currentBaseRate} BW/h)이 성공적으로 동기화되었습니다.`,
+            data: result
+        });
+    } catch (error) {
+        console.error('Failed to sync global miners halving rate:', error);
+        return res.status(500).json({ success: false, message: '마이너 채굴률 일괄 동기화 실패' });
     }
 });
 

@@ -37,13 +37,13 @@ export class UserController {
             const resolvedIp = ipAddress || (Array.isArray(req.headers['x-forwarded-for']) ? req.headers['x-forwarded-for'][0] : (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim()) || req.ip || '127.0.0.1';
 
             // [보안 강화] IP당 최대 지갑 생성 개수 제한 (3개)
-            const MAX_WALLETS_PER_IP = 3;
+            const MAX_WALLETS_PER_IP = 10;
             const existingWalletCount = await User.countDocuments({ ipAddress: resolvedIp });
             if (existingWalletCount >= MAX_WALLETS_PER_IP) {
                 console.log(`[REGISTER] IP 제한 차단 - IP: ${resolvedIp}, 기존 지갑 수: ${existingWalletCount}`);
                 res.status(403).json({
                     success: false,
-                    message: 'IP당 최대 지갑 생성 개수(3개)를 초과하였습니다.'
+                    message: 'IP당 최대 지갑 생성 개수(10개)를 초과하였습니다.'
                 });
                 return;
             }

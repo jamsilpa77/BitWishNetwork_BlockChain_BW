@@ -16,6 +16,7 @@ import BonusRecord from '../models/BonusRecord';
 import MonthlySettlement from '../models/MonthlySettlement';
 import Decimal from 'decimal.js';
 import { BlockMiningService } from '../services/BlockMiningService';
+import { HalvingPolicyEngine } from '../services/HalvingPolicyEngine';
 
 // 50자리 정밀도 설정
 Decimal.set({ precision: 50 });
@@ -39,11 +40,14 @@ export class MiningController {
 
                 if (!state) {
                     // 최초 시작 시 상태 생성
+                    const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
                     state = new MiningState({
                         walletAddress,
                         isMining: true,
                         miningStartTime: new Date(),
-                        lastSyncTime: new Date()
+                        lastSyncTime: new Date(),
+                        currentBaseRate: effectiveBaseRate.toFixed(8),
+                        currentTotalRate: effectiveBaseRate.toFixed(8)
                     });
                 } else {
                     // 이미 존재하는 경우 상태 업데이트
@@ -79,8 +83,10 @@ export class MiningController {
                     state.referralCount = actualReferralCount;
                     state.referralBonusRate = correctedReferralRate.toString();
 
-                    // 3. 최종 채굴률(currentTotalRate) 합산 업데이트
-                    const baseRate = new Decimal(state.currentBaseRate || '0.25');
+                    // 3. 최종 채굴률(currentTotalRate) 합산 업데이트 (반감기 정책 엔진 동적 연동)
+                    const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
+                    state.currentBaseRate = effectiveBaseRate.toFixed(8);
+                    const baseRate = effectiveBaseRate;
                     const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                     const partnerRate = state.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
 
@@ -209,7 +215,9 @@ export class MiningController {
                 }
 
                 if (isChanged) {
-                    const baseRate = new Decimal(state.currentBaseRate || '0.25');
+                    const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
+                    state.currentBaseRate = effectiveBaseRate.toFixed(8);
+                    const baseRate = effectiveBaseRate;
                     const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                     const partnerRate = state.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
 
@@ -346,7 +354,9 @@ export class MiningController {
                 }
 
                 if (isChanged) {
-                    const baseRate = new Decimal(miningState.currentBaseRate || '0.25');
+                    const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
+                    miningState.currentBaseRate = effectiveBaseRate.toFixed(8);
+                    const baseRate = effectiveBaseRate;
                     const attendanceRate = miningState.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                     const partnerRate = miningState.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
 
@@ -573,6 +583,7 @@ export class MiningController {
      */
     public async resetMiningData(walletAddress: string): Promise<boolean> {
         try {
+            const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
             const result = await MiningState.findOneAndUpdate(
                 { walletAddress },
                 {
@@ -580,8 +591,8 @@ export class MiningController {
                     miningStartTime: null,
                     lastSyncTime: new Date(),
                     accumulatedReward: '0.0',
-                    currentBaseRate: '0.25',
-                    currentTotalRate: '0.25'
+                    currentBaseRate: effectiveBaseRate.toFixed(8),
+                    currentTotalRate: effectiveBaseRate.toFixed(8)
                 }
             );
 

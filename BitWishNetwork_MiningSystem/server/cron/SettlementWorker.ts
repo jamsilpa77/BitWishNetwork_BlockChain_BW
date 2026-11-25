@@ -16,6 +16,7 @@ import MonthlySettlement from '../models/MonthlySettlement';
 import BonusRecord from '../models/BonusRecord';
 
 import { BlockMiningService } from '../services/BlockMiningService';
+import { HalvingPolicyEngine } from '../services/HalvingPolicyEngine';
 
 Decimal.set({ precision: 50 });
 
@@ -26,6 +27,7 @@ export class SettlementWorker {
         console.log('⚙️ [SettlementWorker] Mongoose 무인 정산 및 타임락 오토메이션 엔진 기동 완료');
         this.initializeMidnightPatrol();
         this.initializeMonthlySnapshot();
+        this.initializeMonthlyHalvingSchedule();
         this.initializeGlobalBlockHeartbeat();
     }
 
@@ -74,6 +76,55 @@ export class SettlementWorker {
                 await this.executeMonthlySnapshot();
             }
         });
+    }
+
+    /**
+     * [공정 4-3 세부 작업 3] 매월 1일 AM 00:00:00(KST) 무인 자동 선형 반감기 스케줄러
+     */
+    private initializeMonthlyHalvingSchedule(): void {
+        // 매월 1일 AM 00:00:00 (KST 한국 표준시 정각 기준)
+        cron.schedule('0 0 1 * *', async () => {
+            console.log(`[SettlementWorker] ⏰ 매월 1일 KST 자정 도래: 무인 선형 반감기 자동 판별 및 전파 시작`);
+            await this.executeMonthlyHalvingRoutine();
+        }, {
+            timezone: 'Asia/Seoul'
+        });
+    }
+
+    /**
+     * 매월 1일 자정 무인 자동 반감기 판별, 전체 마이너 DB 동기화 및 터미널 정밀 브리핑 실행 로직
+     */
+    public async executeMonthlyHalvingRoutine(): Promise<void> {
+        try {
+            // 1. 메모리 캐시 즉각 무효화하여 최신 상태 유도
+            HalvingPolicyEngine.invalidateCache();
+
+            // 2. 최신 반감기 상태 판별
+            const status = await HalvingPolicyEngine.getHalvingStatus();
+
+            // 3. 반감기가 활성화(ON)되어 있고 시작일이 경과/도달한 경우
+            if (status.config.isEnabled && status.isActive) {
+                console.log('\n' +
+                    '═══════════════════════════════════════════════════════════════════════════════\n' +
+                    ' [BitWish Monthly Halving] ⏰ 새 월(Month) 진입: 무인 선형 반감기 자동 정밀 가동\n' +
+                    '───────────────────────────────────────────────────────────────────────────────\n' +
+                    ` • 발동 일시         : 매월 01일 AM 00:00:00 (KST 한국 표준시 정각)\n` +
+                    ` • 적용 상태         : ${status.currentElapsedMonths}차 선형 감산 (-${status.currentReductionPercent.toFixed(1)}%) 정밀 발동\n` +
+                    ` • 신규 기본 채굴률 : ${status.currentBaseRate} BW/h\n` +
+                    '═══════════════════════════════════════════════════════════════════════════════\n'
+                );
+
+                // 4. 전체 활성 마이너들의 DB 장부(MiningState)에 새 기본 채굴률 무인 일괄 영구 동기화
+                const syncResult = await HalvingPolicyEngine.syncGlobalMiners();
+                console.log(`[BitWish Monthly Halving] ✅ 전체 활성 마이너 ${syncResult.updatedCount}명에게 새 기본 채굴률(${syncResult.currentBaseRate} BW/h)이 무인 자동 동기화되었습니다.`);
+            }
+
+            // 5. 정밀 거버넌스 종합 브리핑 터미널 출력
+            HalvingPolicyEngine.printGovernanceBriefing(status);
+
+        } catch (error) {
+            console.error('[SettlementWorker] ❌ 월간 무인 반감기 스케줄 처리 중 오류 발생:', error);
+        }
     }
 
     /**

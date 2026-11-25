@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import './AdminPage.css';
 import KYCManager from './KYCManager';
 import { PartnerManager } from './PartnerManager';
+import HalvingManager from './HalvingManager';
 
 const AdminPage: React.FC = () => {
     // --- [플랫폼 및 전광판 제어용 신규 상태 변수] ---
@@ -1973,9 +1974,8 @@ const AdminPage: React.FC = () => {
                 )}
 
                 {activeTab === 'halving' && (
-                    <div className="admin-panel">
-                        <h2>⏰ 반감기 정책 관리</h2>
-                        <p>반감기 스케줄 및 이력</p>
+                    <div className="admin-panel animate-fade-in">
+                        <HalvingManager />
                     </div>
                 )}
             </main>

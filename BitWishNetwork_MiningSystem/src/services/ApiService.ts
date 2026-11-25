@@ -305,6 +305,46 @@ class ApiService {
             return { success: false, data: [] };
         }
     }
+
+    /**
+     * [공정 4-1] 반감기 정책 설정 조회 (Admin 거버넌스 전용)
+     */
+    public async getHalvingConfig(): Promise<any> {
+        try {
+            const response = await this.client.get('/admin/halving/config');
+            return response.data;
+        } catch (error) {
+            console.error('Failed to get halving config:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * [공정 4-1] 반감기 정책 설정 업데이트 및 MongoDB 영구 저장 (Admin 거버넌스 전용)
+     * @param configData 반감기 설정 데이터 (isEnabled, startDate, monthlyReductionRate, baseRate, description)
+     */
+    public async saveHalvingConfig(configData: any): Promise<any> {
+        try {
+            const response = await this.client.post('/admin/halving/config', configData);
+            return response.data;
+        } catch (error) {
+            console.error('Failed to save halving config:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * [공정 4-1] 전체 마이너 최신 반감기 채굴률 즉시 일괄 동기화 (Admin 거버넌스 전용)
+     */
+    public async syncGlobalHalvingMiners(): Promise<any> {
+        try {
+            const response = await this.client.post('/admin/halving/sync-global');
+            return response.data;
+        } catch (error) {
+            console.error('Failed to sync global halving miners:', error);
+            throw error;
+        }
+    }
 }
 
 export const apiService = new ApiService();
