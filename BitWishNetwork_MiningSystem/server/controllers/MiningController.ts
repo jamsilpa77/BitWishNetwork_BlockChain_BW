@@ -407,7 +407,7 @@ export class MiningController {
             }
 
             if (miningState) {
-                // [Auto-Expire Check] 출석 보너스 유효기간 검사 (매일 오전 9시 기준)
+                // [공정 5-1 수복] 출석 보너스 유효기간 검사 (매일 오전 9시 기준) 및 공식 무결성 보장
                 const now = new Date();
                 const cutoffTime = new Date();
                 cutoffTime.setHours(9, 0, 0, 0);
@@ -424,16 +424,25 @@ export class MiningController {
                         console.log('[AUTO-EXPIRE] Attendance bonus expired for:', walletAddress);
                         miningState.isAttendanceActive = false;
 
-                        // [FIX] 추천 및 확장프로그램 보너스 유지하면서 재계산
-                        const baseRate = new Decimal(miningState.currentBaseRate);
-                        const referralRate = new Decimal(miningState.referralBonusRate || 0);
-                        const extensionRate = new Decimal(miningState.extensionBonusRate || 0);
+                        // [공정 5-1 핵심 수복]:
+                        // 1. 반감기 최신 기본 채굴률(effectiveBaseRate) 반영
+                        // 2. 가맹점 보너스(partnerRate 1.25) 절대 누락 방지 및 곱연산 유지
+                        // 3. 추천(referralRate), 크롬익스텐션(extensionRate) 보너스 온전 보존
+                        const baseRate = effectiveBaseRate; // 위에서 조회한 HalvingPolicyEngine.getCurrentBaseRate()
+                        miningState.currentBaseRate = baseRate.toFixed(8);
+
+                        const referralRate = new Decimal(miningState.referralBonusRate || '0');
+                        const partnerRate = miningState.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
+                        const extensionRate = new Decimal(miningState.extensionBonusRate || '0');
+
                         miningState.currentTotalRate = baseRate
                             .mul(new Decimal(1).plus(referralRate))
+                            .mul(new Decimal(1).plus(partnerRate))
                             .mul(new Decimal(1).plus(extensionRate))
-                            .toString();
+                            .toFixed(8);
 
                         await miningState.save();
+                        console.log(`[AUTO-EXPIRE] Recalculated TotalRate for ${walletAddress}: BaseRate=${miningState.currentBaseRate}, Partner=${partnerRate}, TotalRate=${miningState.currentTotalRate}`);
                     }
                 }
             }

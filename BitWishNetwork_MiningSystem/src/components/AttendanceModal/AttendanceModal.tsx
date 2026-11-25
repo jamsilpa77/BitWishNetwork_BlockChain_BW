@@ -65,6 +65,26 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onCh
         initAttendance();
     }, [isOpen, walletAddress, attendanceService]);
 
+    // [공정 5-3 수복] 9시 정각 롤오버 이벤트 수신 및 자동 달력 갱신
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleRollover = async () => {
+            console.log('[AttendanceModal] ⏰ 9시 롤오버 신호 수신: 달력 출석 상태를 오늘 기준으로 즉시 자동 초기화');
+            if (walletAddress) {
+                await attendanceService.syncWithServer(walletAddress);
+                const recordDates = attendanceService.getAttendanceRecords().map(r => r.date);
+                setAttendanceData(recordDates);
+                const status = attendanceService.getAttendanceStatus();
+                setIsCheckedToday(status === 'COMPLETED');
+                setBonusRate(attendanceService.calculateBonusRate());
+            }
+        };
+
+        window.addEventListener('bw-attendance-9am-rollover', handleRollover);
+        return () => window.removeEventListener('bw-attendance-9am-rollover', handleRollover);
+    }, [isOpen, walletAddress, attendanceService]);
+
     // [폴링 추가] 관리자 초기화 신호를 이 모달에서도 감지하여 즉시 UI 갱신 (선택사항이나 안전장치로 추가)
     useEffect(() => {
         if (!isOpen) return;
@@ -119,23 +139,25 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, onCh
     const getDateStatus = (date: Date | null) => {
         if (!date) return 'empty';
 
-        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
 
         // 데이터에 있으면 체크됨 (Red)
         if (attendanceData.includes(dateStr)) {
             return 'checked';
         }
 
-        // 오늘 날짜인지 확인 (서비스 로직 활용 권장하나 UI용 간소화)
-        const today = new Date();
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        // [공정 5-2 수복] 오늘 날짜 판별 시 KST 오전 9시 기준 논리적 오늘 날짜(getLogicalToday)로 1:1 일치화
+        const logicalTodayStr = attendanceService.getLogicalToday();
 
-        if (dateStr === todayStr) {
+        if (dateStr === logicalTodayStr) {
             return isCheckedToday ? 'checked' : 'active'; // 이미 했으면 Red, 안했으면 Blue
         }
 
         // 과거인지 미래인지
-        if (new Date(dateStr) < new Date(todayStr)) return 'missed'; // Gray
+        if (dateStr < logicalTodayStr) return 'missed'; // Gray
         return 'future';
     };
 

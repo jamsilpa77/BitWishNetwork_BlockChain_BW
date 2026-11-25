@@ -170,7 +170,7 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
                     const attendanceBonusRateVal = isAttendanceActive ? new Decimal(5.0) : new Decimal(0.0);
 
                     // [공정 4-4 세부 작업 2] 서버에서 실시간 계산된 반감기 유효 보상률을 반영 (대기 상태 즉시 선반영)
-                    const calculatedTotalRate = userData.miningState?.currentTotalRate 
+                    const calculatedTotalRate = userData.miningState?.currentTotalRate
                         || (userData.effectiveBaseRate ? new Decimal(userData.effectiveBaseRate).mul(1.02).toFixed(8) : '0.25');
                     const finalBaseRate = new Decimal(calculatedTotalRate);
 
@@ -272,6 +272,66 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
             unsubscribeMining(); // 구독 해제 (하지만 티커는 서비스에서 계속 돌아감)
         };
     }, [isOpen, walletAddress, realTimeSyncService, referralBonusService]);
+
+    // [공정 5-3 수복] 매일 오전 9시 정각 자동 롤오버(만료 감시) 백그라운드 엔진
+    // 유저가 모달 창을 켜둔 채 오전 9시(KST)를 맞이했을 때, 새로고침 없이 즉각 최신 상태로 재동기화
+    useEffect(() => {
+        if (!isOpen || !walletAddress) return;
+
+        // 현재 시각 기준 논리적 오늘 날짜 기억
+        let lastCheckedDay = (() => {
+            const now = new Date();
+            if (now.getHours() < 9) now.setDate(now.getDate() - 1);
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        })();
+
+        // 1초마다 오전 9시 정각 경계선 통과 여부 정밀 감시
+        const rolloverInterval = setInterval(async () => {
+            const now = new Date();
+            let currentDay = new Date(now);
+            if (currentDay.getHours() < 9) {
+                currentDay.setDate(currentDay.getDate() - 1);
+            }
+            const currentLogicalDay = `${currentDay.getFullYear()}-${String(currentDay.getMonth() + 1).padStart(2, '0')}-${String(currentDay.getDate()).padStart(2, '0')}`;
+
+            // 날짜가 바뀌는 순간 (오전 9시 00분 00초 도달)
+            if (currentLogicalDay !== lastCheckedDay) {
+                console.log(`[공정 5-3 롤오버 엔진] ⏰ 오전 9시 정각 도래 감지: ${lastCheckedDay} -> ${currentLogicalDay}. UI 자동 새로고침 가동`);
+                lastCheckedDay = currentLogicalDay;
+
+                // 1. 서버로부터 최신 마이닝 및 만료 상태 즉각 재조회
+                try {
+                    const statusResult = await apiService.getUserStatus(walletAddress);
+                    if (statusResult && statusResult.success && statusResult.data) {
+                        const userData = statusResult.data;
+                        const isAttendanceActive = userData.miningState?.isAttendanceActive || false;
+                        const attendanceBonusRateVal = isAttendanceActive ? new Decimal(5.0) : new Decimal(0.0);
+
+                        const calculatedTotalRate = userData.miningState?.currentTotalRate
+                            || (userData.effectiveBaseRate ? new Decimal(userData.effectiveBaseRate).toFixed(8) : '0.25');
+                        const finalBaseRate = new Decimal(calculatedTotalRate);
+
+                        setUserStats(prev => ({
+                            ...prev,
+                            baseRate: finalBaseRate,
+                            dailyMaxRate: finalBaseRate.mul(24),
+                            isAttendanceActive: isAttendanceActive,
+                            attendanceBonusRate: attendanceBonusRateVal
+                        }));
+                    }
+                } catch (err) {
+                    console.error('[공정 5-3 롤오버 엔진] 자동 재동기화 실패:', err);
+                }
+
+                // 2. 다른 열려있는 컴포넌트(달력, 대시보드 등)에도 즉시 롤오버 이벤트 전파
+                window.dispatchEvent(new CustomEvent('bw-attendance-9am-rollover', {
+                    detail: { newLogicalDate: currentLogicalDay }
+                }));
+            }
+        }, 1000);
+
+        return () => clearInterval(rolloverInterval);
+    }, [isOpen, walletAddress]);
 
     // [공정 1-3 수복] 절대 시간 기준 타이머 (prev + 1 누적 지연 완전 박멸)
     // Date.now() - miningStartTimeRef 로 매 tick마다 실제 경과 초를 직접 산출

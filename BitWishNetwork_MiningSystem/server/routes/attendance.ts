@@ -9,6 +9,7 @@ import express from 'express';
 import BonusRecord from '../models/BonusRecord';
 import MiningState from '../models/MiningState';
 import Decimal from 'decimal.js';
+import { HalvingPolicyEngine } from '../services/HalvingPolicyEngine';
 
 const router = express.Router();
 
@@ -67,22 +68,25 @@ router.post('/check', async (req, res) => {
             // [Fix] 이미 출석했더라도 MiningState가 꺼져있으면 켜준다. (데이터 불일치 방지 및 초기화 후 복구 지원)
             const currentState = await MiningState.findOne({ walletAddress });
             if (currentState && !currentState.isAttendanceActive) {
-                // 보너스 재적용 (출석 + 추천 + 가맹점)
+                // [공정 5-1 수복] 반감기 최신 기본 채굴률(effectiveBaseRate) 반영 및 4대 보너스 완전 곱연산
                 currentState.isAttendanceActive = true;
                 currentState.attendanceDate = new Date();
 
-                // 정밀도 유지를 위한 Decimal 연산
-                const base = new Decimal(currentState.currentBaseRate);
+                const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
+                currentState.currentBaseRate = effectiveBaseRate.toFixed(8);
+
                 const attendanceBonus = new Decimal('0.05'); // 5%
                 const referralBonus = new Decimal(currentState.referralBonusRate || '0');
                 const partnerBonus = currentState.partnerStatus === 'REGISTERED' ? new Decimal('1.25') : new Decimal('0');
+                const extensionBonus = new Decimal(currentState.extensionBonusRate || '0');
 
-                // 각 보너스를 곱셈으로 적용
-                currentState.currentTotalRate = base
+                // 각 보너스를 곱셈으로 완벽 적용
+                currentState.currentTotalRate = effectiveBaseRate
                     .mul(new Decimal(1).plus(attendanceBonus))
                     .mul(new Decimal(1).plus(referralBonus))
                     .mul(new Decimal(1).plus(partnerBonus))
-                    .toString();
+                    .mul(new Decimal(1).plus(extensionBonus))
+                    .toFixed(8);
 
                 await currentState.save();
 
@@ -91,6 +95,7 @@ router.post('/check', async (req, res) => {
                     message: '출석 상태가 동기화되었습니다',
                     miningState: {
                         isAttendanceActive: true,
+                        currentBaseRate: currentState.currentBaseRate,
                         currentTotalRate: currentState.currentTotalRate
                     }
                 });
@@ -111,6 +116,8 @@ router.post('/check', async (req, res) => {
 
         await bonusRecord.save();
 
+        const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
+
         // MiningState 업데이트 (출석 보너스 반영)
         let miningState = await MiningState.findOne({ walletAddress });
 
@@ -119,30 +126,32 @@ router.post('/check', async (req, res) => {
             miningState = new MiningState({
                 walletAddress,
                 isMining: false,
-                currentBaseRate: '0.25',
-                currentTotalRate: '0.25',
+                currentBaseRate: effectiveBaseRate.toFixed(8),
+                currentTotalRate: effectiveBaseRate.toFixed(8),
                 accumulatedReward: '0',
                 isAttendanceActive: false
             });
         }
 
-        // 출석 보너스 적용
+        // [공정 5-1 수복] 출석 보너스 적용 (반감기 최신 기본 채굴률 직결 및 확장프로그램 보너스 포함 4대 곱연산)
         miningState.isAttendanceActive = true;
         miningState.attendanceDate = new Date();
+        miningState.currentBaseRate = effectiveBaseRate.toFixed(8);
 
-        // 보너스율 계산 및 적용 (출석 + 추천 + 가맹점)
-        const baseRate = new Decimal(miningState.currentBaseRate);
         const attendanceBonus = new Decimal('0.05'); // 5%
         const referralBonus = new Decimal(miningState.referralBonusRate || '0');
         const partnerBonus = miningState.partnerStatus === 'REGISTERED' ? new Decimal('1.25') : new Decimal('0');
+        const extensionBonus = new Decimal(miningState.extensionBonusRate || '0');
 
-        // 각 보너스를 곱셈으로 적용
-        const newTotalRate = baseRate
+        // 각 보너스를 곱셈으로 완벽하게 적용
+        const newTotalRate = effectiveBaseRate
             .mul(new Decimal(1).plus(attendanceBonus))
             .mul(new Decimal(1).plus(referralBonus))
-            .mul(new Decimal(1).plus(partnerBonus));
+            .mul(new Decimal(1).plus(partnerBonus))
+            .mul(new Decimal(1).plus(extensionBonus))
+            .toFixed(8);
 
-        miningState.currentTotalRate = newTotalRate.toString();
+        miningState.currentTotalRate = newTotalRate;
         await miningState.save();
 
         return res.json({

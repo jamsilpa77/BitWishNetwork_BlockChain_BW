@@ -105,18 +105,26 @@ export class AttendanceBonusService {
   }
 
   /**
-   * [핵심] 논리적 '오늘' 날짜 구하기 (오전 9시 기준)
+   * [공정 5-2 수복] 논리적 '오늘' 날짜 구하기 (KST 한국 표준시 오전 9시 기준)
    * 오전 9시 이전이면 '어제' 날짜를 반환함.
    * 예: 16일 새벽 1시 -> 15일 반환
+   * 
+   * ⚠️ toISOString()은 영국 런던(UTC) 기준으로 변환하여 9시간 시차가 발생하므로 영구 폐기하고,
+   * 서버(attendance.ts)와 100% 동일하게 로컬 KST 연/월/일로 직접 포맷팅함.
    */
-  private getLogicalToday(): string {
+  public getLogicalToday(): string {
     const now = new Date();
-    // 9시 전이면 하루 빼기
+    let recordDate = new Date(now);
+
+    // 오전 9시 전이면 하루 빼기
     if (now.getHours() < 9) {
-      now.setDate(now.getDate() - 1);
+      recordDate.setDate(recordDate.getDate() - 1);
     }
-    const isoString = now.toISOString();
-    return isoString.split('T')[0] || '';
+
+    const year = recordDate.getFullYear();
+    const month = String(recordDate.getMonth() + 1).padStart(2, '0');
+    const day = String(recordDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`; // YYYY-MM-DD (KST 로컬 날짜 기준)
   }
 
   /**
