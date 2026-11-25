@@ -353,24 +353,28 @@ export class MiningController {
                     isChanged = true;
                 }
 
-                if (isChanged) {
-                    const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
+                // [공정 4-4 세부 작업 2] 반감기 기본 채굴률 변동 감지 및 미채굴 대기 상태 즉시 최신화
+                const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
+                const isBaseRateChanged = !new Decimal(miningState.currentBaseRate || '0.25').equals(effectiveBaseRate);
+
+                if (isChanged || isBaseRateChanged) {
                     miningState.currentBaseRate = effectiveBaseRate.toFixed(8);
                     const baseRate = effectiveBaseRate;
                     const attendanceRate = miningState.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
                     const partnerRate = miningState.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
 
                     const extensionRate = new Decimal(miningState.extensionBonusRate || '0');
+                    const activeReferralRate = new Decimal(miningState.referralBonusRate || '0');
 
                     miningState.currentTotalRate = baseRate
                         .mul(new Decimal(1).plus(attendanceRate))
-                        .mul(new Decimal(1).plus(correctedRate))
+                        .mul(new Decimal(1).plus(activeReferralRate))
                         .mul(new Decimal(1).plus(partnerRate))
                         .mul(new Decimal(1).plus(extensionRate))
-                        .toString();
+                        .toFixed(8);
 
                     await miningState.save();
-                    console.log(`[HEALER] MiningState corrected for ${walletAddress}: Count=${actualCount}, Rate=${miningState.currentTotalRate}`);
+                    console.log(`[HEALER] MiningState sync for ${walletAddress}: Count=${actualCount}, BaseRate=${miningState.currentBaseRate}, Rate=${miningState.currentTotalRate}`);
                 }
 
                 // 3. BonusRecord 수복 (리스트가 비어있거나 레코드가 없는 경우)
@@ -500,20 +504,43 @@ export class MiningController {
                 .plus(liveBoostAmount)
                 .toString();
 
+            // [공정 4-4 세부 작업 2] 아직 채굴을 시작하지 않은 신규 지갑도 최신 반감기 채굴률 즉시 선반영
+            const effectiveBaseRateDecimal = await HalvingPolicyEngine.getCurrentBaseRate();
+            const currentBaseRateStr = effectiveBaseRateDecimal.toFixed(8);
+
+            const hasParent = user?.referrerCode && user.referrerCode.trim() !== '';
+            const initialBonus = hasParent ? new Decimal(0.02) : new Decimal(0);
+            const initialTotalRate = effectiveBaseRateDecimal.mul(new Decimal(1).plus(initialBonus)).toFixed(8);
+
             res.status(200).json({
                 success: true,
                 serverTimestamp: Date.now(),
+                effectiveBaseRate: currentBaseRateStr,
                 user: user ? {
                     ...user.toObject(),
                     referralBonusStorage: bonusRecord?.referralBonusStorage || '0',
                     referralRewardStorage: bonusRecord?.referralRewardStorage || '0',
                     referralList: bonusRecord?.referralList || []
                 } : null,
-                miningState: {
-                    ...miningState?.toObject(),
+                miningState: miningState ? {
+                    ...miningState.toObject(),
                     miningHistory, // 지갑 UI '이중 원장' 표출용 데이터
                     trueLifeTimeMined, // 랭킹과 100% 동기화된 실시간 전체 누적 보상
-                    totalSettledAmount: totalSettledAmount.toString() // [수복 2차] 순수 과거 정산금 합계 (기준점)
+                    totalSettledAmount: totalSettledAmount.toString(), // [수복 2차] 순수 과거 정산금 합계 (기준점)
+                    effectiveBaseRate: currentBaseRateStr
+                } : {
+                    isMining: false,
+                    currentBaseRate: currentBaseRateStr,
+                    currentTotalRate: initialTotalRate,
+                    referralCount: 0,
+                    referralBonusRate: hasParent ? '0.02' : '0',
+                    isAttendanceActive: false,
+                    partnerStatus: 'NOT_REGISTERED',
+                    accumulatedReward: '0',
+                    trueLifeTimeMined: '0',
+                    totalSettledAmount: '0',
+                    miningHistory: [],
+                    effectiveBaseRate: currentBaseRateStr
                 }
             });
         } catch (error) {

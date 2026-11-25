@@ -29,6 +29,7 @@ import MiningState from './models/MiningState';
 import MonthlySettlement from './models/MonthlySettlement';
 import BonusRecord from './models/BonusRecord';
 import { BlockMiningService } from './services/BlockMiningService';
+import { HalvingPolicyEngine } from './services/HalvingPolicyEngine';
 import Decimal from 'decimal.js';
 
 // 백엔드 프로세스 내부에 전역(Singleton) 코어 엔진을 결합 구동
@@ -485,9 +486,17 @@ mongoose.connect(MONGODB_URI)
         console.log('✅ Connected to MongoDB Hybrid Storage');
 
         // [1공정 수복] 0.1초 만에 웹 서버 포트를 즉시 최우선 개방 (502 Bad Gateway 원천 차단)
-        app.listen(Number(PORT), isProduction ? '127.0.0.1' : '0.0.0.0', () => {
+        app.listen(Number(PORT), isProduction ? '127.0.0.1' : '0.0.0.0', async () => {
             console.log(`🚀 Server is running on port ${PORT}`);
             console.log(`🔄 Server restarted at ${new Date().toLocaleString()}`);
+
+            // [공정 4-4 세부 작업 1] 서버 부팅 시 최신 반감기 정책 KST 기준 정밀 브리핑 박스 터미널 즉각 자동 출력
+            try {
+                const halvingStatus = await HalvingPolicyEngine.getHalvingStatus();
+                HalvingPolicyEngine.printGovernanceBriefing(halvingStatus);
+            } catch (halvingErr) {
+                console.error('❌ [HalvingPolicyEngine] 부팅 브리핑 출력 실패:', halvingErr);
+            }
         });
 
         // 관리자 기본 계정 시드는 백그라운드로 안전하게 실행

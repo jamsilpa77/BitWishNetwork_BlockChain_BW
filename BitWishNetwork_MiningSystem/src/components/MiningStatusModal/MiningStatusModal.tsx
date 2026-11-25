@@ -169,8 +169,10 @@ const MiningStatusModal: React.FC<MiningStatusModalProps> = ({
                     const isAttendanceActive = userData.miningState?.isAttendanceActive || false;
                     const attendanceBonusRateVal = isAttendanceActive ? new Decimal(5.0) : new Decimal(0.0);
 
-                    // 서버에서 이미 계산된 최종 보상률을 반영
-                    const finalBaseRate = new Decimal(userData.miningState?.currentTotalRate || '0.25');
+                    // [공정 4-4 세부 작업 2] 서버에서 실시간 계산된 반감기 유효 보상률을 반영 (대기 상태 즉시 선반영)
+                    const calculatedTotalRate = userData.miningState?.currentTotalRate 
+                        || (userData.effectiveBaseRate ? new Decimal(userData.effectiveBaseRate).mul(1.02).toFixed(8) : '0.25');
+                    const finalBaseRate = new Decimal(calculatedTotalRate);
 
                     // 일일 최대 보상률도 시간당 보상률의 24배로 단순화/통합 적용 (니모닉 30% 보너스 등 모든 보너스 배율 반영)
                     const finalDailyMaxRate = finalBaseRate.mul(24);
