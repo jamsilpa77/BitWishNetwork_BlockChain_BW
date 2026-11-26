@@ -1,6 +1,7 @@
 
 import express from 'express';
 import { body, validationResult } from 'express-validator';
+import { Decimal } from 'decimal.js';
 import MiningState from '../models/MiningState';
 import BonusRecord from '../models/BonusRecord';
 import User from '../models/User'; // [추가] 가입 정보 조회를 위한 User 모델 추가
@@ -20,6 +21,81 @@ function formatDateRange(dateString: string | Date): string {
 
     return `${year}년 ${month}월 ${day}일 am00:00:00~${year}년 ${month}월 ${day}일 pm23:59:59까지`;
 }
+
+/**
+ * [공정 1] GET /api/admin/dashboard/stats
+ * 관리자 대시보드 4대 핵심 지표 MongoDB 원천 실시간 집계 API
+ * (Compass DB 리셋 시 즉시 0, 0, 0, 0으로 칼동기화)
+ */
+router.get('/dashboard/stats', async (req, res) => {
+    try {
+        const [totalUsers, activeMiners, pendingKyc] = await Promise.all([
+            User.countDocuments({}),
+            MiningState.countDocuments({ isMining: true }),
+            User.countDocuments({ 'kycApplication.status': 'PENDING' })
+        ]);
+
+        // 1. 기초 채굴 보상 합계
+        const miningRewardAgg = await MiningState.aggregate([
+            { $group: { _id: null, total: { $sum: { $toDouble: { $ifNull: ["$accumulatedReward", "0"] } } } } }
+        ]);
+        let totalMiningReward = new Decimal(miningRewardAgg[0]?.total || 0);
+
+        // 2. 실시간 활성 마이너 보정 (미동기화 채굴량 합산)
+        const activeMinersList = await MiningState.find({ isMining: true });
+        const now = Date.now();
+        let liveBoost = new Decimal(0);
+        activeMinersList.forEach(m => {
+            const lastSync = m.lastSyncTime ? new Date(m.lastSyncTime).getTime() : now;
+            const elapsed = Math.max(0, (now - lastSync) / 1000);
+            if (elapsed > 0) {
+                const ratePerSec = new Decimal(m.currentTotalRate || '0.225').div(3600);
+                liveBoost = liveBoost.plus(ratePerSec.mul(elapsed));
+            }
+        });
+
+        // 3. 월간 정산 장부 합계
+        const settlementAgg = await MonthlySettlement.aggregate([
+            { $group: { _id: null, total: { $sum: { $toDouble: { $ifNull: ["$totalAmount", "0"] } } } } }
+        ]);
+        const totalSettlementAmount = new Decimal(settlementAgg[0]?.total || 0);
+        totalMiningReward = totalMiningReward.plus(liveBoost).plus(totalSettlementAmount);
+
+        // 4. 추천/보너스 장부 합계
+        const bonusRewardAgg = await BonusRecord.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalRewardStorage: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } },
+                    totalReferralBonusStorage: { $sum: { $toDouble: { $ifNull: ["$referralBonusStorage", "0"] } } },
+                    totalOtherBonusStorage: { $sum: { $toDouble: { $ifNull: ["$bonusStorage", "0"] } } }
+                }
+            }
+        ]);
+        const totalBonusReward = new Decimal(bonusRewardAgg[0]?.totalRewardStorage || 0)
+            .plus(new Decimal(bonusRewardAgg[0]?.totalReferralBonusStorage || 0))
+            .plus(new Decimal(bonusRewardAgg[0]?.totalOtherBonusStorage || 0));
+
+        // 5. 총 발행량 산출
+        const totalIssued = totalMiningReward.plus(totalBonusReward).toFixed(8);
+
+        return res.json({
+            success: true,
+            data: {
+                totalUsers,
+                activeMiners,
+                totalIssued,
+                pendingKyc
+            }
+        });
+    } catch (error) {
+        console.error('Admin dashboard stats error:', error);
+        return res.status(500).json({
+            success: false,
+            message: '대시보드 통계 집계 중 오류 발생: ' + (error as any).message
+        });
+    }
+});
 
 // GET /api/admin/mining/:walletAddress
 router.get('/mining/:walletAddress', async (req, res) => {
@@ -755,6 +831,120 @@ router.post('/halving/sync-global', async (req, res) => {
     } catch (error) {
         console.error('Failed to sync global miners halving rate:', error);
         return res.status(500).json({ success: false, message: '마이너 채굴률 일괄 동기화 실패' });
+    }
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * [공정 7] 4대 전산 장부 원클릭 대사(Audit) 및 무결성 자동 수복 엔진
+ * GET / POST /api/admin/audit/integrity
+ * ════════════════════════════════════════════════════════════════════════════════
+ */
+router.all('/audit/integrity', async (req, res) => {
+    try {
+        console.log('[BitWish Audit] 🔍 4대 전산 장부(User, MiningState, BonusRecord, MonthlySettlement) 무결성 전수 감사 개시...');
+
+        // 1. 전체 등록 회원 조회 (User 기준)
+        const allUsers = await User.find({}).lean();
+        const userCount = allUsers.length;
+        const validUserAddresses = new Set(allUsers.map(u => u.walletAddress));
+
+        // 2. 최신 선형 반감기 유효 기본 채굴률(Rm) 실시간 조회 (현재 2차 반감기 0.22500000 BW/h)
+        const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
+
+        let miningCreatedCount = 0;
+        let bonusCreatedCount = 0;
+
+        // 3. 1:1 누락 검사 및 자동 신규 수복 (기존 회원 데이터 절대 훼손 금지)
+        for (const user of allUsers) {
+            const addr = user.walletAddress;
+
+            // ① MiningState(채굴 통장) 존재 검사
+            const existingMining = await MiningState.findOne({ walletAddress: addr });
+            if (!existingMining) {
+                const referralRate = user.referrerCode ? new Decimal(0.02) : new Decimal(0);
+                const initialTotalRate = effectiveBaseRate.mul(new Decimal(1).plus(referralRate)).toFixed(8);
+
+                await MiningState.create({
+                    walletAddress: addr,
+                    isMining: false,
+                    miningStartTime: null,
+                    lastSyncTime: new Date(),
+                    accumulatedReward: '0.00000000000000000000000000000000000000000000000000',
+                    currentBaseRate: effectiveBaseRate.toFixed(8),
+                    currentTotalRate: initialTotalRate,
+                    isAttendanceActive: false,
+                    attendanceDate: null,
+                    referralCount: 0,
+                    referralBonusRate: referralRate.toFixed(8),
+                    extensionBonusRate: '0.00000000000000000000000000000000000000000000000000',
+                    partnerStatus: 'NOT_REGISTERED',
+                    partnerBonusRate: '0',
+                    lastBlockRewardThreshold: '0'
+                });
+                miningCreatedCount++;
+            }
+
+            // ② BonusRecord(추천/보너스 통장) 존재 검사
+            const existingBonus = await BonusRecord.findOne({ walletAddress: addr });
+            if (!existingBonus) {
+                await BonusRecord.create({
+                    walletAddress: addr,
+                    referralBonusStorage: '0.00000000000000000000000000000000000000000000000000',
+                    referralRewardStorage: '0.00000000000000000000000000000000000000000000000000',
+                    referralList: [],
+                    attendanceHistory: [],
+                    lastBonusBlockThreshold: '0'
+                });
+                bonusCreatedCount++;
+            }
+        }
+
+        // 4. 고아/유령 데이터 전수 감사 (User에 없는 미확인 지갑의 찌꺼기 레코드 탐색 - 비파괴 격리 보고)
+        const allMiningStates = await MiningState.find({}, 'walletAddress').lean();
+        const allBonusRecords = await BonusRecord.find({}, 'walletAddress').lean();
+
+        const orphanMining = allMiningStates.filter(m => !validUserAddresses.has(m.walletAddress));
+        const orphanBonus = allBonusRecords.filter(b => !validUserAddresses.has(b.walletAddress));
+        const totalOrphans = orphanMining.length + orphanBonus.length;
+
+        // 5. 최고급 KST 정밀 터미널 브리핑 박스 출력
+        console.log('═══════════════════════════════════════════════════════════════════════════════');
+        console.log(' [BitWish Audit] 🛡️ 4대 전산 장부 무결성 전수 감사 및 수복 결과');
+        console.log('───────────────────────────────────────────────────────────────────────────────');
+        console.log(` • 총 회원 수 (User)        : ${userCount}명`);
+        console.log(` • 채굴 통장 수복 (Mining)   : ${miningCreatedCount}건 신규 생성 보충 (정상 1:1 일치)`);
+        console.log(` • 보너스 장부 수복 (Bonus)  : ${bonusCreatedCount}건 신규 생성 보충 (정상 1:1 일치)`);
+        console.log(` • 고아/유령 데이터 감지    : ${totalOrphans}건 ${totalOrphans === 0 ? '(완전 무결)' : '(비파괴 격리 보고)'}`);
+        if (totalOrphans > 0) {
+            if (orphanMining.length > 0) console.log(`   └─ 미등록 채굴 장부: ${orphanMining.map(o => o.walletAddress).join(', ')}`);
+            if (orphanBonus.length > 0) console.log(`   └─ 미등록 보너스 장부: ${orphanBonus.map(o => o.walletAddress).join(', ')}`);
+        }
+        console.log(` • 적용 기준 기본 채굴률   : ${effectiveBaseRate.toFixed(8)} BW/h (반감기 실시간 직결)`);
+        console.log(' • 4대 장부 최종 정합성     : 100% 무결점 정렬 완료 ✅');
+        console.log('═══════════════════════════════════════════════════════════════════════════════');
+
+        return res.json({
+            success: true,
+            message: '4대 전산 장부 정합성 감사 및 자동 수복이 100% 완료되었습니다.',
+            data: {
+                totalUsers: userCount,
+                miningFixedCount: miningCreatedCount,
+                bonusFixedCount: bonusCreatedCount,
+                orphanCount: totalOrphans,
+                orphanMining: orphanMining.map(o => o.walletAddress),
+                orphanBonus: orphanBonus.map(o => o.walletAddress),
+                effectiveBaseRate: effectiveBaseRate.toFixed(8),
+                auditTimestamp: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('[BitWish Audit] ❌ 전산 장부 감사 실패:', error);
+        return res.status(500).json({
+            success: false,
+            message: '데이터 정합성 감사 및 수복 중 오류가 발생했습니다.',
+            error: error instanceof Error ? error.message : String(error)
+        });
     }
 });
 

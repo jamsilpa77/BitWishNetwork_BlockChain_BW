@@ -686,18 +686,61 @@ export class WalletService {
     localStorage.setItem(this.IP_LIMIT_KEY, (count + 1).toString());
   }
 
-  public setAuthSession(address: string): void {
+  /**
+   * [공정 6 수복] 10분 SpeedPass 세션 저장 (표준 키 일원화)
+   */
+  public setAuthSession(address: string, method?: string): void {
     if (typeof window === 'undefined') return;
-    const sessionData = { address, timestamp: Date.now() };
+    const sessionData = { 
+      address, 
+      timestamp: Date.now(),
+      method: method || 'STANDARD_AUTH'
+    };
     localStorage.setItem(this.AUTH_SESSION_KEY, JSON.stringify(sessionData));
+    // 레거시 키 잔존 데이터 정리
+    localStorage.removeItem('bw_mining_auth');
   }
 
+  /**
+   * [공정 6 수복] 10분 SpeedPass 세션 안전 조회 및 손상 세션 자동 청소
+   */
+  public getAuthSession(): { address: string; timestamp: number; method?: string } | null {
+    if (typeof window === 'undefined') return null;
+    try {
+      const data = localStorage.getItem(this.AUTH_SESSION_KEY);
+      if (!data) return null;
+      const session = JSON.parse(data);
+      if (!session || !session.address || !session.timestamp) {
+        this.clearAuthSession();
+        return null;
+      }
+      // 10분 초과 검사 (10 * 60 * 1000 ms)
+      if (Date.now() - session.timestamp >= 10 * 60 * 1000) {
+        this.clearAuthSession();
+        return null;
+      }
+      return session;
+    } catch (e) {
+      console.warn('[WalletService] 훼손된 세션 데이터 감지, 자동 청소 집행:', e);
+      this.clearAuthSession();
+      return null;
+    }
+  }
+
+  /**
+   * [공정 6 수복] 세션 유효성 판별
+   */
   public checkAuthSession(): boolean {
-    if (typeof window === 'undefined') return false;
-    const data = localStorage.getItem(this.AUTH_SESSION_KEY);
-    if (!data) return false;
-    const session = JSON.parse(data);
-    return Date.now() - session.timestamp < 10 * 60 * 1000;
+    return this.getAuthSession() !== null;
+  }
+
+  /**
+   * [공정 6 수복] 세션 강제 초기화 및 청소
+   */
+  public clearAuthSession(): void {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(this.AUTH_SESSION_KEY);
+    localStorage.removeItem('bw_mining_auth');
   }
 
   /**

@@ -264,19 +264,19 @@ const AdminPage: React.FC = () => {
         const saved = localStorage.getItem('bw_community_user');
         return saved ? JSON.parse(saved) : null;
     });
-    
+
     // 공지사항 CRUD 상태
     const [noticeList, setNoticeList] = useState<any[]>([]);
     const [noticePage, setNoticePage] = useState(1);
     const [noticeTotalPages, setNoticeTotalPages] = useState(1);
     const [noticeLoading, setNoticeLoading] = useState(false);
-    
+
     const [noticeTitle, setNoticeTitle] = useState('');
     const [noticeContent, setNoticeContent] = useState('');
     const [noticeImagesBase64, setNoticeImagesBase64] = useState<string[]>([]);
     const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
     const [selectedNoticeIds, setSelectedNoticeIds] = useState<string[]>([]);
-    
+
     // 금칙어 상태
     const [bannedWordsList, setBannedWordsList] = useState<any[]>([]);
     const [newBannedWord, setNewBannedWord] = useState('');
@@ -308,7 +308,7 @@ const AdminPage: React.FC = () => {
                 localStorage.setItem('bw_community_user', JSON.stringify(data.user));
                 setCommunityToken(data.tokens.accessToken);
                 setCommunityUser(data.user);
-                
+
                 sessionStorage.setItem('bw_admin_authenticated', 'true');
                 setIsAdminLoggedIn(true);
                 setAdminPassword('');
@@ -357,7 +357,7 @@ const AdminPage: React.FC = () => {
         if (!files || files.length === 0) return;
 
         const fileArray = Array.from(files);
-        
+
         // 1. 최대 개수 10개 제한 검증
         if (noticeImagesBase64.length + fileArray.length > 10) {
             alert('이미지는 최대 10개까지 업로드할 수 있습니다.');
@@ -416,7 +416,7 @@ const AdminPage: React.FC = () => {
             const isEdit = !!editingNoticeId;
             const url = isEdit ? `/api/community/admin/notices/${editingNoticeId}` : '/api/community/admin/notices';
             const method = isEdit ? 'PUT' : 'POST';
-            
+
             const bodyData: any = {
                 title: noticeTitle.trim(),
                 content: noticeContent.trim(),
@@ -873,11 +873,11 @@ const AdminPage: React.FC = () => {
                     <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <div>
                             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px' }}>이메일 아이디</label>
-                            <input 
-                                type="email" 
-                                value={adminEmail} 
-                                onChange={e => setAdminEmail(e.target.value)} 
-                                required 
+                            <input
+                                type="email"
+                                value={adminEmail}
+                                onChange={e => setAdminEmail(e.target.value)}
+                                required
                                 style={{
                                     width: '100%',
                                     padding: '12px 16px',
@@ -889,16 +889,16 @@ const AdminPage: React.FC = () => {
                                     outline: 'none',
                                     transition: 'border-color 0.2s',
                                     boxSizing: 'border-box'
-                                }} 
+                                }}
                             />
                         </div>
                         <div>
                             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px' }}>비밀번호</label>
-                            <input 
-                                type="password" 
-                                value={adminPassword} 
-                                onChange={e => setAdminPassword(e.target.value)} 
-                                required 
+                            <input
+                                type="password"
+                                value={adminPassword}
+                                onChange={e => setAdminPassword(e.target.value)}
+                                required
                                 style={{
                                     width: '100%',
                                     padding: '12px 16px',
@@ -910,7 +910,7 @@ const AdminPage: React.FC = () => {
                                     outline: 'none',
                                     transition: 'border-color 0.2s',
                                     boxSizing: 'border-box'
-                                }} 
+                                }}
                             />
                         </div>
                         {adminLoginError && (
@@ -925,8 +925,8 @@ const AdminPage: React.FC = () => {
                                 ⚠️ {adminLoginError}
                             </div>
                         )}
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             style={{
                                 padding: '14px',
                                 borderRadius: '8px',
@@ -1640,7 +1640,7 @@ const AdminPage: React.FC = () => {
                         {/* [가입자 목록 통합 영역] */}
                         <div className="test-section" style={{ marginTop: '30px' }}>
                             <h3>🎁 전체 가입자 목록 및 검색</h3>
-                            
+
                             <div className="search-box">
                                 <input
                                     type="text"
@@ -1767,196 +1767,196 @@ const AdminPage: React.FC = () => {
                             </div>
                         </div>
 
-                                <div className="admin-system-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px' }}>
-                                    {/* 공지 관리 섹션 */}
-                                    <div className="admin-system-card">
-                                        <h3>📢 커뮤니티 공지사항 관리</h3>
-                                        
-                                        {/* 공지 작성 및 수정 폼 */}
-                                        <form onSubmit={handleSaveNotice} style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
-                                            <h4 style={{ marginTop: 0 }}>{editingNoticeId ? '✏️ 공지사항 수정' : '✏️ 새 공지사항 작성'}</h4>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                <div>
-                                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>공지 제목</label>
-                                                    <input type="text" value={noticeTitle} onChange={e => setNoticeTitle(e.target.value)} required className="admin-input" style={{ width: '100%' }} />
-                                                </div>
-                                                <div>
-                                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>공지 내용</label>
-                                                    <textarea value={noticeContent} onChange={e => setNoticeContent(e.target.value)} required className="admin-input" style={{ width: '100%', minHeight: '120px', resize: 'vertical' }} rows={4} />
-                                                </div>
-                                                <div>
-                                                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>이미지 첨부 (옵션 - 최대 10개, 개당 2MB 이하, Base64 자동변환)</label>
-                                                    <input type="file" accept="image/*" multiple onChange={handleImagesChange} className="admin-input" style={{ width: '100%' }} />
-                                                    {noticeImagesBase64 && noticeImagesBase64.length > 0 && (
-                                                        <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px' }}>
-                                                            {noticeImagesBase64.map((imgSrc, idx) => (
-                                                                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '8px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
-                                                                    <img src={imgSrc} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                                    <button 
-                                                                        type="button" 
-                                                                        onClick={() => handleRemoveImage(idx)} 
-                                                                        style={{ 
-                                                                            position: 'absolute', 
-                                                                            top: '2px', 
-                                                                            right: '2px', 
-                                                                            background: 'rgba(239, 68, 68, 0.9)', 
-                                                                            color: 'white', 
-                                                                            border: 'none', 
-                                                                            borderRadius: '50%', 
-                                                                            width: '18px', 
-                                                                            height: '18px', 
-                                                                            fontSize: '10px', 
-                                                                            cursor: 'pointer',
-                                                                            display: 'flex',
-                                                                            alignItems: 'center',
-                                                                            justifyContent: 'center',
-                                                                            padding: 0
-                                                                        }}
-                                                                    >
-                                                                        ✕
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                                    <button type="submit" className="admin-button primary" style={{ flex: 1 }}>{editingNoticeId ? '수정 완료' : '등록 완료'}</button>
-                                                    {editingNoticeId && (
-                                                        <button type="button" onClick={() => {
-                                                            setEditingNoticeId(null);
-                                                            setNoticeTitle('');
-                                                            setNoticeContent('');
-                                                            setNoticeImagesBase64([]);
-                                                        }} className="admin-button secondary">취소</button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </form>
+                        <div className="admin-system-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px' }}>
+                            {/* 공지 관리 섹션 */}
+                            <div className="admin-system-card">
+                                <h3>📢 커뮤니티 공지사항 관리</h3>
 
-                                        {/* 공지 목록 */}
-                                        <h4>공지 목록 {noticeLoading && <span style={{ fontSize: '12px', color: '#64748b' }}>(로딩중...)</span>}</h4>
-                                        
-                                        {noticeList.length > 0 ? (
-                                            <>
-                                                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <button onClick={handleDeleteSelectedNotices} disabled={selectedNoticeIds.length === 0} className="admin-button danger" style={{ padding: '8px 16px', fontSize: '12px' }}>
-                                                        🗑️ 선택 삭제 ({selectedNoticeIds.length}개 선택됨)
-                                                    </button>
-                                                    <div>
-                                                        <input 
-                                                            type="checkbox" 
-                                                            id="selectAllNotices"
-                                                            checked={selectedNoticeIds.length === noticeList.length && noticeList.length > 0}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) {
-                                                                    setSelectedNoticeIds(noticeList.map(n => n.id));
-                                                                } else {
-                                                                    setSelectedNoticeIds([]);
-                                                                }
-                                                            }}
-                                                        />
-                                                        <label htmlFor="selectAllNotices" style={{ marginLeft: '6px', fontSize: '13px', cursor: 'pointer' }}>전체 선택</label>
-                                                    </div>
-                                                </div>
-                                                <table className="admin-system-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                                    <thead>
-                                                        <tr style={{ background: '#f1f5f9' }}>
-                                                            <th style={{ width: '40px', padding: '8px', textAlign: 'center' }}>선택</th>
-                                                            <th style={{ padding: '8px', textAlign: 'left' }}>제목</th>
-                                                            <th style={{ width: '100px', padding: '8px', textAlign: 'left' }}>작성자</th>
-                                                            <th style={{ width: '120px', padding: '8px', textAlign: 'center' }}>등록일</th>
-                                                            <th style={{ width: '100px', padding: '8px', textAlign: 'center' }}>동작</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {noticeList.map((notice, idx) => (
-                                                            <tr key={notice.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                                <td style={{ padding: '8px', textAlign: 'center' }}>
-                                                                    <input 
-                                                                        type="checkbox"
-                                                                        checked={selectedNoticeIds.includes(notice.id)}
-                                                                        onChange={(e) => {
-                                                                            if (e.target.checked) {
-                                                                                setSelectedNoticeIds([...selectedNoticeIds, notice.id]);
-                                                                            } else {
-                                                                                setSelectedNoticeIds(selectedNoticeIds.filter(id => id !== notice.id));
-                                                                            }
-                                                                        }}
-                                                                    />
-                                                                </td>
-                                                                <td style={{ padding: '8px', fontSize: '13px' }}>
-                                                                    <div style={{ fontWeight: 'bold' }}>{notice.title}</div>
-                                                                    {notice.images && notice.images.length > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>🖼️ 이미지 {notice.images.length}개</span>}
-                                                                </td>
-                                                                <td style={{ padding: '8px', fontSize: '13px' }}>{notice.author.nickname}</td>
-                                                                <td style={{ padding: '8px', fontSize: '12px', textAlign: 'center', color: '#64748b' }}>
-                                                                    {new Date(notice.createdAt).toLocaleDateString()}
-                                                                </td>
-                                                                <td style={{ padding: '8px', textAlign: 'center' }}>
-                                                                    <button onClick={() => handleEditSelectNotice(notice)} className="admin-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}>수정</button>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-
-                                                {/* 페이징 네비게이션 */}
-                                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
-                                                    <button onClick={() => fetchAdminNotices(noticePage - 1)} disabled={noticePage === 1} className="admin-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>이전</button>
-                                                    <span style={{ fontSize: '13px' }}>{noticePage} / {noticeTotalPages} 페이지</span>
-                                                    <button onClick={() => fetchAdminNotices(noticePage + 1)} disabled={noticePage === noticeTotalPages} className="admin-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>다음</button>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="no-data-message" style={{ padding: '30px' }}>등록된 공지사항이 없습니다.</div>
-                                        )}
-                                    </div>
-
-                                    {/* 금칙어 관리 섹션 */}
-                                    <div className="admin-system-card">
-                                        <h3>🚫 실시간 글쓰기 금칙어 관리</h3>
-                                        <p style={{ fontSize: '12px', color: '#64748b', margin: '-10px 0 20px 0' }}>
-                                            여기에 등록된 단어는 커뮤니티 내 모든 게시글 및 댓글 작성 시 즉각 필터링되어 차단 처리됩니다.
-                                        </p>
-                                        
-                                        <form onSubmit={handleAddBannedWord} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-                                            <input 
-                                                type="text" 
-                                                value={newBannedWord} 
-                                                onChange={e => setNewBannedWord(e.target.value)} 
-                                                placeholder="추가할 금칙어 입력" 
-                                                required 
-                                                className="admin-input" 
-                                                style={{ flex: 1 }} 
-                                            />
-                                            <button type="submit" className="admin-button primary" style={{ padding: '10px 20px' }}>추가</button>
-                                        </form>
-
-                                        <h4>등록된 금칙어 ({bannedWordsList.length}개) {bannedWordLoading && <span style={{ fontSize: '12px', color: '#64748b' }}>(로딩중...)</span>}</h4>
-                                        
-                                        <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '15px', minHeight: '200px', maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0' }}>
-                                            {bannedWordsList.length > 0 ? (
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                                    {bannedWordsList.map(bw => (
-                                                        <div key={bw._id} style={{ display: 'flex', alignItems: 'center', background: '#fee2e2', color: '#991b1b', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', border: '1px solid #fca5a5' }}>
-                                                            <strong>{bw.word}</strong>
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => handleDeleteBannedWord(bw._id)} 
-                                                                style={{ border: 'none', background: 'transparent', color: '#b91c1c', marginLeft: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}
+                                {/* 공지 작성 및 수정 폼 */}
+                                <form onSubmit={handleSaveNotice} style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
+                                    <h4 style={{ marginTop: 0 }}>{editingNoticeId ? '✏️ 공지사항 수정' : '✏️ 새 공지사항 작성'}</h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>공지 제목</label>
+                                            <input type="text" value={noticeTitle} onChange={e => setNoticeTitle(e.target.value)} required className="admin-input" style={{ width: '100%' }} />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>공지 내용</label>
+                                            <textarea value={noticeContent} onChange={e => setNoticeContent(e.target.value)} required className="admin-input" style={{ width: '100%', minHeight: '120px', resize: 'vertical' }} rows={4} />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 'bold' }}>이미지 첨부 (옵션 - 최대 10개, 개당 2MB 이하, Base64 자동변환)</label>
+                                            <input type="file" accept="image/*" multiple onChange={handleImagesChange} className="admin-input" style={{ width: '100%' }} />
+                                            {noticeImagesBase64 && noticeImagesBase64.length > 0 && (
+                                                <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px' }}>
+                                                    {noticeImagesBase64.map((imgSrc, idx) => (
+                                                        <div key={idx} style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '8px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
+                                                            <img src={imgSrc} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveImage(idx)}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: '2px',
+                                                                    right: '2px',
+                                                                    background: 'rgba(239, 68, 68, 0.9)',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    borderRadius: '50%',
+                                                                    width: '18px',
+                                                                    height: '18px',
+                                                                    fontSize: '10px',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    padding: 0
+                                                                }}
                                                             >
-                                                                ×
+                                                                ✕
                                                             </button>
                                                         </div>
                                                     ))}
                                                 </div>
-                                            ) : (
-                                                <div className="no-data-message" style={{ padding: '30px', color: '#64748b' }}>등록된 금칙어가 없습니다.</div>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                            <button type="submit" className="admin-button primary" style={{ flex: 1 }}>{editingNoticeId ? '수정 완료' : '등록 완료'}</button>
+                                            {editingNoticeId && (
+                                                <button type="button" onClick={() => {
+                                                    setEditingNoticeId(null);
+                                                    setNoticeTitle('');
+                                                    setNoticeContent('');
+                                                    setNoticeImagesBase64([]);
+                                                }} className="admin-button secondary">취소</button>
                                             )}
                                         </div>
                                     </div>
+                                </form>
+
+                                {/* 공지 목록 */}
+                                <h4>공지 목록 {noticeLoading && <span style={{ fontSize: '12px', color: '#64748b' }}>(로딩중...)</span>}</h4>
+
+                                {noticeList.length > 0 ? (
+                                    <>
+                                        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <button onClick={handleDeleteSelectedNotices} disabled={selectedNoticeIds.length === 0} className="admin-button danger" style={{ padding: '8px 16px', fontSize: '12px' }}>
+                                                🗑️ 선택 삭제 ({selectedNoticeIds.length}개 선택됨)
+                                            </button>
+                                            <div>
+                                                <input
+                                                    type="checkbox"
+                                                    id="selectAllNotices"
+                                                    checked={selectedNoticeIds.length === noticeList.length && noticeList.length > 0}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedNoticeIds(noticeList.map(n => n.id));
+                                                        } else {
+                                                            setSelectedNoticeIds([]);
+                                                        }
+                                                    }}
+                                                />
+                                                <label htmlFor="selectAllNotices" style={{ marginLeft: '6px', fontSize: '13px', cursor: 'pointer' }}>전체 선택</label>
+                                            </div>
+                                        </div>
+                                        <table className="admin-system-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{ background: '#f1f5f9' }}>
+                                                    <th style={{ width: '40px', padding: '8px', textAlign: 'center' }}>선택</th>
+                                                    <th style={{ padding: '8px', textAlign: 'left' }}>제목</th>
+                                                    <th style={{ width: '100px', padding: '8px', textAlign: 'left' }}>작성자</th>
+                                                    <th style={{ width: '120px', padding: '8px', textAlign: 'center' }}>등록일</th>
+                                                    <th style={{ width: '100px', padding: '8px', textAlign: 'center' }}>동작</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {noticeList.map((notice, idx) => (
+                                                    <tr key={notice.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                        <td style={{ padding: '8px', textAlign: 'center' }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedNoticeIds.includes(notice.id)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedNoticeIds([...selectedNoticeIds, notice.id]);
+                                                                    } else {
+                                                                        setSelectedNoticeIds(selectedNoticeIds.filter(id => id !== notice.id));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ padding: '8px', fontSize: '13px' }}>
+                                                            <div style={{ fontWeight: 'bold' }}>{notice.title}</div>
+                                                            {notice.images && notice.images.length > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>🖼️ 이미지 {notice.images.length}개</span>}
+                                                        </td>
+                                                        <td style={{ padding: '8px', fontSize: '13px' }}>{notice.author.nickname}</td>
+                                                        <td style={{ padding: '8px', fontSize: '12px', textAlign: 'center', color: '#64748b' }}>
+                                                            {new Date(notice.createdAt).toLocaleDateString()}
+                                                        </td>
+                                                        <td style={{ padding: '8px', textAlign: 'center' }}>
+                                                            <button onClick={() => handleEditSelectNotice(notice)} className="admin-button primary" style={{ padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}>수정</button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        {/* 페이징 네비게이션 */}
+                                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '20px' }}>
+                                            <button onClick={() => fetchAdminNotices(noticePage - 1)} disabled={noticePage === 1} className="admin-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>이전</button>
+                                            <span style={{ fontSize: '13px' }}>{noticePage} / {noticeTotalPages} 페이지</span>
+                                            <button onClick={() => fetchAdminNotices(noticePage + 1)} disabled={noticePage === noticeTotalPages} className="admin-button secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>다음</button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="no-data-message" style={{ padding: '30px' }}>등록된 공지사항이 없습니다.</div>
+                                )}
+                            </div>
+
+                            {/* 금칙어 관리 섹션 */}
+                            <div className="admin-system-card">
+                                <h3>🚫 실시간 글쓰기 금칙어 관리</h3>
+                                <p style={{ fontSize: '12px', color: '#64748b', margin: '-10px 0 20px 0' }}>
+                                    여기에 등록된 단어는 커뮤니티 내 모든 게시글 및 댓글 작성 시 즉각 필터링되어 차단 처리됩니다.
+                                </p>
+
+                                <form onSubmit={handleAddBannedWord} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                                    <input
+                                        type="text"
+                                        value={newBannedWord}
+                                        onChange={e => setNewBannedWord(e.target.value)}
+                                        placeholder="추가할 금칙어 입력"
+                                        required
+                                        className="admin-input"
+                                        style={{ flex: 1 }}
+                                    />
+                                    <button type="submit" className="admin-button primary" style={{ padding: '10px 20px' }}>추가</button>
+                                </form>
+
+                                <h4>등록된 금칙어 ({bannedWordsList.length}개) {bannedWordLoading && <span style={{ fontSize: '12px', color: '#64748b' }}>(로딩중...)</span>}</h4>
+
+                                <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '15px', minHeight: '200px', maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0' }}>
+                                    {bannedWordsList.length > 0 ? (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                            {bannedWordsList.map(bw => (
+                                                <div key={bw._id} style={{ display: 'flex', alignItems: 'center', background: '#fee2e2', color: '#991b1b', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', border: '1px solid #fca5a5' }}>
+                                                    <strong>{bw.word}</strong>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteBannedWord(bw._id)}
+                                                        style={{ border: 'none', background: 'transparent', color: '#b91c1c', marginLeft: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="no-data-message" style={{ padding: '30px', color: '#64748b' }}>등록된 금칙어가 없습니다.</div>
+                                    )}
                                 </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 

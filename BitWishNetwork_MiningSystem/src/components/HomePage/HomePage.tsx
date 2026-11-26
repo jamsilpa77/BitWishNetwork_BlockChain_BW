@@ -402,29 +402,34 @@ const HomePage: React.FC = () => {
      */
     const handleStartMining = (): void => {
         try {
-            // [Phase 2] 10분 하이패스 세션 연동
-            // @ts-ignore
-            if (walletService.checkAuthSession()) {
-                const sessionStr = localStorage.getItem('bw_mining_auth');
-                if (sessionStr) {
-                    const sessionData = JSON.parse(sessionStr);
-                    if (sessionData.address) {
-                        setAuthenticatedAddress(sessionData.address);
-                        setIsMiningModalOpen(true);
-                        return;
-                    }
-                }
+            // [공정 6 수복] 10분 SpeedPass 세션 연동 및 안전 검증
+            const activeSession = walletService.getAuthSession();
+            if (activeSession && activeSession.address) {
+                setAuthenticatedAddress(activeSession.address);
+                setIsMiningModalOpen(true);
+                return;
             }
 
-            // [Phase 3] 세션 만료 시 니모닉 파편 인증 모달 호출
+            // [공정 6 수복] 세션 부재/만료 시: 지갑 주소 식별 후 니모닉 파편 보안 인증 모달로 연결
             const currentAddr = walletService.getCurrentWalletAddress();
             if (currentAddr) {
                 setAuthenticatedAddress(currentAddr);
+                setIsMnemonicModalOpen(true);
+            } else {
+                // 지갑이 전혀 등록되지 않은 기기인 경우 지갑 생성 모달로 안전하게 안내
+                setIsCreateWalletModalOpen(true);
             }
-            // 지갑 주소 저장 여부와 상관없이 무조건 "니모닉 파편 보안 인증" 창을 엽니다!
-            setIsMnemonicModalOpen(true);
         } catch (error) {
             console.error('마이닝 시작 핸들러 오류:', error);
+            // 예외 발생 시 손상 세션 강제 청소 후 안전 폴백
+            walletService.clearAuthSession();
+            const currentAddr = walletService.getCurrentWalletAddress();
+            if (currentAddr) {
+                setAuthenticatedAddress(currentAddr);
+                setIsMnemonicModalOpen(true);
+            } else {
+                setIsCreateWalletModalOpen(true);
+            }
         }
     };
 
@@ -440,9 +445,10 @@ const HomePage: React.FC = () => {
      */
     const handleMyWallet = (): void => {
         try {
-            // 1. 인증 세션 확인 (10분 유예)
-            // @ts-ignore
-            if (walletService.checkAuthSession()) {
+            // [공정 6 수복] 1. 인증 세션 확인 (10분 유예)
+            const activeSession = walletService.getAuthSession();
+            if (activeSession && activeSession.address) {
+                setAuthenticatedAddress(activeSession.address);
                 setIsMyWalletModalOpen(true);
                 handleFocus('wallet');
             } else {
@@ -451,6 +457,8 @@ const HomePage: React.FC = () => {
             }
         } catch (error) {
             console.error('나의 지갑 오류:', error);
+            walletService.clearAuthSession();
+            setIsWalletAuthModalOpen(true);
         }
     };
 
@@ -965,12 +973,8 @@ const HomePage: React.FC = () => {
                 currentLanguage={currentLanguage}
                 onOpenMining={(address) => {
                     setAuthenticatedAddress(address);
-                    const sessionData = {
-                        address: address,
-                        timestamp: Date.now(),
-                        method: 'WALLET_DIRECT_ACCESS'
-                    };
-                    localStorage.setItem('bw_mining_auth', JSON.stringify(sessionData));
+                    // [공정 6 수복] 단일 표준 세션 키로 10분 하이패스 등록
+                    walletService.setAuthSession(address, 'WALLET_DIRECT_ACCESS');
                     // [Step 4 Fix] 지갑 창을 닫지 않고 마이닝 창을 나란히 띄움
                     setIsMiningModalOpen(true);
                     handleFocus('mining');
@@ -985,6 +989,11 @@ const HomePage: React.FC = () => {
                     onClose={() => setIsWalletAuthModalOpen(false)}
                     currentLanguage={currentLanguage}
                     onSuccess={() => {
+                        const currentAddr = walletService.getCurrentWalletAddress();
+                        if (currentAddr) {
+                            walletService.setAuthSession(currentAddr, 'SEED_RESTORE_AUTH');
+                            setAuthenticatedAddress(currentAddr);
+                        }
                         setIsWalletAuthModalOpen(false);
                         setIsMyWalletModalOpen(true);
                     }}
@@ -1040,12 +1049,8 @@ const HomePage: React.FC = () => {
                     onClose={() => setIsMnemonicModalOpen(false)}
                     onSuccess={(address) => {
                         setAuthenticatedAddress(address);
-                        const sessionData = {
-                            address: address,
-                            timestamp: Date.now(),
-                            method: 'MNEMONIC_FRAGMENT_AUTH'
-                        };
-                        localStorage.setItem('bw_mining_auth', JSON.stringify(sessionData));
+                        // [공정 6 수복] 단일 표준 세션 키로 10분 하이패스 등록
+                        walletService.setAuthSession(address, 'MNEMONIC_FRAGMENT_AUTH');
                         setIsMnemonicModalOpen(false);
                         setIsMiningModalOpen(true);
                     }}
