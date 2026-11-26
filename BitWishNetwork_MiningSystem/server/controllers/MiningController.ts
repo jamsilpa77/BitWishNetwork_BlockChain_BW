@@ -322,6 +322,9 @@ export class MiningController {
             // [Step 2-1 Fix] BonusRecord 조회 추가 (대소문자 무시 검색 적용)
             const bonusRecord = await BonusRecord.findOne({ walletAddress: new RegExp('^' + walletAddress + '$', 'i') });
 
+            // [공통 직결] 최신 반감기 유효 기본 채굴률 사전 조회
+            const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
+
             // [Step 2: Healer Engine] 데이터 정합성 수복 로직 (자식 0명 유저 포함 전수 조사)
             if (miningState) {
                 // 1. 실제 추천인 데이터 전수 조사 (Robust Search Query)
@@ -354,7 +357,6 @@ export class MiningController {
                 }
 
                 // [공정 4-4 세부 작업 2] 반감기 기본 채굴률 변동 감지 및 미채굴 대기 상태 즉시 최신화
-                const effectiveBaseRate = await HalvingPolicyEngine.getCurrentBaseRate();
                 const isBaseRateChanged = !new Decimal(miningState.currentBaseRate || '0.25').equals(effectiveBaseRate);
 
                 if (isChanged || isBaseRateChanged) {
@@ -514,12 +516,11 @@ export class MiningController {
                 .toString();
 
             // [공정 4-4 세부 작업 2] 아직 채굴을 시작하지 않은 신규 지갑도 최신 반감기 채굴률 즉시 선반영
-            const effectiveBaseRateDecimal = await HalvingPolicyEngine.getCurrentBaseRate();
-            const currentBaseRateStr = effectiveBaseRateDecimal.toFixed(8);
+            const currentBaseRateStr = effectiveBaseRate.toFixed(8);
 
             const hasParent = user?.referrerCode && user.referrerCode.trim() !== '';
             const initialBonus = hasParent ? new Decimal(0.02) : new Decimal(0);
-            const initialTotalRate = effectiveBaseRateDecimal.mul(new Decimal(1).plus(initialBonus)).toFixed(8);
+            const initialTotalRate = effectiveBaseRate.mul(new Decimal(1).plus(initialBonus)).toFixed(8);
 
             res.status(200).json({
                 success: true,
