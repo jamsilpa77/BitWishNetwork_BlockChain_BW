@@ -516,18 +516,14 @@ router.get('/rewards/total', async (req, res) => {
             { $group: { _id: null, total: { $sum: { $toDouble: { $ifNull: ["$referralRewardStorage", "0"] } } } } }
         ]);
 
-        // 2. [추천인 측] 보너스율(2%p) 합산 - MiningState에서 추출
+        // 2. 시스템 전역 실제 부여된 추천 보너스율 순수 전수 합산 (MiningState 단일 원천 집계)
+        // MiningState에는 추천인 2%와 가입자 2%가 각각 이미 완벽히 들어있으므로, 이 합계가 시스템 전체 순수 보너스율임!
         const bonusRateResults = await MiningState.aggregate([
             { $group: { _id: null, total: { $sum: { $toDouble: { $ifNull: ["$referralBonusRate", "0"] } } } } }
         ]);
 
-        // 3. [가입자 측] 보너스율(2%) 합산 - referrerCode 보유 유저 수 추출
-        const joinerCount = await User.countDocuments({ referrerCode: { $ne: null } });
-
-        // 4. 양방향 합산 처리 (추천인 합계 + 가입자 합계)
-        const referrerSum = bonusRateResults.length > 0 ? bonusRateResults[0].total : 0;
-        const joinerSum = joinerCount * 0.02;
-        const finalTotalRate = (referrerSum + joinerSum) * 100;
+        const totalBonusDecimal = bonusRateResults.length > 0 ? bonusRateResults[0].total : 0;
+        const finalTotalRate = totalBonusDecimal * 100; // 0.04 * 100 = 4.00% (2% 이중 합산 왜곡 원천 제거)
 
         return res.json({
             success: true,
