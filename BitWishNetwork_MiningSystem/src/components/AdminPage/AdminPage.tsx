@@ -10,7 +10,7 @@
  * 5. 반감기 정책 관리
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './AdminPage.css';
 import KYCManager from './KYCManager';
 import { PartnerManager } from './PartnerManager';
@@ -60,6 +60,30 @@ const AdminPage: React.FC = () => {
     };
     // --------------------------------------------------
 
+    // [공정 1] 대시보드 4대 핵심 지표 MongoDB 원천 실시간 state
+    const [dashboardStats, setDashboardStats] = useState({
+        totalUsers: 0,
+        activeMiners: 0,
+        totalIssued: '0.00000000',
+        pendingKyc: 0
+    });
+    const [isStatsLoading, setIsStatsLoading] = useState(false);
+
+    const fetchDashboardStats = async () => {
+        try {
+            setIsStatsLoading(true);
+            const res = await fetch('/api/admin/dashboard/stats');
+            const data = await res.json();
+            if (data.success && data.data) {
+                setDashboardStats(data.data);
+            }
+        } catch (err) {
+            console.error('대시보드 통계 조회 실패:', err);
+        } finally {
+            setIsStatsLoading(false);
+        }
+    };
+
     const [subAdmins] = useState([
         { email: 'admin@bitwish.network', nickname: '최고 관리자', grade: 'Super-Admin' },
         { email: 'sub_01@bitwish.network', nickname: '보안 담당자', grade: 'Sub-Admin' }
@@ -97,6 +121,18 @@ const AdminPage: React.FC = () => {
     // ----------------------------------------------------
 
     const [activeTab, setActiveTab] = useState<string>('dashboard');
+
+    // [공정 1] 대시보드 탭 진입 시 실시간 4대 지표 자동 조회 및 5초 주기 폴링
+    useEffect(() => {
+        let interval: any;
+        if (activeTab === 'dashboard') {
+            fetchDashboardStats();
+            interval = setInterval(fetchDashboardStats, 5000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [activeTab]);
     // --- [다국어 확장] 로드맵 에디터 언어 선택 탭 ---
     const [roadmapEditorLang, setRoadmapEditorLang] = useState<'ko' | 'en' | 'ja' | 'zh'>('ko');
 
@@ -1187,22 +1223,33 @@ const AdminPage: React.FC = () => {
                 )}
                 {activeTab === 'dashboard' && (
                     <div className="admin-panel animate-fade-in">
-                        <h2>📊 대시보드</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <h2 style={{ margin: 0 }}>📊 대시보드</h2>
+                            <button
+                                className="admin-button secondary refresh-icon-button"
+                                onClick={fetchDashboardStats}
+                                title="실시간 새로고침"
+                                disabled={isStatsLoading}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '13px', cursor: 'pointer' }}
+                            >
+                                <span>{isStatsLoading ? '동기화 중...' : '🔄 실시간 새로고침'}</span>
+                            </button>
+                        </div>
                         <div className="dashboard-grid">
                             <div className="dashboard-card">
-                                <div className="card-value">1,234</div>
+                                <div className="card-value">{dashboardStats.totalUsers.toLocaleString()}</div>
                                 <div className="card-label">총 사용자</div>
                             </div>
                             <div className="dashboard-card">
-                                <div className="card-value">987</div>
+                                <div className="card-value">{dashboardStats.activeMiners.toLocaleString()}</div>
                                 <div className="card-label">활성 마이너</div>
                             </div>
                             <div className="dashboard-card">
-                                <div className="card-value">12,345,678 BW</div>
+                                <div className="card-value">{parseFloat(dashboardStats.totalIssued || '0').toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })} BW</div>
                                 <div className="card-label">총 발행량</div>
                             </div>
                             <div className="dashboard-card">
-                                <div className="card-value">15</div>
+                                <div className="card-value">{dashboardStats.pendingKyc.toLocaleString()}</div>
                                 <div className="card-label">대기 중인 KYC</div>
                             </div>
                         </div>
