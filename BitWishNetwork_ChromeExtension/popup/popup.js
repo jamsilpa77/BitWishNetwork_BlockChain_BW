@@ -142,7 +142,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /**
-   * 실시간 네트워크 데이터 조회 (3종: 총공급량/현재발행량/잔여발행량)
+   * 실시간 네트워크 데이터 조회 (3종: 총공급량 210억 고정/현재발행량/잔여발행량 정밀 연산)
    */
   async function fetchRealtimeStats() {
     try {
@@ -152,10 +152,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       if (data && (data.stats || data.data)) {
         const statsData = data.stats || data.data;
-        const currentIssued = parseFloat(statsData.totalMinted || statsData.currentIssued || 0);
-        const remainingPool = 21000000000 - currentIssued;
+        // 백엔드 stats.ts의 currentIssued(8자리 고정 문자열) 파싱
+        const currentIssued = parseFloat(statsData.currentIssued || statsData.totalMinted || 0);
+        
+        // [공정 4 정합성 수복] 백서 §1.1 공식 총공급량 210억 BW(21,000,000,000) 기준 잔여 풀 정확 연산
+        // 서버에서 계산된 remainingSupply가 있으면 우선 사용, 없으면 210억 - currentIssued 정밀 연산
+        let remainingPool;
+        if (statsData.remainingSupply !== undefined && statsData.remainingSupply !== null) {
+          remainingPool = parseFloat(statsData.remainingSupply);
+        } else {
+          remainingPool = Math.max(0, 21000000000 - currentIssued);
+        }
 
-        // 카운트 애니메이션 효과와 함께 숫자 업데이트
+        // 카운트 애니메이션 효과와 함께 숫자 업데이트 (소수점 4자리 포맷)
         animateValue(currentIssuedEl, parseFloat(currentIssuedEl.dataset.value || 0), currentIssued, 1000);
         animateValue(remainingPoolEl, parseFloat(remainingPoolEl.dataset.value || 21000000000), remainingPool, 1000);
 

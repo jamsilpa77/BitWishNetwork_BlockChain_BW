@@ -33,6 +33,7 @@ export class RealTimeSyncService {
   private lastSyncTime: Date;
   private walletAddress: string | null;
   private syncCount: number;
+  private uninstalledDetectionCount: number = 0; // [공정 5] Crawl-Back Guard 오판 방지 유예 버퍼 카운터 (3회 연속 미감지 시에만 회수)
   private subscribers: Array<(status: RealTimeMiningStatus) => void> = [];
 
   constructor() {
@@ -238,30 +239,43 @@ export class RealTimeSyncService {
       const response = await apiService.syncMiningData(this.walletAddress, currentAmount, currentBonus);
 
       if (response && response.success && response.data) {
-        // [Crawl-Back Guard] 확장프로그램 설치 여부 검출 및 보너스 강제 회수
+        // [Crawl-Back Guard] 확장프로그램 설치 여부 검출 및 보너스 회수 (3회 연속 미감지 유예 버퍼 적용)
         const serverExtensionRate = parseFloat(response.data.extensionBonusRate || '0');
-        if (typeof document !== 'undefined' && document.documentElement.dataset['bitwishInstalled'] !== "true" && serverExtensionRate > 0) {
-          console.warn(`[Extension Guard] Extension uninstalled detected. Revoking bonus for ${this.walletAddress}`);
-          try {
-            await fetch('/api/mining/extension-bonus', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ walletAddress: this.walletAddress, bonusRate: '0.00000000000000000000000000000000000000000000000000' })
-            });
-            // 회수 후 로컬 데이터 강제 갱신
-            response.data.extensionBonusRate = '0.00000000000000000000000000000000000000000000000000';
-            // 전체 채굴 속도 재계산
-            const baseRate = new Decimal(response.data.currentBaseRate || '0.25');
-            const attendanceRate = response.data.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
-            const referralRate = new Decimal(response.data.referralBonusRate || '0');
-            const partnerRate = response.data.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
-            response.data.currentTotalRate = baseRate
-              .mul(new Decimal(1).plus(attendanceRate))
-              .mul(new Decimal(1).plus(referralRate))
-              .mul(new Decimal(1).plus(partnerRate))
-              .toString();
-          } catch (guardErr) {
-            console.error('[Extension Guard] Failed to revoke bonus:', guardErr);
+        const isInstalledFlag = typeof document !== 'undefined' && document.documentElement.dataset['bitwishInstalled'] === "true";
+
+        if (isInstalledFlag) {
+          // 정상 감지 시 카운터 리셋
+          this.uninstalledDetectionCount = 0;
+        } else if (serverExtensionRate > 0) {
+          // 미감지 시 유예 카운트 증가
+          this.uninstalledDetectionCount++;
+          console.warn(`[Extension Guard] Extension not detected (${this.uninstalledDetectionCount}/3) for ${this.walletAddress}`);
+
+          // 일시적 로딩 렉이나 탭 전환 지연을 방어하고, 3회 연속(약 90초) 확실하게 미감지될 때만 정상 회수
+          if (this.uninstalledDetectionCount >= 3) {
+            console.warn(`[Extension Guard] 3 consecutive uninstalled detections confirmed. Revoking bonus for ${this.walletAddress}`);
+            try {
+              await fetch('/api/mining/extension-bonus', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walletAddress: this.walletAddress, bonusRate: '0.00000000000000000000000000000000000000000000000000' })
+              });
+              // 회수 후 로컬 데이터 강제 갱신
+              response.data.extensionBonusRate = '0.00000000000000000000000000000000000000000000000000';
+              // 전체 채굴 속도 재계산
+              const baseRate = new Decimal(response.data.currentBaseRate || '0.25');
+              const attendanceRate = response.data.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
+              const referralRate = new Decimal(response.data.referralBonusRate || '0');
+              const partnerRate = response.data.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
+              response.data.currentTotalRate = baseRate
+                .mul(new Decimal(1).plus(attendanceRate))
+                .mul(new Decimal(1).plus(referralRate))
+                .mul(new Decimal(1).plus(partnerRate))
+                .toString();
+              this.uninstalledDetectionCount = 0;
+            } catch (guardErr) {
+              console.error('[Extension Guard] Failed to revoke bonus:', guardErr);
+            }
           }
         }
 

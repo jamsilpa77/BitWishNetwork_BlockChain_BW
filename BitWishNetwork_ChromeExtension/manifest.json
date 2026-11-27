@@ -10,6 +10,8 @@
   "host_permissions": [
     "*://bitwishnetwork.com/*",
     "*://www.bitwishnetwork.com/*",
+    "http://localhost:5000/*",
+    "http://127.0.0.1:5000/*",
     "http://localhost:5001/*"
   ],
   "action": {
@@ -25,7 +27,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://bitwishnetwork.com/*", "*://www.bitwishnetwork.com/*", "*://localhost/*", "http://localhost:5001/*"],
+      "matches": [
+        "*://bitwishnetwork.com/*",
+        "*://www.bitwishnetwork.com/*",
+        "http://localhost:5000/*",
+        "http://127.0.0.1:5000/*",
+        "http://localhost:5001/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_start"
     }
