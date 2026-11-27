@@ -36,6 +36,28 @@ export const DEFAULT_HALVING_CONFIG: IHalvingPolicyConfig = {
 };
 
 export const HALVING_CONFIG_KEY = 'halving_policy';
+export const EXTENSION_POLICY_KEY = 'extension_policy';
+
+/**
+ * [공정 1] 크롬 확장프로그램 팝업 부스트 거버넌스 정책 규격
+ */
+export interface IExtensionPolicyConfig {
+    isBetaActive: boolean;       // true: 30% (클로즈 베타 가동), false: 10% (정규 운영)
+    currentRate: number;         // 0.30 또는 0.10
+    betaEndDate?: string;        // 베타 종료 예정일시 (선택)
+    description?: string;        // 정책 메모
+    updatedAt?: Date;            // 최종 수정 시각
+    updatedBy?: string;          // 수정한 관리자
+}
+
+/**
+ * 크롬 확장프로그램 기본 정책 (현재 클로즈 베타 30% 기본 활성)
+ */
+export const DEFAULT_EXTENSION_POLICY: IExtensionPolicyConfig = {
+    isBetaActive: true,
+    currentRate: 0.30,
+    description: '크롬 확장프로그램 클로즈 베타 30% 특전 가동 중'
+};
 
 const SystemConfigSchema = new mongoose.Schema({
     key: { type: String, required: true, unique: true },
@@ -91,6 +113,57 @@ export async function saveHalvingConfig(
         { key: HALVING_CONFIG_KEY },
         {
             key: HALVING_CONFIG_KEY,
+            value: updatedValue,
+            updatedAt: new Date()
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return {
+        ...updatedValue,
+        updatedAt: doc.updatedAt
+    };
+}
+
+/**
+ * [공정 1] 크롬 확장프로그램 정책 DB 조회 헬퍼
+ */
+export async function getExtensionPolicy(): Promise<IExtensionPolicyConfig> {
+    try {
+        const configDoc = await SystemConfig.findOne({ key: EXTENSION_POLICY_KEY });
+        if (!configDoc || !configDoc.value) {
+            return { ...DEFAULT_EXTENSION_POLICY };
+        }
+        return {
+            ...DEFAULT_EXTENSION_POLICY,
+            ...configDoc.value,
+            updatedAt: configDoc.updatedAt
+        };
+    } catch (err) {
+        console.error('[SystemConfig] 확장프로그램 정책 조회 실패 (기본값 사용):', err);
+        return { ...DEFAULT_EXTENSION_POLICY };
+    }
+}
+
+/**
+ * [공정 1] 크롬 확장프로그램 정책 DB 저장/수정 헬퍼
+ */
+export async function saveExtensionPolicy(
+    config: Partial<IExtensionPolicyConfig>,
+    adminEmail: string = 'salmani1@naver.com'
+): Promise<IExtensionPolicyConfig> {
+    const current = await getExtensionPolicy();
+    const updatedValue: IExtensionPolicyConfig = {
+        ...current,
+        ...config,
+        currentRate: config.isBetaActive !== undefined ? (config.isBetaActive ? 0.30 : 0.10) : (config.currentRate !== undefined ? config.currentRate : current.currentRate),
+        updatedBy: adminEmail
+    };
+
+    const doc = await SystemConfig.findOneAndUpdate(
+        { key: EXTENSION_POLICY_KEY },
+        {
+            key: EXTENSION_POLICY_KEY,
             value: updatedValue,
             updatedAt: new Date()
         },

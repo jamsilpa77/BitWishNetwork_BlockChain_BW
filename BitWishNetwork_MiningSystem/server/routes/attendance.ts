@@ -80,13 +80,13 @@ router.post('/check', async (req, res) => {
                 const partnerBonus = currentState.partnerStatus === 'REGISTERED' ? new Decimal('1.25') : new Decimal('0');
                 const extensionBonus = new Decimal(currentState.extensionBonusRate || '0');
 
-                // 각 보너스를 곱셈으로 완벽 적용
+                // 각 보너스를 곱셈으로 완벽 적용 (50자리 정밀도 유지)
                 currentState.currentTotalRate = effectiveBaseRate
                     .mul(new Decimal(1).plus(attendanceBonus))
                     .mul(new Decimal(1).plus(referralBonus))
                     .mul(new Decimal(1).plus(partnerBonus))
                     .mul(new Decimal(1).plus(extensionBonus))
-                    .toFixed(8);
+                    .toFixed(50);
 
                 await currentState.save();
 
@@ -96,7 +96,8 @@ router.post('/check', async (req, res) => {
                     miningState: {
                         isAttendanceActive: true,
                         currentBaseRate: currentState.currentBaseRate,
-                        currentTotalRate: currentState.currentTotalRate
+                        currentTotalRate: currentState.currentTotalRate,
+                        extensionBonusRate: currentState.extensionBonusRate
                     }
                 });
             }
@@ -143,20 +144,26 @@ router.post('/check', async (req, res) => {
         const partnerBonus = miningState.partnerStatus === 'REGISTERED' ? new Decimal('1.25') : new Decimal('0');
         const extensionBonus = new Decimal(miningState.extensionBonusRate || '0');
 
-        // 각 보너스를 곱셈으로 완벽하게 적용
+        // 각 보너스를 곱셈으로 완벽하게 적용 (50자리 정밀도 유지)
         const newTotalRate = effectiveBaseRate
             .mul(new Decimal(1).plus(attendanceBonus))
             .mul(new Decimal(1).plus(referralBonus))
             .mul(new Decimal(1).plus(partnerBonus))
             .mul(new Decimal(1).plus(extensionBonus))
-            .toFixed(8);
+            .toFixed(50);
 
         miningState.currentTotalRate = newTotalRate;
         await miningState.save();
 
         return res.json({
             success: true,
-            message: '출석 체크가 완료되었습니다'
+            message: '출석 체크가 완료되었습니다',
+            miningState: {
+                isAttendanceActive: true,
+                currentBaseRate: miningState.currentBaseRate,
+                currentTotalRate: miningState.currentTotalRate,
+                extensionBonusRate: miningState.extensionBonusRate
+            }
         });
     } catch (error) {
         console.error('Attendance check error:', error);

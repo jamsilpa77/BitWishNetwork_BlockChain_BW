@@ -30,4 +30,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     return true;
   }
+
+  // 웹 마이닝 출석 완료 상태를 팝업 스토리지에 동기화
+  if (message.type === "SYNC_ATTENDANCE_STATUS") {
+    chrome.storage.local.set({ attendanceBonusActive: Boolean(message.isAttendanceActive) }, () => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+
+  // 팝업 출석 완료 시 활성 탭(웹 마이닝 페이지)의 content.js로 브릿지 메시지 전달
+  if (message.type === "NOTIFY_WEB_ATTENDANCE_COMPLETED") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs[0] && tabs[0].id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: "POPUP_ATTENDANCE_COMPLETED",
+          walletAddress: message.walletAddress,
+          miningState: message.miningState
+        }, () => {});
+      }
+    });
+    sendResponse({ success: true });
+    return true;
+  }
 });

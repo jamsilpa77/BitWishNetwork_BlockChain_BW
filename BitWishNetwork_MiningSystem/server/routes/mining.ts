@@ -316,10 +316,24 @@ router.get('/block-transactions/:walletAddress', async (req, res) => {
     }
 });
 
-// 크롬 확장프로그램 보너스 업데이트 API
+// 크롬 확장프로그램 정책 공개 조회 API (팝업 및 프론트엔드 동적 연동용)
+router.get('/extension-policy', async (req, res) => {
+    try {
+        const { getExtensionPolicy } = require('../models/SystemConfig');
+        const policy = await getExtensionPolicy();
+        return res.json({
+            success: true,
+            data: policy
+        });
+    } catch (error: any) {
+        return res.status(500).json({ success: false, message: '확장프로그램 정책 조회 실패', error: error.message });
+    }
+});
+
+// [공정 2 어뷰징 방어 가드] 크롬 확장프로그램 보너스 업데이트 API (PC 1대 상한 고정 & 멱등성 보장)
 router.post('/extension-bonus', async (req, res) => {
     try {
-        const { walletAddress, bonusRate } = req.body;
+        const { walletAddress, bonusRate, isActive } = req.body;
         if (!walletAddress) {
             return res.status(400).json({ success: false, message: '지갑 주소가 필요합니다.' });
         }
@@ -335,9 +349,38 @@ router.post('/extension-bonus', async (req, res) => {
             return res.status(404).json({ success: false, message: '마이닝 상태를 찾을 수 없습니다.' });
         }
 
-        state.extensionBonusRate = bonusRate || '0.00000000000000000000000000000000000000000000000000';
+        // [공정 1 거버넌스 연동] 관리자가 설정한 현재 거버넌스 정책 요율(0.30 or 0.10) 조회
+        const { getExtensionPolicy } = require('../models/SystemConfig');
+        const policy = await getExtensionPolicy();
+        const maxAllowedRate = policy.currentRate; // 0.30 (클로즈 베타) 또는 0.10 (정규 운영)
 
-        // 채굴률 즉시 업데이트
+        // 🛡️ [공정 2 어뷰징 차단 핵심 가드]
+        // 클라이언트가 보낸 bonusRate 수치와 무관하게, 활성화(isActive !== false && bonusRate > 0) 요청인 경우
+        // 오직 관리자 거버넌스 상한선(maxAllowedRate: 0.30 또는 0.10)만 부여합니다.
+        // 다중 PC나 가상머신에서 동일 니모닉으로 여러 번 인증을 시도하더라도,
+        // 이미 해당 요율이 설정되어 있으면 중복 누적되지 않고 정확히 1회분만 유지(Idempotency)됩니다.
+        const requested = parseFloat(bonusRate || '0');
+        const isRequestActive = isActive !== undefined ? Boolean(isActive) : (requested > 0);
+        const enforcedRate = isRequestActive ? maxAllowedRate : 0;
+        const newExtensionBonusRate = new Decimal(enforcedRate).toFixed(50);
+
+        // 현재 상태와 동일한 경우 불필요한 재계산 없이 안전하게 반환
+        if (state.extensionBonusRate === newExtensionBonusRate) {
+            return res.json({
+                success: true,
+                message: '이미 최적의 부스트가 적용되어 있습니다. (중복 가산 차단됨)',
+                extensionBonusRate: state.extensionBonusRate,
+                currentTotalRate: state.currentTotalRate,
+                policy: {
+                    isBetaActive: policy.isBetaActive,
+                    currentRate: policy.currentRate
+                }
+            });
+        }
+
+        state.extensionBonusRate = newExtensionBonusRate;
+
+        // 채굴률 즉시 업데이트 (출석 5% * 추천 * 가맹점 * 확장 부스트)
         const baseRate = new Decimal(state.currentBaseRate || '0.25');
         const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
         const referralRate = new Decimal(state.referralBonusRate || '0');
@@ -349,16 +392,21 @@ router.post('/extension-bonus', async (req, res) => {
             .mul(new Decimal(1).plus(referralRate))
             .mul(new Decimal(1).plus(partnerRate))
             .mul(new Decimal(1).plus(extensionRate))
-            .toString();
+            .toFixed(50);
 
         await state.save();
 
-        console.log(`[Extension Bonus] Updated for ${walletAddress}: rate=${state.extensionBonusRate}, totalRate=${state.currentTotalRate}`);
+        console.log(`[Extension Bonus - Anti-Abuse] Guard Enforced for ${walletAddress}: policyCap=${maxAllowedRate}, finalRate=${state.extensionBonusRate}, totalRate=${state.currentTotalRate}`);
 
         return res.json({
             success: true,
+            message: '확장프로그램 부스트가 정상 적용되었습니다.',
             extensionBonusRate: state.extensionBonusRate,
-            currentTotalRate: state.currentTotalRate
+            currentTotalRate: state.currentTotalRate,
+            policy: {
+                isBetaActive: policy.isBetaActive,
+                currentRate: policy.currentRate
+            }
         });
     } catch (error: any) {
         console.error('Extension bonus update error:', error);

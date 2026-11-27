@@ -322,6 +322,17 @@ export class RealTimeSyncService {
   }
 
   /**
+   * [공정 3 브릿지] 팝업 또는 외부 출석 완료 신호 수신 시 실시간 동기화
+   */
+  public triggerImmediateSync(): void {
+    if (this.walletAddress) {
+      this.performDataSync((status: RealTimeMiningStatus) => {
+        this.notifySubscribers();
+      });
+    }
+  }
+
+  /**
    * 보너스 저장소 업데이트용 (ReferralBonusService 연동)
    */
   public updateBonusStorage(bonusAmountDelta: number): void {

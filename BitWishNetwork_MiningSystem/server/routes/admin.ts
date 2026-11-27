@@ -8,7 +8,7 @@ import User from '../models/User'; // [추가] 가입 정보 조회를 위한 Us
 import SystemConfig from '../models/SystemConfig';
 import MonthlySettlement from '../models/MonthlySettlement'; // [추가] 마이그레이션 상태 승격을 위한 모델 추가
 import { HalvingPolicyEngine } from '../services/HalvingPolicyEngine';
-import { saveHalvingConfig } from '../models/SystemConfig';
+import { saveHalvingConfig, getExtensionPolicy, saveExtensionPolicy } from '../models/SystemConfig';
 
 const router = express.Router();
 
@@ -941,6 +941,81 @@ router.all('/audit/integrity', async (req, res) => {
             message: '데이터 정합성 감사 및 수복 중 오류가 발생했습니다.',
             error: error instanceof Error ? error.message : String(error)
         });
+    }
+});
+
+// ---------------------------------------------------------
+// [공정 1] 크롬 확장프로그램 팝업 부스트 거버넌스 제어 API (30% ↔ 10%)
+// ---------------------------------------------------------
+
+// 1. 현재 정책 조회
+router.get('/extension/policy', async (req, res) => {
+    try {
+        const policy = await getExtensionPolicy();
+        return res.json({
+            success: true,
+            data: policy
+        });
+    } catch (error: any) {
+        return res.status(500).json({ success: false, message: '확장프로그램 정책 조회 실패', error: error.message });
+    }
+});
+
+// 2. 부스트 모드 변경 (베타 30% ↔ 정규 10% 원클릭 전환 및 기 활성 유저 채굴률 동기화)
+router.post('/extension/policy', async (req, res) => {
+    try {
+        const { isBetaActive, betaEndDate, description, adminEmail } = req.body;
+
+        const updatedPolicy = await saveExtensionPolicy({
+            isBetaActive: Boolean(isBetaActive),
+            betaEndDate: betaEndDate || '',
+            description: description || (isBetaActive ? '크롬 확장프로그램 클로즈 베타 30% 특전 가동 중' : '크롬 확장프로그램 정규 10% 표준 가동')
+        }, adminEmail || 'salmani1@naver.com');
+
+        const newTargetRate = updatedPolicy.currentRate; // 0.30 또는 0.10
+        const newTargetRateStr = new Decimal(newTargetRate).toFixed(50);
+
+        // [동기화] 현재 확장프로그램 부스트를 활성화하여 채굴 중인 모든 계정의 extensionBonusRate 및 총 채굴률 일괄 갱신
+        const activeStates = await MiningState.find({
+            extensionBonusRate: { $exists: true, $ne: '0.00000000000000000000000000000000000000000000000000' }
+        });
+
+        let updatedUserCount = 0;
+        for (const state of activeStates) {
+            const currentExt = parseFloat(state.extensionBonusRate || '0');
+            if (currentExt > 0) {
+                state.extensionBonusRate = newTargetRateStr;
+
+                // 채굴률 재계산
+                const baseRate = new Decimal(state.currentBaseRate || '0.25');
+                const attendanceRate = state.isAttendanceActive ? new Decimal(0.05) : new Decimal(0);
+                const referralRate = new Decimal(state.referralBonusRate || '0');
+                const partnerRate = state.partnerStatus === 'REGISTERED' ? new Decimal(1.25) : new Decimal(0);
+                const extensionRate = new Decimal(newTargetRate);
+
+                state.currentTotalRate = baseRate
+                    .mul(new Decimal(1).plus(attendanceRate))
+                    .mul(new Decimal(1).plus(referralRate))
+                    .mul(new Decimal(1).plus(partnerRate))
+                    .mul(new Decimal(1).plus(extensionRate))
+                    .toFixed(50);
+
+                await state.save();
+                updatedUserCount++;
+            }
+        }
+
+        console.log(`[Extension Policy Governance] 부스트 모드 변경 완료: ${updatedPolicy.isBetaActive ? '30% (베타)' : '10% (정규)'}, 동기화된 유저 수: ${updatedUserCount}명`);
+
+        return res.json({
+            success: true,
+            message: `확장프로그램 부스트 정책이 ${updatedPolicy.isBetaActive ? '30% (클로즈 베타)' : '10% (정규 운영)'}으로 성공적으로 전환되었습니다.`,
+            data: updatedPolicy,
+            syncedUsers: updatedUserCount
+        });
+    } catch (error: any) {
+        console.error('[Extension Policy Governance] 정책 변경 실패:', error);
+        return res.status(500).json({ success: false, message: '정책 변경 실패', error: error.message });
     }
 });
 

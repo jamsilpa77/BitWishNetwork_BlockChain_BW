@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let walletAddress = "";
   let attendanceBonusActive = false;
   let mnemonicBonusActive = false;
+  let activePolicyRate = 30; // 기본값 30% (관리자 정책 동적 조회로 갱신)
+  let isBetaPolicy = true;
   let timerInterval = null;
   let miningPollingInterval = null;
   let statsPollingInterval = null;
@@ -26,6 +28,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const mnemonicInputArea = document.getElementById("mnemonicInputArea");
   const mnemonicSuccessArea = document.getElementById("mnemonicSuccessArea");
   const txtWalletAddress = document.getElementById("txtWalletAddress");
+  const mnemonicBonusTag = document.getElementById("mnemonicBonusTag");
+  const mnemonicSubText = document.getElementById("mnemonicSubText");
+  const mnemonicSuccessText = document.getElementById("mnemonicSuccessText");
 
   // 마이닝 실시간 데이터 4종 DOM
   const accumulatedRewardEl = document.getElementById("accumulatedReward");
@@ -57,6 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
    * - 출석체크는 지갑 연결 후에만 활성화
    */
   function initWalletState() {
+    fetchExtensionPolicy();
     chrome.storage.local.get(
       ["walletAddress", "attendanceBonusActive", "mnemonicBonusActive"],
       async (result) => {
@@ -375,12 +381,44 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /**
-   * 총 부스트 요율 계산 및 UI 업데이트
+   * [공정 1] 서버 거버넌스 정책 동적 조회 (베타 30% vs 정규 10%)
+   */
+  async function fetchExtensionPolicy() {
+    try {
+      const response = await fetch(`${backendUrl}/api/mining/extension-policy`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result && result.success && result.data) {
+          isBetaPolicy = result.data.isBetaActive;
+          activePolicyRate = Math.round((result.data.currentRate || 0.30) * 100);
+          
+          // UI 동적 갱신
+          if (mnemonicBonusTag) {
+            mnemonicBonusTag.innerText = `+${activePolicyRate}%`;
+          }
+          if (mnemonicSubText) {
+            mnemonicSubText.innerText = isBetaPolicy 
+              ? "* 현재 클로즈 베타 가동 중 (+30% 특전 적용)" 
+              : "* 공식 정규 운영 (+10% 표준 부스트 적용)";
+          }
+          if (mnemonicSuccessText) {
+            mnemonicSuccessText.innerText = `니모닉 +${activePolicyRate}% 부스트가 안전하게 활성화되었습니다!`;
+          }
+          updateTotalBoostDisplay();
+        }
+      }
+    } catch (e) {
+      console.warn("[Extension] Policy fetch fallback to default:", e);
+    }
+  }
+
+  /**
+   * 총 부스트 요율 계산 및 UI 업데이트 (관리자 정책 동적 반영)
    */
   function updateTotalBoostDisplay() {
     let rate = 0;
     if (attendanceBonusActive) rate += 5;
-    if (mnemonicBonusActive) rate += 30;
+    if (mnemonicBonusActive) rate += activePolicyRate;
     totalBoost.innerText = `${rate}%`;
     
     // 보너스 뱃지 색상 동적 변경
@@ -392,18 +430,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /**
    * 서버에 보너스 업데이트 요청 전송
-   * [중요] 출석 보너스(5%)는 /api/attendance/check 엔드포인트에서
-   * MiningState.isAttendanceActive를 통해 별도로 관리됩니다.
-   * 여기서는 니모닉 보너스(30%)만 extensionBonusRate로 전송합니다.
-   * 출석 보너스를 여기에 포함하면 서버에서 이중 계산됩니다.
    */
   async function syncBonusToServer() {
     if (!walletAddress) return;
     
-    // [Fix] 출석 보너스는 서버의 isAttendanceActive에서 처리하므로 제외
-    // 니모닉 보너스만 extensionBonusRate로 전송
+    // 니모닉 보너스만 extensionBonusRate로 전송 (관리자 정책 요율 동적 반영)
     let rate = 0;
-    if (mnemonicBonusActive) rate += 0.30;
+    if (mnemonicBonusActive) rate = activePolicyRate / 100; // 0.30 또는 0.10
     
     const decimalRate = rate.toFixed(50);
 
@@ -455,6 +488,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateAttendanceUIToChecked();
         updateTotalBoostDisplay();
         await syncBonusToServer();
+
+        // [공정 3 브릿지] 활성 브라우저 창(마이닝 페이지)으로 실시간 출석 완료 브릿지 메시지 발송
+        chrome.runtime.sendMessage({
+          type: "NOTIFY_WEB_ATTENDANCE_COMPLETED",
+          walletAddress: walletAddress,
+          miningState: data.miningState || null
+        }, () => {});
+
         alert("✅ 출석체크가 완료되었습니다!\n+5% 채굴 보너스가 반영되었습니다!");
       } else {
         alert(data.message || "출석체크에 실패했습니다.");
@@ -532,7 +573,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         btnAttendance.disabled = false;
         await syncAttendanceStatus();
 
-        alert("✅ 24단어 니모닉 인증이 완료되었습니다!\n+30% 채굴 보너스가 즉시 적용되었습니다!\n(클로즈 베타 종료 후 10%로 조정됩니다)");
+        alert(`✅ 24단어 니모닉 인증이 완료되었습니다!\n+${activePolicyRate}% 채굴 보너스가 즉시 적용되었습니다!`);
       } else {
         alert(data.message || "니모닉 인증에 실패했습니다. 단어의 철자나 순서를 확인해보세요.");
         btnVerifyMnemonic.disabled = false;

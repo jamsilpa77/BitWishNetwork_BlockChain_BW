@@ -124,9 +124,24 @@ const HomePage: React.FC = () => {
             }
         };
 
+        // [공정 3 브릿지] 크롬 팝업에서 출석 완료 시 웹페이지 실시간 감지 리스너
+        const handleExtensionMessage = (event: MessageEvent) => {
+            if (event.data && event.data.type === "BITWISH_POPUP_ATTENDANCE_COMPLETED") {
+                console.log("[HomePage] 팝업으로부터 출석 완료 신호 수신:", event.data);
+                // 실시간 동기화 서비스에 즉각 서버 재동기화 트리거 (새로고침 없이 0.1초 만에 마이닝 화면 점등 및 채굴률 갱신)
+                const realTimeSync = RealTimeSyncService.getInstance();
+                realTimeSync.triggerImmediateSync();
+            }
+        };
+
+        window.addEventListener("message", handleExtensionMessage);
+
         checkExtensionAndWallet();
         const interval = setInterval(checkExtensionAndWallet, 3000);
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("message", handleExtensionMessage);
+        };
     }, []);
 
     const [isDarkMode, setIsDarkMode] = useState(false);
@@ -1033,15 +1048,6 @@ const HomePage: React.FC = () => {
                 />
             )}
             */}
-
-            {isReferralModalOpen && (
-                <ReferralModal
-                    isOpen={isReferralModalOpen}
-                    onClose={() => setIsReferralModalOpen(false)}
-                    currentLanguage={currentLanguage}
-                    walletAddress={authenticatedAddress}
-                />
-            )}
 
             {isMnemonicModalOpen && (
                 <MnemonicAuthModal

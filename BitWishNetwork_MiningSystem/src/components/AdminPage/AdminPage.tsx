@@ -15,6 +15,7 @@ import './AdminPage.css';
 import KYCManager from './KYCManager';
 import { PartnerManager } from './PartnerManager';
 import HalvingManager from './HalvingManager';
+import ExtensionPolicyManager from './ExtensionPolicyManager';
 
 const AdminPage: React.FC = () => {
     // --- [플랫폼 및 전광판 제어용 신규 상태 변수] ---
@@ -1046,7 +1047,7 @@ const AdminPage: React.FC = () => {
                 </button>
                 <div className="admin-tab-dropdown-wrapper">
                     <button
-                        className={`admin-tab ${activeTab === 'kyc' || activeTab === 'halving' || activeTab === 'partner' ? 'active' : ''}`}
+                        className={`admin-tab ${activeTab === 'kyc' || activeTab === 'halving' || activeTab === 'partner' || activeTab === 'extensionPolicy' ? 'active' : ''}`}
                         onClick={() => setActiveTab('kyc')}
                     >
                         🆔 KYC 관리 ▾
@@ -1055,6 +1056,7 @@ const AdminPage: React.FC = () => {
                         <button onClick={() => setActiveTab('kyc')}>KYC 신청 목록</button>
                         <button onClick={() => setActiveTab('partner')}>🏪 가맹점 관리</button>
                         <button onClick={() => setActiveTab('halving')}>⏰ 반감기 관리</button>
+                        <button onClick={() => setActiveTab('extensionPolicy')}>🚀 확장프로그램 부스트 관리</button>
                     </div>
                 </div>
             </nav>
@@ -2023,6 +2025,12 @@ const AdminPage: React.FC = () => {
                 {activeTab === 'halving' && (
                     <div className="admin-panel animate-fade-in">
                         <HalvingManager />
+                    </div>
+                )}
+
+                {activeTab === 'extensionPolicy' && (
+                    <div className="admin-panel animate-fade-in">
+                        <ExtensionPolicyManager />
                     </div>
                 )}
             </main>

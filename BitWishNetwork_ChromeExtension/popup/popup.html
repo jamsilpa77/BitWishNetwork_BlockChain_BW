@@ -87,14 +87,14 @@
         </div>
       </section>
 
-      <!-- 4. 니모닉 인증 30% 부스트 -->
+      <!-- 4. 니모닉 인증 부스트 (관리자 거버넌스 연동) -->
       <section class="action-section">
         <div class="action-header">
           <h2 class="section-title">🔑 니모닉 지갑 보안 인증</h2>
-          <span class="bonus-rate-tag">+30%</span>
+          <span class="bonus-rate-tag" id="mnemonicBonusTag">+30%</span>
         </div>
         <div class="action-card">
-          <p class="card-text">24단어 복구용 니모닉 코드를 입력하여 30% 속도 보너스를 활성화하세요. (지갑 원문은 외부에 전송 및 보관되지 않고 즉시 해싱됩니다)<br><span style="color: var(--accent-gold); font-size: 10px;">* 클로즈 베타가 끝나면 팝업 보너스 부스터는 10%로 내려갑니다.</span></p>
+          <p class="card-text" id="mnemonicCardText">24단어 복구용 니모닉 코드를 입력하여 전용 속도 보너스를 활성화하세요. (지갑 원문은 외부에 전송 및 보관되지 않고 즉시 해싱됩니다)<br><span id="mnemonicSubText" style="color: var(--accent-gold); font-size: 10px;">* PC 1대에 한해 전용 채굴 부스트가 적용됩니다.</span></p>
           
           <div id="mnemonicInputArea">
             <textarea id="txtMnemonic" class="mnemonic-input" placeholder="24단어 니모닉 코드를 띄어쓰기로 구분하여 정확히 입력해 주세요." rows="3"></textarea>
@@ -103,7 +103,7 @@
 
           <div id="mnemonicSuccessArea" class="success-area hide">
             <span class="success-icon">✓</span>
-            <span class="success-text">니모닉 30% 부스트가 안전하게 활성화되었습니다!<br><span style="font-size: 9px; opacity: 0.8;">(클로즈 베타 종료 후에는 10%로 조정됩니다)</span></span>
+            <span class="success-text" id="mnemonicSuccessText">니모닉 채굴 부스트가 안전하게 활성화되었습니다!</span>
           </div>
         </div>
       </section>
