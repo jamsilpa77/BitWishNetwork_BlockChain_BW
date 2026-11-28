@@ -382,9 +382,23 @@ const isProduction = process.env.NODE_ENV === 'production';
 app.disable('x-powered-by');
 
 // Middleware
-// [보안] CORS 도메인 제한 - 프로덕션에서는 bitwishnetwork.com만 API 호출 허용
+// [보안 & 공정 6] CORS 도메인 제한 - 프로덕션에서는 bitwishnetwork.com 및 크롬 확장프로그램만 API 호출 허용
 app.use(cors(isProduction ? {
-    origin: ['https://bitwishnetwork.com', 'https://www.bitwishnetwork.com'],
+    origin: (origin, callback) => {
+        // 브라우저 직접 접속, Postman, 서버 간 호출 등 origin이 없는 경우 허용
+        if (!origin) return callback(null, true);
+        
+        // 공식 도메인 및 크롬 확장프로그램 고유 Origin(chrome-extension://) 허용
+        if (
+            origin === 'https://bitwishnetwork.com' ||
+            origin === 'https://www.bitwishnetwork.com' ||
+            /^chrome-extension:\/\/[a-z]{32}$/.test(origin)
+        ) {
+            return callback(null, true);
+        }
+        
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
 } : {}));
 app.use(bodyParser.json({ limit: '50mb' }));
