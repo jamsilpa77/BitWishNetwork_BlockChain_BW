@@ -9,6 +9,7 @@ import SystemConfig from '../models/SystemConfig';
 import MonthlySettlement from '../models/MonthlySettlement'; // [추가] 마이그레이션 상태 승격을 위한 모델 추가
 import { HalvingPolicyEngine } from '../services/HalvingPolicyEngine';
 import { saveHalvingConfig, getExtensionPolicy, saveExtensionPolicy } from '../models/SystemConfig';
+import { settlementWorker } from '../cron/SettlementWorker';
 
 const router = express.Router();
 
@@ -1016,6 +1017,18 @@ router.post('/extension/policy', async (req, res) => {
     } catch (error: any) {
         console.error('[Extension Policy Governance] 정책 변경 실패:', error);
         return res.status(500).json({ success: false, message: '정책 변경 실패', error: error.message });
+    }
+});
+
+// [공정 3 수복] 관리자 전용 월간 정산 스냅샷 즉시 실행 API
+router.post('/settlement/trigger-snapshot', async (req, res) => {
+    try {
+        console.log('[Admin Settlement Trigger] 관리자에 의한 월간 정산 스냅샷 즉시 실행 시작...');
+        const result = await settlementWorker.executeMonthlySnapshot();
+        return res.json(result);
+    } catch (error: any) {
+        console.error('[Admin Settlement Trigger Error]:', error);
+        return res.status(500).json({ success: false, message: '월간 정산 실행 중 오류 발생', error: error.message });
     }
 });
 

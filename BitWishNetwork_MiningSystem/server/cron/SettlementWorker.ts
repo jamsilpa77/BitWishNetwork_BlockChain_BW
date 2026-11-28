@@ -63,18 +63,24 @@ export class SettlementWorker {
     }
 
     /**
-     * [스냅샷] 매월 말일 23:59:59 월간 정산 자동 가동
+     * [스냅샷] 매월 말일 23:59:59 월간 정산 자동 가동 (KST 한국 표준시 기준)
      */
     private initializeMonthlySnapshot(): void {
         cron.schedule('59 59 23 * * *', async () => {
             const now = new Date();
-            const tomorrow = new Date(now.getTime() + 1000); // 1초 뒤 (다음 달 1일 00:00:00)
+            // 한국 표준시(KST) 기준 현재 연, 월, 일 정밀 추출
+            const kstDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }); // YYYY-MM-DD
+            const [year, month, day] = kstDateStr.split('-').map(Number);
 
-            // 현재 달과 1초 뒤 달이 달라지는 순간이 바로 말일 23:59:59
-            if (now.getMonth() !== tomorrow.getMonth()) {
-                console.log(`[SettlementWorker] 📸 말일 스냅샷 가동: 월간 채굴 보존 및 이관 공정 시작`);
+            // 해당 월의 실제 마지막 날짜 계산 (11월: 30, 12월: 31, 2월: 28/29)
+            const lastDayOfMonth = new Date(year, month, 0).getDate();
+
+            if (day === lastDayOfMonth) {
+                console.log(`[SettlementWorker] 📸 KST 말일 도래 확인(${kstDateStr}): 월간 채굴 보존 및 이관 스냅샷 가동`);
                 await this.executeMonthlySnapshot();
             }
+        }, {
+            timezone: 'Asia/Seoul' // KST 한국 표준시 엄격 지정
         });
     }
 
@@ -170,11 +176,22 @@ export class SettlementWorker {
     /**
      * 월간 말일 정산 스냅샷 실행 로직
      */
-    public async executeMonthlySnapshot(): Promise<void> {
+    public async executeMonthlySnapshot(): Promise<{ success: boolean; settledCount: number; targetYear: number; targetMonth: number; message: string }> {
         try {
             const now = new Date();
-            const targetYear = now.getFullYear();
-            const targetMonth = now.getMonth() + 1; // 1~12
+            const kstDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+            const [kstYear, kstMonth] = kstDateStr.split('-').map(Number);
+            const targetYear = kstYear;
+            const targetMonth = kstMonth; // 1~12 (KST 기준 정밀 연월)
+
+            // [공정 4-1 안전 방어선] 이전 비정상 실행 등으로 발생했을 수 있는 walletAddress null/빈값 결함 레코드 사전 정리
+            await MonthlySettlement.deleteMany({
+                $or: [
+                    { walletAddress: null },
+                    { walletAddress: '' },
+                    { walletAddress: { $exists: false } }
+                ]
+            });
 
             const users = await User.find({});
             console.log(`[SettlementWorker] ${targetYear}-${targetMonth} 월간 정산 스냅샷 대상 회원: 총 ${users.length}명`);
@@ -183,17 +200,43 @@ export class SettlementWorker {
 
             for (const user of users) {
                 const walletAddress = user.walletAddress;
+                const normalizedAddress = walletAddress.trim();
                 const isKycApproved = Boolean(user.isKycVerified || user.kycApplication?.status === 'APPROVED');
                 const migrationStatus = isKycApproved ? 'LOCKED' : 'WAITING_KYC';
 
                 const miningState = await MiningState.findOne({
-                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i')
+                    walletAddress: new RegExp('^' + normalizedAddress + '$', 'i')
                 });
                 const bonusRecord = await BonusRecord.findOne({
-                    walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i')
+                    walletAddress: new RegExp('^' + normalizedAddress + '$', 'i')
                 });
 
                 if (!miningState) continue;
+
+                // [공정 2 수복] 스냅샷 직전 미동기화 실시간 채굴량(Pending LiveBoost) 50자리 전수 소급 결산
+                if (miningState.isMining) {
+                    const lastSync = miningState.lastSyncTime || (miningState as any).updatedAt || now;
+                    const diffSeconds = Math.max(0, (now.getTime() - new Date(lastSync).getTime()) / 1000);
+                    if (diffSeconds > 0) {
+                        // 1. 메인 채굴 보상 실시간 증분 소급 합산 (50자리 초정밀 연산)
+                        const currentReward = new Decimal(miningState.accumulatedReward || '0');
+                        const ratePerHour = new Decimal(miningState.currentTotalRate || '0.25');
+                        const ratePerSecond = ratePerHour.div(3600);
+                        const livePendingMined = ratePerSecond.mul(diffSeconds);
+                        miningState.accumulatedReward = currentReward.plus(livePendingMined).toFixed(50);
+
+                        // 2. 추천 보너스 보관함 실시간 증분 소급 합산 (50자리 초정밀 연산)
+                        if (bonusRecord && new Decimal(miningState.referralBonusRate || '0').gt(0)) {
+                            const baseRate = new Decimal(miningState.currentBaseRate || '0.25');
+                            const referralRate = new Decimal(miningState.referralBonusRate || '0');
+                            const referralRatePerSecond = baseRate.mul(referralRate).div(3600);
+                            const livePendingBonus = referralRatePerSecond.mul(diffSeconds);
+                            const currentBonusStorage = new Decimal(bonusRecord.referralBonusStorage || '0');
+                            bonusRecord.referralBonusStorage = currentBonusStorage.plus(livePendingBonus).toFixed(50);
+                        }
+                        miningState.lastSyncTime = now;
+                    }
+                }
 
                 const currentMined = new Decimal(miningState.accumulatedReward || '0');
                 const currentBonus = new Decimal(bonusRecord?.referralBonusStorage || '0');
@@ -205,15 +248,27 @@ export class SettlementWorker {
                 const bonusAmountStr = currentBonus.toFixed(50);
                 const totalAmountStr = totalSettled.toFixed(50);
 
-                // 1. MonthlySettlement 영구 장부에 정산 레코드 생성/업데이트
+                // [공정 4-1 수복] MonthlySettlement 영구 장부에 정산 레코드 생성/업데이트 (정규식 제거 및 $setOnInsert 완전 방어)
                 await MonthlySettlement.findOneAndUpdate(
-                    { walletAddress: new RegExp('^' + walletAddress.trim() + '$', 'i'), year: targetYear, month: targetMonth },
+                    { 
+                        walletAddress: normalizedAddress, 
+                        year: targetYear, 
+                        month: targetMonth 
+                    },
                     {
-                        minedAmount: minedAmountStr,
-                        bonusAmount: bonusAmountStr,
-                        totalAmount: totalAmountStr,
-                        settledAt: now,
-                        migrationStatus
+                        $set: {
+                            minedAmount: minedAmountStr,
+                            bonusAmount: bonusAmountStr,
+                            totalAmount: totalAmountStr,
+                            settledAt: now,
+                            migrationStatus: migrationStatus
+                        },
+                        $setOnInsert: {
+                            walletAddress: normalizedAddress,
+                            year: targetYear,
+                            month: targetMonth,
+                            createdAt: now
+                        }
                     },
                     { upsert: true, new: true }
                 );
@@ -239,8 +294,22 @@ export class SettlementWorker {
             }
 
             console.log(`[SettlementWorker] 🎉 ${targetYear}-${targetMonth} 월간 무인 스냅샷 공정 성공적 종료! 총 ${settledCount}명 정산 적립 완료.`);
-        } catch (error) {
+            return {
+                success: true,
+                settledCount,
+                targetYear,
+                targetMonth,
+                message: `${targetYear}년 ${targetMonth}월 정산 스냅샷이 성공적으로 완료되었습니다. (정산 인원: ${settledCount}명)`
+            };
+        } catch (error: any) {
             console.error(`[SettlementWorker] ❌ 월간 스냅샷 처리 중 심각한 오류 발생:`, error);
+            return {
+                success: false,
+                settledCount: 0,
+                targetYear: 0,
+                targetMonth: 0,
+                message: error.message || '월간 정산 스냅샷 처리 중 오류가 발생했습니다.'
+            };
         }
     }
 }

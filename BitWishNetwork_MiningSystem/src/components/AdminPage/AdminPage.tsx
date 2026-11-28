@@ -646,6 +646,44 @@ const AdminPage: React.FC = () => {
 
 
     // 마이닝 데이터 검색
+    const [isSettlementLoading, setIsSettlementLoading] = useState<boolean>(false);
+    const [settlementResult, setSettlementResult] = useState<any>(null);
+    const [settlementError, setSettlementError] = useState<string>('');
+
+    // 월간 채굴 정산 즉시 트리거 (테스트/수동)
+    const handleTriggerSettlement = async () => {
+        if (!window.confirm('⚡ [월간 채굴 정산 즉시 실행]\n\n현재 활성화된 채굴자들의 실시간 미동기화 보상(Pending LiveBoost)을 전수 결산하고, 이번 달 월간 정산 스냅샷을 즉시 장부에 저장합니다.\n\n정말로 정산을 실행하시겠습니까?')) {
+            return;
+        }
+
+        setIsSettlementLoading(true);
+        setSettlementError('');
+        setSettlementResult(null);
+
+        try {
+            const response = await fetch('/api/admin/settlement/trigger-snapshot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                setSettlementResult(data);
+                alert(`✅ 월간 채굴 정산이 성공적으로 완료되었습니다!\n- 정산 대상 월: ${data.targetYear}년 ${data.targetMonth}월\n- 정산 처리된 지갑 수: ${data.settledCount}건`);
+            } else {
+                setSettlementError(data.message || '정산 처리 중 오류가 발생했습니다.');
+                alert(`❌ 정산 실패: ${data.message || '오류 발생'}`);
+            }
+        } catch (err: any) {
+            console.error('월간 정산 트리거 오류:', err);
+            const msg = `서버 통신 오류: ${err.message || '알 수 없는 오류'}`;
+            setSettlementError(msg);
+            alert(`❌ 정산 트리거 실패: ${msg}`);
+        } finally {
+            setIsSettlementLoading(false);
+        }
+    };
+
     const handleSearchMining = async () => {
         if (!searchAddress.trim()) {
             setError('지갑 주소를 입력하세요');
@@ -1375,6 +1413,89 @@ const AdminPage: React.FC = () => {
                 {activeTab === 'mining' && (
                     <div className="admin-panel">
                         <h2>🧪 마이닝 테스트 관리</h2>
+
+                        {/* 월간 채굴 정산 즉시 실행 제어 콘솔 카드 */}
+                        <div style={{
+                            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            marginBottom: '24px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '24px' }}>📸</span>
+                                    <div>
+                                        <h3 style={{ margin: 0, color: '#60a5fa', fontSize: '18px', fontWeight: 'bold' }}>
+                                            월간 채굴 정산 관리 (스냅샷 테스트 & 즉시 이관)
+                                        </h3>
+                                        <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '13px' }}>
+                                            매월 말일 23:59:59에 자동 실행되는 정산 로직을 관리자가 수동으로 즉시 트리거하여 검증합니다.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleTriggerSettlement}
+                                    disabled={isSettlementLoading}
+                                    style={{
+                                        background: isSettlementLoading
+                                            ? 'rgba(100, 116, 139, 0.5)'
+                                            : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                                        color: '#ffffff',
+                                        border: '1px solid rgba(96, 165, 250, 0.4)',
+                                        padding: '10px 20px',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        fontSize: '14px',
+                                        cursor: isSettlementLoading ? 'not-allowed' : 'pointer',
+                                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)',
+                                        transition: 'all 0.2s ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}
+                                >
+                                    {isSettlementLoading ? (
+                                        <>
+                                            <span className="spinner" style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></span>
+                                            정산 및 스냅샷 처리 중...
+                                        </>
+                                    ) : (
+                                        <>⚡ 월간 채굴 정산 즉시 실행 (테스트/수동)</>
+                                    )}
+                                </button>
+                            </div>
+
+                            {settlementResult && (
+                                <div style={{
+                                    marginTop: '12px',
+                                    padding: '12px 16px',
+                                    background: 'rgba(34, 197, 94, 0.1)',
+                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                    borderRadius: '8px',
+                                    color: '#4ade80',
+                                    fontSize: '13px'
+                                }}>
+                                    <strong>✅ 최근 정산 실행 성공:</strong> {settlementResult.targetYear}년 {settlementResult.targetMonth}월 정산 완료 (총 {settlementResult.settledCount}건 지갑 장부 저장 완료)
+                                </div>
+                            )}
+
+                            {settlementError && (
+                                <div style={{
+                                    marginTop: '12px',
+                                    padding: '12px 16px',
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    borderRadius: '8px',
+                                    color: '#f87171',
+                                    fontSize: '13px'
+                                }}>
+                                    <strong>❌ 정산 실행 오류:</strong> {settlementError}
+                                </div>
+                            )}
+                        </div>
+
                         <div className="test-section">
                             <p className="warning-text">⚠️ 테스트 목적으로만 사용하세요</p>
 
